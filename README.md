@@ -59,7 +59,7 @@ Fill in [`challenges/TEMPLATE.md`](challenges/TEMPLATE.md) and read [`docs/ADDIN
 | `tron` – Tron Battle | 30×20 grid, `UP/DOWN/LEFT/RIGHT` | wood (random), bronze (flood fill), silver (Voronoi) |
 | `ocean-of-code` – Ocean of Code | 15×15 map, `MOVE/SURFACE/TORPEDO/SONAR/SILENCE/MINE/TRIGGER` | wood (random patrol), bronze (tracks you, sonar, torpedoes), silver (+ silence, mines) |
 
-Ocean of Code's rules were re-implemented from the CodinGame statement; see `games/ocean-of-code/statement.md` for what is enforced. Map generation is random per seed, not CodinGame's exact generator.
+Ocean of Code is a port of the official referee ([CodinGameCommunity/ocean-of-code](https://github.com/CodinGameCommunity/ocean-of-code)): same league rules (Wood 2 / Wood 1 / Bronze+ selectable in the UI), same validation order and error messages, same "skip invalid, else SURFACE" behaviour, and the same map generator through a port of `java.util.Random`, so a seed taken from a CodinGame replay gives the same map here. The bosses are this repo's own heuristic bots; CodinGame's boss bots are not public.
 
 ## Adding a game
 

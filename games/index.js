@@ -26,6 +26,7 @@ function loadGames() {
       dir,
       Referee,
       bosses: cfg.bosses || [],
+      leagues: cfg.leagues || null,     // optional rule sets, e.g. CodinGame leagues
       starters,
       statement: fs.existsSync(path.join(dir, 'statement.md')) ? fs.readFileSync(path.join(dir, 'statement.md'), 'utf8') : '',
       viewerPath: path.join(dir, 'viewer.js'),

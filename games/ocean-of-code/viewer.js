@@ -37,10 +37,10 @@ window.CGViewers.ocean = {
       ctx.fillStyle = colors[i]; ctx.globalAlpha = 0.35;
       for (const k of p.visited) ctx.fillRect(ox + (k % W) * cell + 3, oy + Math.floor(k / W) * cell + 3, cell - 6, cell - 6);
       ctx.globalAlpha = 1;
-      for (const [mx, my] of p.mines) {
+      for (const [mx, my, active] of p.mines) {
         ctx.beginPath(); ctx.moveTo(ox + mx * cell + cell / 2, oy + my * cell + 4); ctx.lineTo(ox + mx * cell + cell - 4, oy + my * cell + cell / 2);
         ctx.lineTo(ox + mx * cell + cell / 2, oy + my * cell + cell - 4); ctx.lineTo(ox + mx * cell + 4, oy + my * cell + cell / 2); ctx.closePath();
-        ctx.strokeStyle = colors[i]; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = colors[i]; ctx.lineWidth = 2; ctx.setLineDash(active === false ? [3, 3] : []); ctx.stroke(); ctx.setLineDash([]);
       }
     });
     frame.players.forEach((p, i) => {
@@ -61,13 +61,15 @@ window.CGViewers.ocean = {
   hud(st, frame, info) {
     if (!frame) return [];
     const lines = [];
+    const cd = v => v < 0 ? '–' : v;
     frame.players.forEach((p, i) => {
       const hearts = '♥'.repeat(Math.max(0, p.life)) + '♡'.repeat(Math.max(0, 6 - Math.max(0, p.life)));
-      lines.push(`${info.playerNames[i]}  ${hearts}  pos (${p.x},${p.y})  cd T${p.cd.TORPEDO} S${p.cd.SONAR} Si${p.cd.SILENCE} M${p.cd.MINE}  ${p.msg ? '“' + p.msg + '”' : ''}`);
+      lines.push(`${info.playerNames[i]}  ${hearts}  pos (${p.x},${p.y})  cd T${cd(p.cd.TORPEDO)} S${cd(p.cd.SONAR)} Si${cd(p.cd.SILENCE)} M${cd(p.cd.MINE)}  ${p.msg ? '“' + p.msg + '”' : ''}`);
     });
     if (frame.events) {
       const e = frame.events;
-      lines.push(`P${e.player} played: ${e.orders}` + (e.sonar ? `  → sonar ${e.sonar.result}` : '') + (e.damage.some(d => d) ? `  damage [${e.damage.join(', ')}]` : ''));
+      lines.push(`P${e.player} played: ${e.orders}` + (e.sonar ? `  → sonar ${e.sonar.result}` : '') + (e.damage.some(d => d) ? `  damage [${e.damage.join(', ')}]` : '')
+        + (e.skipped && e.skipped.length ? `  ⚠ skipped: ${e.skipped.join('; ')}` : ''));
     }
     return lines;
   },

@@ -47,7 +47,7 @@ async function buildPlayers(gameDef, players, workRoot) {
  *   emit(event): called with {type:'start'|'frame'|'end'|'error', ...}
  * Resolves with the final result.
  */
-async function runMatch({ gameDef, players, seed = 1, timeoutMultiplier = 1, workRoot, emit }) {
+async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMultiplier = 1, workRoot, emit }) {
   const meta = gameDef.Referee.meta;
   if (players.length !== meta.playerCount) throw new Error(`${gameDef.name} needs ${meta.playerCount} players`);
   const built = await buildPlayers(gameDef, players, workRoot);
@@ -56,10 +56,10 @@ async function runMatch({ gameDef, players, seed = 1, timeoutMultiplier = 1, wor
     emit(ev);
     return ev;
   }
-  const referee = new gameDef.Referee({ seed, playerCount: meta.playerCount });
+  const referee = new gameDef.Referee({ seed, playerCount: meta.playerCount, league });
   const procs = built.bots.map(b => new BotProcess(b).start());
   const names = built.bots.map(b => b.name);
-  emit({ type: 'start', game: { id: gameDef.id, name: gameDef.name, viewer: meta.viewer }, players: names, seed, static: referee.getStaticInfo() });
+  emit({ type: 'start', game: { id: gameDef.id, name: gameDef.name, viewer: meta.viewer }, players: names, seed, league, static: referee.getStaticInfo() });
 
   const firstTurn = procs.map(() => true);
   try {

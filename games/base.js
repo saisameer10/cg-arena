@@ -15,9 +15,10 @@ function mulberry32(seed) {
 }
 
 class Referee {
-  constructor({ seed = 1, playerCount = 2 } = {}) {
-    this.seed = seed;
-    this.rng = mulberry32(seed);
+  constructor({ seed = 1, playerCount = 2, league = null } = {}) {
+    this.seed = seed;                    // number or numeric string (CodinGame seeds can exceed 2^53)
+    this.league = league;
+    this.rng = mulberry32((Number(seed) || 1) >>> 0);
     this.playerCount = playerCount;
     this.turn = 0;             // one engine turn = one call to getActors()
     this.summary = [];

@@ -73,6 +73,15 @@
     const opts = `<option value="me">My code</option>` + state.game.bosses.map(b => `<option value="boss:${b.id}">${b.name}</option>`).join('');
     $('p0').innerHTML = opts; $('p1').innerHTML = opts;
     $('p0').value = 'me'; $('p1').value = state.game.bosses.length ? 'boss:' + state.game.bosses[0].id : 'me';
+    const leagues = state.game.leagues || [];
+    $('leagueLabel').style.display = leagues.length ? '' : 'none';
+    $('league').innerHTML = leagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+    if (leagues.length) {
+      let saved = null; try { saved = localStorage.getItem(`cg-arena:league:${state.game.id}`); } catch {}
+      const def = leagues.find(l => l.default) || leagues[0];
+      $('league').value = leagues.some(l => l.id === saved) ? saved : def.id;
+      $('league').onchange = () => { try { localStorage.setItem(`cg-arena:league:${state.game.id}`, $('league').value); } catch {} };
+    }
     loadCode(false);
     loadViewer(state.game.id);
     state.frames = []; state.static = null; state.result = null; state.logs = []; state.idx = 0;
@@ -99,7 +108,7 @@
     $('result').textContent = ''; $('result').className = '';
     const ctrl = state.abort = new AbortController();
     try {
-      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed: +$('seed').value || 1, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
+      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed: $('seed').value.trim() || '1', league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
       for (;;) {
         const { value, done } = await reader.read();

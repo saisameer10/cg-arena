@@ -43,6 +43,7 @@ const server = http.createServer(async (req, res) => {
         games: Object.values(games).map(g => ({
           id: g.id, name: g.name, statement: g.statement, starters: g.starters,
           bosses: g.bosses.map(b => ({ id: b.id, name: b.name })),
+          leagues: g.leagues,
           meta: g.Referee.meta,
         })),
       });
@@ -54,8 +55,10 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
       const emit = ev => res.write(JSON.stringify(ev) + '\n');
       try {
+        const seed = String(body.seed === undefined || body.seed === '' ? 1 : body.seed).trim();
         await runMatch({
-          gameDef, players: body.players, seed: Number(body.seed) || 1,
+          gameDef, players: body.players, seed: /^[+-]?\d{1,15}$/.test(seed) ? Number(seed) : seed,
+          league: body.league || null,
           timeoutMultiplier: Math.max(0.1, Number(body.timeoutMultiplier) || 1),
           workRoot: WORK, emit,
         });

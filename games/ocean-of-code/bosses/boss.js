@@ -70,8 +70,8 @@ function trackOrders(orders) {
 }
 
 // --- state ------------------------------------------------------------------
-let visited = new Set(), mines = [];
-let lastSonar = null, lastShot = null, prevOppLife = 6;
+let visited = new Set(), mines = [];      // mines: [x, y, roundPlaced]; armed from the next round on
+let lastSonar = null, lastShot = null, prevOppLife = 6, round = 0;
 
 // first turn: choose a start position
 let sx, sy;
@@ -94,7 +94,7 @@ for (;;) {
   const [x, y, myLife, oppLife, cdTorpedo, cdSonar, cdSilence, cdMine] = line.split(' ').map(Number);
   const sonarResult = readline();
   const oppOrders = readline();
-  mx = x; my = y;
+  mx = x; my = y; round++;
 
   // 1. information from my previous turn (sonar / torpedo), evaluated before the opponent moved
   if (lastSonar && sonarResult !== 'NA') {
@@ -168,12 +168,13 @@ for (;;) {
   // 7. mines (silver): drop one behind when charged
   if (level === 'silver' && cdMine === 0 && moved) {
     const spots = Object.entries(DIRS).map(([d, [dx, dy]]) => [d, mx + dx, my + dy]).filter(([, nx, ny]) => water(nx, ny) && !mines.some(m => m[0] === nx && m[1] === ny));
-    if (spots.length) { const s = spots[(rnd() * spots.length) | 0]; mines.push([s[1], s[2]]); orders.push(`MINE ${s[0]}`); }
+    if (spots.length) { const s = spots[(rnd() * spots.length) | 0]; mines.push([s[1], s[2], round]); orders.push(`MINE ${s[0]}`); }
   }
   // 8. trigger a mine if the opponent is probably on it and I am safe
   if (level === 'silver' && mines.length) {
     for (let i = 0; i < mines.length; i++) {
-      const [tx, ty] = mines[i];
+      const [tx, ty, placed] = mines[i];
+      if (placed >= round) continue;                 // not armed until the round after placement
       if (dmgAt(mx, my, tx, ty) > 0) continue;
       let exp = 0; for (const c of cand) exp += dmgAt(cx(c), cy(c), tx, ty);
       if (exp / cand.size >= 0.8) { orders.push(`TRIGGER ${tx} ${ty}`); mines.splice(i, 1); break; }

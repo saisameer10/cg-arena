@@ -1,5 +1,10 @@
 {
   "name": "Ocean of Code",
+  "leagues": [
+    { "id": "wood2", "name": "Wood 2 — MOVE, SURFACE, TORPEDO" },
+    { "id": "wood1", "name": "Wood 1 — + SONAR, SILENCE", "default": true },
+    { "id": "bronze", "name": "Bronze and above — + MINE, TRIGGER" }
+  ],
   "bosses": [
     { "id": "wood", "name": "Boss Wood (random patrol)", "file": "bosses/boss.js", "args": ["wood"] },
     { "id": "bronze", "name": "Boss Bronze (tracks you, sonar, torpedoes)", "file": "bosses/boss.js", "args": ["bronze"] },

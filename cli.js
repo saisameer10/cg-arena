@@ -19,14 +19,14 @@ function parseBot(arg) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const opts = { games: 1, seed: 1, 'timeout-mult': 1, replay: null };
+  const opts = { games: 1, seed: 1, 'timeout-mult': 1, replay: null, league: null };
   const pos = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--')) opts[argv[i].slice(2)] = argv[++i];
     else pos.push(argv[i]);
   }
   if (pos.length < 3) {
-    console.log('usage: node cli.js <game> <bot1> <bot2> [--games N] [--seed S] [--timeout-mult X] [--replay file.json]');
+    console.log('usage: node cli.js <game> <bot1> <bot2> [--games N] [--seed S] [--league id] [--timeout-mult X] [--replay file.json]');
     console.log('games:', Object.keys(loadGames()).join(', '));
     process.exit(1);
   }
@@ -40,7 +40,7 @@ async function main() {
   for (let g = 0; g < n; g++) {
     const events = [];
     const result = await runMatch({
-      gameDef, players, seed: seed0 + g, timeoutMultiplier: Number(opts['timeout-mult']),
+      gameDef, players, seed: seed0 + g, league: opts.league, timeoutMultiplier: Number(opts['timeout-mult']),
       workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); },
     });
     if (opts.replay) replays.push(events);
