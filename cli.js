@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadGames } = require('./games');
-const { runMatch } = require('./server/engine/match');
+const { runMatch, workRoot } = require('./server/engine/match');
 
 const EXT = { '.py': 'python', '.js': 'javascript', '.java': 'java', '.cpp': 'cpp' };
 
@@ -41,7 +41,7 @@ async function main() {
     const events = [];
     const result = await runMatch({
       gameDef, players, seed: seed0 + g, timeoutMultiplier: Number(opts['timeout-mult']),
-      workRoot: process.env.CG_ARENA_WORK || path.join(require('os').tmpdir(), 'cg-arena'), emit: ev => { if (opts.replay) events.push(ev); },
+      workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); },
     });
     if (opts.replay) replays.push(events);
     if (result.type === 'error') { console.error(result.message, result.compileLog || ''); process.exit(2); }

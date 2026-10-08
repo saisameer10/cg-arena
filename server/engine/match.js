@@ -111,4 +111,12 @@ async function runMatch({ gameDef, players, seed = 1, timeoutMultiplier = 1, wor
   }
 }
 
-module.exports = { runMatch };
+// Where bot sources are written, compiled and run. Windows CreateProcess rejects working
+// directories longer than ~260 chars, so a deeply nested checkout falls back to the temp dir.
+function workRoot() {
+  if (process.env.CG_ARENA_WORK) return process.env.CG_ARENA_WORK;
+  const local = path.join(__dirname, '..', '..', '.runs');
+  return local.length < 150 ? local : path.join(require('os').tmpdir(), 'cg-arena');
+}
+
+module.exports = { runMatch, workRoot };

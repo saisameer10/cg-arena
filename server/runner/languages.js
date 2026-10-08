@@ -18,6 +18,12 @@ function findJdk() {
   const candidates = [];
   if (process.env.JAVA_HOME) candidates.push(process.env.JAVA_HOME);
   if (process.platform === 'win32') {
+    // JAVA_HOME set with setx / the registry is not visible to already-running shells; read it directly
+    for (const hive of ['HKCU\\Environment', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment']) {
+      const r = spawnSync('reg', ['query', hive, '/v', 'JAVA_HOME'], { encoding: 'utf8', windowsHide: true });
+      const m = r.stdout && r.stdout.match(/JAVA_HOME\s+REG_\w+\s+(.+)/);
+      if (m) candidates.push(m[1].trim());
+    }
     for (const root of ['C:\\Program Files\\Microsoft', 'C:\\Program Files\\Eclipse Adoptium', 'C:\\Program Files\\Java', 'C:\\Program Files\\Amazon Corretto', 'C:\\Program Files\\Zulu']) {
       try { for (const d of fs.readdirSync(root)) if (/jdk/i.test(d)) candidates.push(path.join(root, d)); } catch {}
     }

@@ -9,8 +9,8 @@ const { runMatch } = require('./engine/match');
 
 const PORT = Number(process.env.PORT || 3000);
 const WEB = path.join(__dirname, '..', 'web');
-// bot sources are compiled/run from a short temp path (long cwd paths break process creation on Windows)
-const WORK = process.env.CG_ARENA_WORK || path.join(require('os').tmpdir(), 'cg-arena');
+const { workRoot } = require('./engine/match');
+const WORK = workRoot();
 const games = loadGames();
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.md': 'text/markdown', '.png': 'image/png', '.svg': 'image/svg+xml' };
