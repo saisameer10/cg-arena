@@ -1,0 +1,9 @@
+node_modules/
+.runs/
+*.class
+*.exe
+*.log
+.DS_Store
+Thumbs.db
+my-bots/*
+!my-bots/README.md

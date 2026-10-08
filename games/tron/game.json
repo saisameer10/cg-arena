@@ -1,0 +1,13 @@
+{
+  "name": "Tron Battle",
+  "bosses": [
+    { "id": "wood", "name": "Boss Wood (random safe moves)", "file": "bosses/boss.js", "args": ["wood"] },
+    { "id": "bronze", "name": "Boss Bronze (flood fill)", "file": "bosses/boss.js", "args": ["bronze"] },
+    { "id": "silver", "name": "Boss Silver (Voronoi)", "file": "bosses/boss.js", "args": ["silver"] }
+  ],
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java"
+  }
+}

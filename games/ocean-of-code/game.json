@@ -1,0 +1,13 @@
+{
+  "name": "Ocean of Code",
+  "bosses": [
+    { "id": "wood", "name": "Boss Wood (random patrol)", "file": "bosses/boss.js", "args": ["wood"] },
+    { "id": "bronze", "name": "Boss Bronze (tracks you, sonar, torpedoes)", "file": "bosses/boss.js", "args": ["bronze"] },
+    { "id": "silver", "name": "Boss Silver (bronze + silence + mines)", "file": "bosses/boss.js", "args": ["silver"] }
+  ],
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java"
+  }
+}

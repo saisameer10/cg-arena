@@ -1,0 +1,11 @@
+{
+  "name": "cg-arena",
+  "version": "0.1.0",
+  "description": "Self-hosted CodinGame-style arena: write a bot, run it against bosses, watch the replay.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "cli": "node cli.js"
+  },
+  "license": "MIT"
+}
