@@ -7,3 +7,4 @@ node_modules/
 Thumbs.db
 my-bots/*
 !my-bots/README.md
+.claude/
