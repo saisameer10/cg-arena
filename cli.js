@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadGames } = require('./games');
-const { runMatch, workRoot } = require('./server/engine/match');
+const { runMatch, workRoot, offsetSeed } = require('./server/engine/match');
 const arena = require('./server/arena');
 
 const EXT = { '.py': 'python', '.js': 'javascript', '.java': 'java', '.cpp': 'cpp' };
@@ -71,7 +71,7 @@ async function main() {
     if (!pos[2]) usage(games);
     const candidate = parseBot(pos[2]);
     const summary = await arena.runArena({
-      gameDef, candidate, opponents: opts.opponents, games: Number(opts.games) || 4, seed: Number(opts.seed), league: opts.league,
+      gameDef, candidate, opponents: opts.opponents, games: Number(opts.games) || 4, seed: opts.seed, league: opts.league,
       timeoutMultiplier: Number(opts['timeout-mult']),
       emit: ev => {
         if (ev.type === 'match') console.log(`  vs ${ev.name}  game ${ev.game + 1}  as P${ev.side}  ${ev.outcome}${ev.scores ? '  scores ' + JSON.stringify(ev.scores) : ''}${ev.dq && ev.dq.length ? '  ' + ev.dq.join(' | ') : ''}${ev.message ? '  ' + ev.message : ''}`);
@@ -90,20 +90,21 @@ async function main() {
   if (pos.length < 3) usage(games);
   const refs = [parseBot(pos[1]), parseBot(pos[2])];
   const players = refs.map(r => arena.resolvePlayer(gameDef, r));
-  const n = Number(opts.games) || 1, seed0 = Number(opts.seed);
+  const n = Number(opts.games) || 1;
   const wins = [0, 0]; let draws = 0;
   const replays = [];
   for (let g = 0; g < n; g++) {
     const events = [];
+    const seed = offsetSeed(opts.seed, g);
     const result = await runMatch({
-      gameDef, players, seed: seed0 + g, league: opts.league, timeoutMultiplier: Number(opts['timeout-mult']),
+      gameDef, players, seed, league: opts.league, timeoutMultiplier: Number(opts['timeout-mult']),
       workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); },
     });
     if (opts.replay) replays.push(events);
     if (result.type === 'error') { console.error(result.message, result.compileLog || ''); process.exit(2); }
     if (result.winner === null || result.winner === undefined) draws++; else wins[result.winner]++;
     const reasons = (result.dq || []).map((d, i) => d ? ` [P${i}: ${d}]` : '').join('');
-    console.log(`game ${g + 1}/${n} seed=${seed0 + g} scores=${JSON.stringify(result.scores)} winner=${result.winner === null ? 'draw' : 'P' + result.winner + ' (' + result.players[result.winner] + ')'}${reasons}`);
+    console.log(`game ${g + 1}/${n} seed=${seed} scores=${JSON.stringify(result.scores)} winner=${result.winner === null ? 'draw' : 'P' + result.winner + ' (' + result.players[result.winner] + ')'}${reasons}`);
   }
   console.log(`\n${label(refs[0])} vs ${label(refs[1])}: ${wins[0]} - ${wins[1]} (draws ${draws})  => P0 win rate ${(100 * wins[0] / n).toFixed(1)}%`);
   if (opts.replay) fs.writeFileSync(opts.replay, JSON.stringify(replays));

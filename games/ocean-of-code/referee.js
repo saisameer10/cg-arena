@@ -13,10 +13,14 @@ const MAX_ROUNDS = 598;                 // 299 rounds per player; with the place
 const LEAGUES = { wood2: 1, wood1: 2, bronze: 3 };
 const TILES = ['11.0.111', '.11111.0', '.0.0.111', '11.0.0.1', '.111.0.0', '.0.111.0', '1111.0.1', '.0.11111',
   '11111111', '11111101', '11110111', '11011111', '01111111'].map(t => new RegExp('^' + t + '$'));
-const isInt = s => /^[+-]?\d+$/.test(s || '');
+const MAX_FRAMES = 1000;                // CodinGame SDK cap: gameTurn 1 = placements, then one executed action per frame
+// Java semantics for the bits of parsing bots can hit: Integer.parseInt range, String.trim() (chars <= U+0020)
+const javaInt = s => (/^[+-]?\d+$/.test(s || '') && Number(s) >= -2147483648 && Number(s) <= 2147483647) ? Number(s) : null;
+const jtrim = s => s.replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, '');
 
 class OceanReferee extends Referee {
-  static meta = { id: 'ocean-of-code', name: 'Ocean of Code', playerCount: 2, firstTurnTimeout: 1000, turnTimeout: 50, maxTurns: MAX_ROUNDS + 2, viewer: 'ocean' };
+  // engine turn 0 = both placements (as Game.initialize does), then 598 rounds alternating players
+  static meta = { id: 'ocean-of-code', name: 'Ocean of Code', playerCount: 2, firstTurnTimeout: 1000, turnTimeout: 50, maxTurns: MAX_ROUNDS + 1, viewer: 'ocean' };
 
   constructor(opts = {}) {
     super(opts);
@@ -34,7 +38,7 @@ class OceanReferee extends Referee {
       return { index, life: 6, x: -1, y: -1, placed: false, visited: this.emptyGrid(), charges: { TORPEDO: 0, SONAR: 0, SILENCE: 0, MINE: 0 },
         powers: new Set(powers), commands, mines: [], message: '', summaries: [], sonarResult: 'NA' };
     });
-    this.current = 0;
+    this.frames = 1;          // SDK gameTurns consumed so far (turn 1 = placements); the game ends at MAX_FRAMES
     this.events = null;
   }
 
@@ -114,7 +118,6 @@ class OceanReferee extends Referee {
   // ---- engine contract ----------------------------------------------------------------
   getStaticInfo() { return { width: SIZE, height: SIZE, map: this.map, league: this.leagueId, level: this.level }; }
   getInitInput(p) { return [`${SIZE} ${SIZE} ${p}`, ...this.map]; }
-  getActors() { return [this.current]; }
   getTurnInput(p) {
     const me = this.players[p], opp = this.players[1 - p];
     if (!me.placed) return [];
@@ -149,6 +152,7 @@ class OceanReferee extends Referee {
     // performRoundAction, one action per frame; the official referee stops once the game is over
     while (actions.length && !this.isGameOver()) {
       const a = actions.shift();
+      this.frames++;                       // each executed action is one SDK frame
       this.execute(me, a);
       this.dropInvalidHead(me, actions);
     }
@@ -158,7 +162,7 @@ class OceanReferee extends Referee {
   cleanActions(raw) {
     const keys = new Set(); const actions = [];
     for (let c of raw.split('|')) {
-      c = c.trim();
+      c = jtrim(c);
       if (c === '') continue;
       const i = c.indexOf(' ');
       const activator = i < 0 ? c : c.slice(0, i);
@@ -306,17 +310,18 @@ class OceanReferee extends Referee {
     return power;
   }
   target(parts, msg) {
-    if (!isInt(parts[1]) || !isInt(parts[2])) throw new GameError(msg);
-    return [parseInt(parts[1], 10), parseInt(parts[2], 10)];
+    const x = javaInt(parts[1]), y = javaInt(parts[2]);
+    if (x === null || y === null) throw new GameError(msg);
+    return [x, y];
   }
   sectorArg(parts, a) {
-    const s = isInt(parts[1]) ? parseInt(parts[1], 10) : NaN;
-    if (!(s >= 1 && s <= 9)) throw new GameError('Invalid sector on SONAR: ' + a.command);
+    const s = javaInt(parts[1]);
+    if (s === null || s < 1 || s > 9) throw new GameError('Invalid sector on SONAR: ' + a.command);
     return s;
   }
   distanceArg(parts, a) {
-    const d = isInt(parts[2]) ? parseInt(parts[2], 10) : NaN;
-    if (!(d >= 0 && d <= 4)) throw new GameError('Invalid distance on SILENCE: ' + a.command);
+    const d = javaInt(parts[2]);
+    if (d === null || d < 0 || d > 4) throw new GameError('Invalid distance on SILENCE: ' + a.command);
     return d;
   }
   mineTarget(me, parts, a) {
@@ -325,12 +330,16 @@ class OceanReferee extends Referee {
   }
 
   onDisqualify(p) { this.players[p].life = -1; }
-  endTurn() { this.turn++; this.current = 1 - this.current; }
-  isGameOver() { return this.players.some(p => p.life <= 0) || this.turn >= MAX_ROUNDS + 2; }
+  // engine turn 0: both players place (Game.initialize places both even if the first one fails);
+  // engine turns 1..598: rounds, player 0 first
+  getActors() { return this.turn === 0 ? [0, 1] : [(this.turn - 1) % 2]; }
+  endTurn() { this.turn++; }
+  isGameOver() { return this.players.some(p => p.life <= 0) || this.turn > MAX_ROUNDS || this.frames >= MAX_FRAMES; }
   getFrame() {
     return {
       actor: this.events ? this.events.player : null,
-      next: this.current,
+      next: this.isGameOver() ? null : this.getActors()[0],
+      frames: this.frames,
       league: this.leagueId,
       players: this.players.map(p => {
         const visited = [];

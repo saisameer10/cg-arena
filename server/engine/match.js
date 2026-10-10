@@ -9,6 +9,13 @@ const { BotProcess, BotError, prepareBot } = require('../runner/bot');
 const { LANGUAGES } = require('../runner/languages');
 
 const PRELUDE = path.join(__dirname, '..', 'runner', 'js-prelude.js');
+const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 1500));
+
+// Seeds stay strings so 64-bit CodinGame seeds survive; game g of a batch uses seed + g.
+function offsetSeed(seed, g) {
+  const s = String(seed === undefined || seed === null || seed === '' ? 1 : seed).trim();
+  return /^[+-]?\d+$/.test(s) ? (BigInt(s) + BigInt(g)).toString() : (g ? `${s}-${g}` : s);
+}
 
 function bossSpec(gameDef, boss) {
   const file = path.join(gameDef.dir, boss.file);
@@ -52,6 +59,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
   if (players.length !== meta.playerCount) throw new Error(`${gameDef.name} needs ${meta.playerCount} players`);
   const built = await buildPlayers(gameDef, players, workRoot);
   if (built.error) {
+    try { fs.rmSync(built.matchDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); } catch {}
     const ev = { type: 'error', player: built.error.player, message: `Player ${built.error.player} failed to compile`, compileLog: built.error.compileLog };
     emit(ev);
     return ev;
@@ -77,7 +85,10 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
         if (referee.dq[p]) continue;
         const input = referee.getTurnInput(p);
         if (input.length) procs[p].write(input.join('\n') + '\n');
-        const budget = (firstTurn[p] ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier;
+        // The first turn also pays for the interpreter/JVM boot (python ~0.5 s, java ~0.4 s cold on a laptop),
+        // which CodinGame's servers do not charge to the bot, so the first turn gets a boot grace on top.
+        const first = firstTurn[p];
+        const budget = (first ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier + (first ? BOOT_GRACE_MS : 0);
         firstTurn[p] = false;
         const t0 = Date.now();
         let output = [], error = null;
@@ -85,6 +96,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
           output = await procs[p].readLines(referee.outputLines(p), budget);
         } catch (e) {
           error = e instanceof BotError ? e.message : String(e);
+          if (first && /^timeout/.test(error)) error += ` (first turn: ${meta.firstTurnTimeout} ms limit + ${BOOT_GRACE_MS} ms boot grace)`;
           referee.disqualify(p, error);
         }
         const ms = Date.now() - t0;
@@ -109,8 +121,8 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
     emit({ type: 'end', result, summary: referee.takeSummary() });
     return result;
   } finally {
-    procs.forEach(p => p.kill());
-    setTimeout(() => { try { fs.rmSync(built.matchDir, { recursive: true, force: true }); } catch {} }, 2000);
+    await Promise.all(procs.map(p => p.kill()));   // wait for the processes to go away, then drop their work dir
+    try { fs.rmSync(built.matchDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }); } catch {}
   }
 }
 
@@ -122,4 +134,4 @@ function workRoot() {
   return local.length < 150 ? local : path.join(require('os').tmpdir(), 'cg-arena');
 }
 
-module.exports = { runMatch, workRoot };
+module.exports = { runMatch, workRoot, offsetSeed, BOOT_GRACE_MS };

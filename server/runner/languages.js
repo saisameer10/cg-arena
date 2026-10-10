@@ -54,7 +54,8 @@ const LANGUAGES = {
     id: 'java', name: 'Java', monaco: 'java', fileName: 'Player.java',
     detect: () => !!JDK(),
     compile: (dir) => ({ cmd: JDK().javac, args: ['-d', dir, path.join(dir, 'Player.java')] }),
-    run: (dir) => ({ cmd: JDK().java, args: ['-Xss64m', '-cp', dir, 'Player'] }),
+    // serial GC, class-data sharing and no perf-data file: faster JVM start and steadier 50 ms turns
+    run: (dir) => ({ cmd: JDK().java, args: ['-Xss64m', '-XX:+UseSerialGC', '-Xshare:auto', '-XX:-UsePerfData', '-cp', dir, 'Player'] }),
   },
   cpp: {
     id: 'cpp', name: 'C++ (g++)', monaco: 'cpp', fileName: 'bot.cpp',

@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { runMatch, workRoot } = require('./engine/match');
+const { runMatch, workRoot, offsetSeed } = require('./engine/match');
 const { LANGUAGES } = require('./runner/languages');
 
 const ROOT = process.env.CG_ARENA_POOL || path.join(__dirname, '..', 'arena');
@@ -134,7 +134,8 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
       const side = g % 2;
       const players = side === 0 ? [candSpec, oppSpec] : [oppSpec, candSpec];
       let result;
-      try { result = await runMatch({ gameDef, players, seed: Number(seed) + g, league, timeoutMultiplier, workRoot: workRoot(), emit: () => {}, signal }); }
+      const gameSeed = offsetSeed(seed, g);
+      try { result = await runMatch({ gameDef, players, seed: gameSeed, league, timeoutMultiplier, workRoot: workRoot(), emit: () => {}, signal }); }
       catch (e) { result = { type: 'error', message: e.message }; }
       if (result.type === 'error') {
         if (result.compileLog && result.player === side) {   // the candidate itself does not compile: nothing else to run
@@ -153,7 +154,7 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
       row[field]++; total[field]++;
       if (candKey) elo(pool, candKey, key, outcome === 'win' ? 1 : outcome === 'loss' ? 0 : 0.5);
       const dq = (result.dq || []).map((d, i) => d ? `P${i}: ${d}` : null).filter(Boolean);
-      emit({ type: 'match', opponent: key, name: row.name, game: g, side, seed: Number(seed) + g, outcome, scores: result.scores, dq });
+      emit({ type: 'match', opponent: key, name: row.name, game: g, side, seed: gameSeed, outcome, scores: result.scores, dq });
     }
     row.played = row.wins + row.losses + row.draws;
     row.winRate = row.played ? row.wins / row.played : 0;

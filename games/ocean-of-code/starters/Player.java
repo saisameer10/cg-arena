@@ -16,6 +16,9 @@ class Player {
         outer:
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) if (grid[y].charAt(x) == '.') { sx = x; sy = y; break outer; }
         visited.add(sx + sy * width);
+        // Warm up string concatenation and System.err inside the 1000 ms first turn, so the first
+        // 50 ms round does not pay the JVM's one-time initialisation costs.
+        System.err.println("start (" + sx + "," + sy + ") league devices visible next turn; warm=" + ("MOVE " + dirs[0] + " TORPEDO").length());
         System.out.println(sx + " " + sy);
 
         while (in.hasNextInt()) {

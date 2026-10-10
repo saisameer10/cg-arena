@@ -96,8 +96,14 @@ class BotProcess {
     return out;
   }
   takeStderr() { const s = this.stderr; this.stderr = ''; return s; }
-  kill() {
-    if (this.proc && !this.exited) { try { this.proc.kill(); } catch {} }
+  // Kill the bot and resolve once the OS has reaped it (or after `timeoutMs`), so its files can be deleted.
+  kill(timeoutMs = 1000) {
+    if (!this.proc || this.exited) return Promise.resolve();
+    return new Promise(resolve => {
+      const t = setTimeout(resolve, timeoutMs);
+      this.proc.once('close', () => { clearTimeout(t); resolve(); });
+      try { this.proc.kill(); } catch { clearTimeout(t); resolve(); }
+    });
   }
 }
 

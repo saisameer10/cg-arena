@@ -107,7 +107,7 @@ const server = http.createServer(async (req, res) => {
       try {
         await arena.runArena({
           gameDef, candidate: body.candidate, opponents: body.opponents, games: body.games,
-          seed: Number(body.seed) || 1, league: body.league || null,
+          seed: body.seed, league: body.league || null,
           timeoutMultiplier: Math.max(0.1, Number(body.timeoutMultiplier) || 1), emit, signal,
         });
       } catch (e) {

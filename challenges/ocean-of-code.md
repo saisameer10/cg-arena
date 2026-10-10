@@ -76,7 +76,7 @@ Bronze league additions (from the referee source, `MinePower.java` / `TriggerCom
 
 ### Limits
 - Response time first turn: 1000 ms; per turn: 50 ms
-- Max turns: 598 rounds (299 each) after placement; referee constant `maxTurns = 598`
+- Max turns: 598 rounds (299 each) after placement; referee constant `maxTurns = 598`. The SDK additionally caps the game at 1000 frames (`gameManager.setMaxTurns(1000)`): frame 1 is the placements and every executed action is one frame, so at most 999 actions run in a game
 - Victory: more lives at the end; score = lives; disabled player scores -1
 - Invalid output: see "Ambiguities" below for the exact rule
 

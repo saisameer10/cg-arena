@@ -20,6 +20,7 @@ Devices not in your league report a cooldown of `-1`. Charging or using one is a
 - **9 sectors** of 5 × 5 cells, numbered 1 (top left) to 9 (bottom right), row by row.
 - Player 0 plays first. Players alternate. On your turn you learn the opponent's orders of its last turn, then you act.
 - Each player has **300 turns including the initial placement** (299 rounds each). At the end, more lives wins; equal is a draw.
+- CodinGame's engine also stops after **999 executed actions in total** (one frame per action, the placements count as one). A bot that chains 3 orders every turn therefore gets about 166 rounds, not 299. This referee enforces the same cap.
 
 ### Actions
 Chain several with `|`. Each type at most once per turn, executed in the order written.

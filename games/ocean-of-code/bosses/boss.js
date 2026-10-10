@@ -71,7 +71,7 @@ function trackOrders(orders) {
 
 // --- state ------------------------------------------------------------------
 let visited = new Set(), mines = [];      // mines: [x, y, roundPlaced]; armed from the next round on
-let lastSonar = null, lastShot = null, prevOppLife = 6, round = 0;
+let lastSonar = null, lastShot = null, lastTrigger = false, prevOppLife = 6, round = 0;
 
 // first turn: choose a start position
 let sx, sy;
@@ -100,14 +100,15 @@ for (;;) {
   if (lastSonar && sonarResult !== 'NA') {
     cand = new Set([...cand].filter(k => (sector(cx(k), cy(k)) === lastSonar) === (sonarResult === 'Y')));
   }
-  if (lastShot) {
+  // damage inference is only sound when my torpedo was the sole source of damage this exchange
+  if (lastShot && !lastTrigger && !oppOrders.includes('TORPEDO') && !oppOrders.includes('TRIGGER')) {
     let dmg = prevOppLife - oppLife;
     if (oppOrders.includes('SURFACE')) dmg -= 1;
     const [tx, ty] = lastShot;
     const f = [...cand].filter(k => dmgAt(cx(k), cy(k), tx, ty) === Math.max(0, dmg));
     if (f.length) cand = new Set(f);
   }
-  lastSonar = null; lastShot = null;
+  lastSonar = null; lastShot = null; lastTrigger = false;
   // 2. opponent's orders since then
   trackOrders(oppOrders);
   prevOppLife = oppLife;
@@ -133,15 +134,20 @@ for (;;) {
     orders.push('SURFACE');
     visited = new Set([key(mx, my)]);
   }
-  // 4. silence (silver): slip away when charged and hurt
+  // 4. silence (silver): slip away when charged and hurt, along the longest legal run (never a wasted "SILENCE d 0")
   if (level === 'silver' && cdSilence === 0 && (myLife <= oppLife || rnd() < 0.3)) {
-    const dirs = Object.entries(DIRS);
-    const [d, [dx, dy]] = dirs[(rnd() * 4) | 0];
-    let dist = 0, tx = mx, ty = my;
-    const maxDist = 1 + ((rnd() * 3) | 0);
-    while (dist < maxDist && water(tx + dx, ty + dy) && !visited.has(key(tx + dx, ty + dy))) { tx += dx; ty += dy; dist++; visited.add(key(tx, ty)); }
-    orders.push(`SILENCE ${d} ${dist}`);
-    mx = tx; my = ty;
+    let best = null;
+    for (const [d, [dx, dy]] of Object.entries(DIRS)) {
+      let run = 0, tx = mx, ty = my;
+      while (run < 4 && water(tx + dx, ty + dy) && !visited.has(key(tx + dx, ty + dy))) { tx += dx; ty += dy; run++; }
+      const score = run + rnd() * 0.5;
+      if (run >= 1 && (!best || score > best.score)) best = { d, dx, dy, run, score };
+    }
+    if (best) {
+      const dist = 1 + ((rnd() * best.run) | 0);
+      for (let i = 1; i <= dist; i++) { mx += best.dx; my += best.dy; visited.add(key(mx, my)); }
+      orders.push(`SILENCE ${best.d} ${dist}`);
+    }
   }
   // 5. attack
   const threshold = level === 'wood' ? 3 : 15;
@@ -177,7 +183,7 @@ for (;;) {
       if (placed >= round) continue;                 // not armed until the round after placement
       if (dmgAt(mx, my, tx, ty) > 0) continue;
       let exp = 0; for (const c of cand) exp += dmgAt(cx(c), cy(c), tx, ty);
-      if (exp / cand.size >= 0.8) { orders.push(`TRIGGER ${tx} ${ty}`); mines.splice(i, 1); break; }
+      if (exp / cand.size >= 0.8) { orders.push(`TRIGGER ${tx} ${ty}`); mines.splice(i, 1); lastTrigger = true; break; }
     }
   }
   printErr(`boss ${level}: candidates=${cand.size} life=${myLife}/${oppLife}`);
