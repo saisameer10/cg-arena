@@ -16,10 +16,23 @@
         $('status').textContent = 'basic editor (Monaco could not be loaded; Tab inserts 4 spaces)';
         resolve();
       };
-      const t = setTimeout(fallback, 8000);
-      const start = () => {
-        if (!window.require) return fallback();
-        window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs' } });
+      const t = setTimeout(fallback, 12000);
+      // CDN mirrors tried in order (cdnjs dropped older Monaco versions once; a 404 must not cost the editor)
+      const MIRRORS = [
+        'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs',
+        'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs',
+        'https://unpkg.com/monaco-editor@0.52.2/min/vs',
+      ];
+      const loadLoader = i => {
+        if (i >= MIRRORS.length) return fallback();
+        const s = document.createElement('script');
+        s.src = MIRRORS[i] + '/loader.js';
+        s.onload = () => window.require ? start(MIRRORS[i]) : loadLoader(i + 1);
+        s.onerror = () => loadLoader(i + 1);
+        document.head.appendChild(s);
+      };
+      const start = base => {
+        window.require.config({ paths: { vs: base } });
         window.require(['vs/editor/editor.main'], () => {
           clearTimeout(t);
           const late = settled;                  // Monaco arrived after the fallback: adopt the textarea's text, never lose it
@@ -31,10 +44,7 @@
           resolve();
         }, fallback);
       };
-      const tag = $('monacoLoader');
-      if (window.require) start();
-      else if (tag) { tag.addEventListener('load', start); tag.addEventListener('error', fallback); }
-      else fallback();
+      loadLoader(0);
     });
   }
   const getCode = () => editor ? editor.getValue() : $('fallback').value;

@@ -112,9 +112,9 @@
     </div>
   </section>
 </main>
-<!-- CDN libraries load asynchronously: without network the IDE still starts at once with a plain textarea -->
+<!-- marked loads asynchronously and Monaco is fetched by app.js from a list of CDN mirrors;
+     without network the IDE still starts at once with a plain textarea -->
 <script id="markedLib" src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" async></script>
-<script id="monacoLoader" src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs/loader.min.js" async></script>
 <script src="app.js"></script>
 </body>
 </html>
