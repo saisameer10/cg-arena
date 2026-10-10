@@ -68,7 +68,8 @@ window.CGViewers.ocean = {
     });
     if (frame.events) {
       const e = frame.events;
-      lines.push(`P${e.player} played: ${e.orders}` + (e.sonar ? `  → sonar ${e.sonar.result}` : '') + (e.damage.some(d => d) ? `  damage [${e.damage.join(', ')}]` : '')
+      if (e.error) lines.push(`P${e.player} loses: ${e.error}`);
+      else lines.push(`P${e.player} played: ${e.orders}` + (e.sonar ? `  → sonar ${e.sonar.result}` : '') + (e.damage.some(d => d) ? `  damage [${e.damage.join(', ')}]` : '')
         + (e.skipped && e.skipped.length ? `  ⚠ skipped: ${e.skipped.join('; ')}` : ''));
     }
     return lines;

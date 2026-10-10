@@ -329,7 +329,11 @@ class OceanReferee extends Referee {
     return [me.x + DIRS[dir][0], me.y + DIRS[dir][1]];
   }
 
-  onDisqualify(p) { this.players[p].life = -1; }
+  onDisqualify(p, reason) {
+    this.players[p].life = -1;
+    // the frame must describe this player's failure, not the opponent's previous orders
+    this.events = { player: p, orders: '', explosions: [], damage: [0, 0], surfaced: null, sonar: null, silence: null, path: [], mine: null, trigger: null, skipped: [], error: reason };
+  }
   // engine turn 0: both players place (Game.initialize places both even if the first one fails);
   // engine turns 1..598: rounds, player 0 first
   getActors() { return this.turn === 0 ? [0, 1] : [(this.turn - 1) % 2]; }

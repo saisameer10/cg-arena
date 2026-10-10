@@ -1,23 +1,40 @@
 (() => {
   const $ = id => document.getElementById(id);
   const PLAYER_COLORS = ['#ff8a3d', '#4fa3ff'];
-  const state = { games: [], languages: [], game: null, lang: null, frames: [], static: null, meta: null, names: [], idx: 0, playing: null, running: false, abort: null, result: null, tab: 'console0', follow: true, logs: [] };
+  const state = { games: [], languages: [], game: null, lang: null, frames: [], static: null, meta: null, names: [], idx: 0, playing: null, running: false, abort: null, result: null, tab: 'console0', follow: true, logs: [], turnCount: [0, 0], board: [] };
   let editor = null, editorReady = null;
 
   // ---------- editor ----------
+  // Monaco and marked come from cdnjs with `async`; without network the textarea fallback takes over at once.
   function initEditor() {
     editorReady = new Promise(resolve => {
-      const fallback = () => { $('fallback').style.display = 'block'; editor = null; resolve(); };
-      if (!window.require) return fallback();
-      const t = setTimeout(fallback, 8000);
-      window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs' } });
-      window.require(['vs/editor/editor.main'], () => {
-        clearTimeout(t);
-        editor = monaco.editor.create($('monaco'), { value: '', language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 13, minimap: { enabled: false }, scrollBeyondLastLine: false });
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run);
-        editor.onDidChangeModelContent(() => saveCode());
+      let settled = false;
+      const fallback = () => {
+        if (settled) return;
+        settled = true; editor = null;
+        $('fallback').style.display = 'block';
+        $('status').textContent = 'basic editor (Monaco could not be loaded; Tab inserts 4 spaces)';
         resolve();
-      }, fallback);
+      };
+      const t = setTimeout(fallback, 8000);
+      const start = () => {
+        if (!window.require) return fallback();
+        window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.50.0/min/vs' } });
+        window.require(['vs/editor/editor.main'], () => {
+          clearTimeout(t);
+          const late = settled;                  // Monaco arrived after the fallback: adopt the textarea's text, never lose it
+          settled = true;
+          editor = monaco.editor.create($('monaco'), { value: late ? $('fallback').value : '', language: state.lang ? state.lang.monaco : 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 13, minimap: { enabled: false }, scrollBeyondLastLine: false });
+          editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, run);
+          editor.onDidChangeModelContent(() => saveCode());
+          if (late) { $('fallback').style.display = 'none'; $('status').textContent = ''; }
+          resolve();
+        }, fallback);
+      };
+      const tag = $('monacoLoader');
+      if (window.require) start();
+      else if (tag) { tag.addEventListener('load', start); tag.addEventListener('error', fallback); }
+      else fallback();
     });
   }
   const getCode = () => editor ? editor.getValue() : $('fallback').value;
@@ -29,14 +46,32 @@
   }
   const codeKey = () => `cg-arena:code:${state.game.id}:${state.lang.id}`;
   let saveTimer = null;
-  function saveCode() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(codeKey(), getCode()); } catch {} }, 300); }
+  function saveCode() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        const code = getCode();
+        const prev = localStorage.getItem(codeKey());
+        if (code.trim() === '' && prev && prev.trim()) return;   // never replace saved work with an empty buffer
+        localStorage.setItem(codeKey(), code);
+      } catch {}
+    }, 300);
+  }
   function loadCode(forceStarter) {
     let code = null;
     if (!forceStarter) { try { code = localStorage.getItem(codeKey()); } catch {} }
-    if (code === null) code = state.game.starters[state.lang.id] || `# no starter for ${state.lang.name} in ${state.game.name}\n`;
+    if (code === null || code.trim() === '') code = state.game.starters[state.lang.id] || `${state.lang.id === 'python' ? '#' : '//'} no starter for ${state.lang.name} in ${state.game.name}\n`;
     setCode(code, state.lang.monaco);
   }
   $('fallback').addEventListener('input', saveCode);
+  $('fallback').addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    const ta = e.target, s = ta.selectionStart, en = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(en);
+    ta.selectionStart = ta.selectionEnd = s + 4;
+    saveCode();
+  });
 
   // ---------- setup ----------
   async function init() {
@@ -49,17 +84,19 @@
     try { $('lang').value = localStorage.getItem('cg-arena:lang') || data.languages[0].id; } catch {}
     await editorReady;
     selectGame();
+    const ml = $('markedLib');
+    if (ml && !window.marked) ml.addEventListener('load', renderStatement);   // statement upgrades from <pre> to HTML when marked arrives
     $('game').onchange = selectGame;
     $('lang').onchange = () => { state.lang = state.languages.find(l => l.id === $('lang').value); try { localStorage.setItem('cg-arena:lang', state.lang.id); } catch {} loadCode(false); };
     $('run').onclick = run;
     $('stop').onclick = () => state.abort && state.abort.abort();
-    $('reset').onclick = () => { if (confirm('Replace your code with the starter code?')) loadCode(true); saveCode(); };
+    $('reset').onclick = () => { if (confirm('Replace your code with the starter code?')) { loadCode(true); saveCode(); } };
     $('first').onclick = () => goTo(0);
     $('prev').onclick = () => goTo(state.idx - 1);
     $('next').onclick = () => goTo(state.idx + 1);
     $('play').onclick = togglePlay;
     $('slider').oninput = () => goTo(+$('slider').value);
-    document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b)); renderConsole(); });
+    document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
     document.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); run(); } });
     $('saveVersion').onclick = saveVersion;
     $('arenaRun').onclick = runArena;
@@ -67,12 +104,21 @@
     window.addEventListener('resize', draw);
     new ResizeObserver(draw).observe($('viewer'));
   }
+  function setTab(name) {
+    state.tab = name;
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+    renderConsole();
+  }
+  function renderStatement() {
+    if (!state.game) return;
+    $('statement').innerHTML = window.marked ? marked.parse(state.game.statement) : `<pre style="white-space:pre-wrap">${esc(state.game.statement)}</pre>`;
+  }
 
   function selectGame() {
     state.game = state.games.find(g => g.id === $('game').value);
     state.lang = state.languages.find(l => l.id === $('lang').value) || state.languages[0];
     try { localStorage.setItem('cg-arena:game', state.game.id); } catch {}
-    $('statement').innerHTML = window.marked ? marked.parse(state.game.statement) : `<pre>${state.game.statement.replace(/</g, '&lt;')}</pre>`;
+    renderStatement();
     state.board = [];
     refreshOpponents();
     $('p0').value = 'me'; $('p1').value = state.game.bosses.length ? 'boss:' + state.game.bosses[0].id : 'me';
@@ -98,10 +144,31 @@
     loadedViewers.add(gameId);
     const s = document.createElement('script'); s.src = `/games/${gameId}/viewer.js`; s.onload = draw; document.head.appendChild(s);
   }
+  const seedValue = () => {
+    const s = $('seed').value.trim() || '1';
+    if (!/^[+-]?\d{1,20}$/.test(s)) throw new Error('Seed must be an integer (up to 20 digits)');
+    return s;
+  };
 
   // ---------- running a match ----------
+  async function readStream(res, onLine) {
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `${res.status} ${res.statusText}`);
+    }
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (line.trim()) onLine(JSON.parse(line)); }
+    }
+  }
   async function run() {
     if (state.running) return;
+    let seed;
+    try { seed = seedValue(); } catch (e) { $('result').textContent = e.message; $('result').className = 'lose'; return; }
     const players = ['p0', 'p1'].map(id => playerSpec($(id).value));
     state.running = true; state.frames = []; state.result = null; state.logs = []; state.idx = 0; state.follow = true;
     stopPlay();
@@ -109,15 +176,8 @@
     $('result').textContent = ''; $('result').className = '';
     const ctrl = state.abort = new AbortController();
     try {
-      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed: $('seed').value.trim() || '1', league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
-      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let i;
-        while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (line.trim()) onEvent(JSON.parse(line)); }
-      }
+      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed, league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
+      await readStream(res, onEvent);
     } catch (e) {
       if (e.name !== 'AbortError') { $('result').textContent = 'Error: ' + e.message; $('result').className = 'lose'; }
       else $('status').textContent = 'stopped';
@@ -129,10 +189,11 @@
   }
   function onEvent(ev) {
     if (ev.type === 'start') {
-      state.static = ev.static; state.meta = ev.game; state.names = ev.players; state.frames = []; state.logs = [];
-      $('status').textContent = `running (seed ${ev.seed})`;
+      state.static = ev.static; state.meta = ev.game; state.names = ev.players; state.frames = []; state.logs = []; state.turnCount = [0, 0];
+      $('status').textContent = `running (seed ${ev.seed}${ev.league ? ', ' + ev.league : ''})`;
       updateControls(); draw();
     } else if (ev.type === 'frame') {
+      for (const a of ev.actors) a.turnNo = ++state.turnCount[a.player];   // the player's own turn number
       state.frames.push(ev);
       if (ev.summary && ev.summary.length) state.logs.push(...ev.summary.map(s => ({ turn: ev.turn, text: s })));
       if (state.follow) state.idx = state.frames.length - 1;
@@ -143,7 +204,8 @@
       const r = ev.result;
       const me = ['p0', 'p1'].map(id => $(id).value === 'me');
       let text, cls;
-      if (r.winner === null || r.winner === undefined) { text = `Draw  (scores ${r.scores.join(' – ')})`; cls = 'draw'; }
+      if (r.aborted) { text = 'Stopped'; cls = 'draw'; }
+      else if (r.winner === null || r.winner === undefined) { text = `Draw  (scores ${r.scores.join(' – ')})`; cls = 'draw'; }
       else {
         text = `P${r.winner} ${state.names[r.winner]} wins  (scores ${r.scores.join(' – ')})`;
         cls = me[r.winner] && !me[1 - r.winner] ? 'win' : !me[r.winner] && me[1 - r.winner] ? 'lose' : 'draw';
@@ -155,7 +217,7 @@
       renderConsole();
     } else if (ev.type === 'error') {
       $('result').textContent = ev.message; $('result').className = 'lose';
-      if (ev.compileLog) { state.logs.push({ turn: 0, text: ev.compileLog }); state.tab = 'log'; renderConsole(); }
+      if (ev.compileLog) { state.logs.push({ turn: 0, text: ev.compileLog }); setTab('log'); }
       $('status').textContent = 'error';
     }
   }
@@ -215,22 +277,27 @@
     }
     if (!frame) { c.innerHTML = '<span class="dim">run a match to see output</span>'; return; }
     if (state.tab === 'io') {
-      c.innerHTML = frame.actors.map(a => `<span class="dim">── P${a.player} input ──</span>\n${esc(a.input.join('\n')) || '<span class="dim">(none)</span>'}\n<span class="dim">── P${a.player} output (${a.ms} ms) ──</span>\n<span class="out">${esc(a.output.join('\n'))}</span>${a.error ? `\n<span class="err">${esc(a.error)}</span>` : ''}`).join('\n\n');
+      c.innerHTML = frame.actors.map(a => `<span class="dim">── P${a.player} turn ${a.turnNo} input ──</span>\n${esc(a.input.join('\n')) || '<span class="dim">(none)</span>'}\n<span class="dim">── P${a.player} output (${a.ms} ms) ──</span>\n<span class="out">${esc(a.output.join('\n'))}</span>${a.error ? `\n<span class="err">${esc(a.error)}</span>` : ''}`).join('\n\n');
       return;
     }
+    // Console Pn: the player's last entries up to the selected frame; the most recent one is bright.
+    // In alternating-turn games a player acts every other frame, so we walk back by entries, not frames.
     const p = +state.tab.slice(-1);
-    // show stderr of this frame plus the previous frames so the panel has context
-    const lines = [];
-    for (let i = Math.max(0, state.idx - 8); i <= state.idx; i++) {
-      for (const a of state.frames[i].actors) {
-        if (a.player !== p) continue;
-        const cur = i === state.idx;
-        lines.push(`<span class="dim">── turn ${i + 1} (${a.ms} ms) ──</span>`);
-        if (a.stderr) lines.push(cur ? esc(a.stderr.trimEnd()) : `<span class="dim">${esc(a.stderr.trimEnd())}</span>`);
-        lines.push(`<span class="out">> ${esc(a.output.join(' | '))}</span>`);
-        if (a.error) lines.push(`<span class="err">${esc(a.error)}</span>`);
-      }
+    const entries = [];
+    for (let i = state.idx; i >= 0 && entries.length < 6; i--) {
+      for (const a of state.frames[i].actors) if (a.player === p) entries.push({ a, frame: i + 1 });
     }
+    entries.reverse();
+    const lines = [];
+    entries.forEach((e, k) => {
+      const cur = k === entries.length - 1;
+      const { a } = e;
+      lines.push(`<span class="dim">── turn ${a.turnNo} · frame ${e.frame} (${a.ms} ms) ──</span>`);
+      if (a.stderr) lines.push(cur ? esc(a.stderr.trimEnd()) : `<span class="dim">${esc(a.stderr.trimEnd())}</span>`);
+      lines.push(`<span class="out">> ${esc(a.output.join(' | '))}</span>`);
+      if (a.extraOutput) lines.push(`<span class="err">⚠ ${a.extraOutput} extra stdout line(s) from the previous turn were ignored: print exactly one answer per turn (debug goes to stderr)</span>`);
+      if (a.error) lines.push(`<span class="err">${esc(a.error)}</span>`);
+    });
     c.innerHTML = lines.join('\n') || '<span class="dim">no output from this player yet</span>';
     c.scrollTop = c.scrollHeight;
   }
@@ -265,13 +332,13 @@
   function renderBoard() {
     const rows = state.board || [];
     $('arenaBoard').innerHTML = `<tr><th>#</th><th>name</th><th>rating</th><th>games</th><th>W-L-D</th><th></th></tr>` + rows.map((r, i) =>
-      `<tr><td class="dim">${i + 1}</td><td>${esc(r.name)}${r.kind === 'version' ? ` <span class="dim">${esc(r.lang)} · ${new Date(r.created).toLocaleString()}</span>` : ' <span class="dim">boss</span>'}</td><td>${r.rating}</td><td>${r.games}</td><td><span class="win">${r.wins}</span>-<span class="loss">${r.losses}</span>-<span class="draw">${r.draws}</span></td><td>${r.kind === 'version' ? `<button class="secondary tiny" data-load="${r.key}">load</button> <button class="secondary tiny" data-del="${r.id}">delete</button>` : ''}</td></tr>`).join('');
+      `<tr><td class="dim">${i + 1}</td><td>${esc(r.name)}${r.kind === 'version' ? ` <span class="dim">${esc(r.lang)} · ${new Date(r.created).toLocaleString()}</span>` : ' <span class="dim">boss</span>'}</td><td>${r.rating}</td><td>${r.games}</td><td><span class="win">${r.wins}</span>-<span class="loss">${r.losses}</span>-<span class="draw">${r.draws}</span></td><td>${r.kind === 'version' ? `<button class="secondary tiny" data-load="${r.key}">set as P1</button> <button class="secondary tiny" data-del="${r.id}">delete</button>` : ''}</td></tr>`).join('');
     $('arenaBoard').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       if (!confirm('Delete this saved version and its rating?')) return;
       const res = await (await fetch('/api/arena/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, id: b.dataset.del }) })).json();
       state.board = res.leaderboard || []; refreshOpponents(); renderBoard();
     });
-    $('arenaBoard').querySelectorAll('[data-load]').forEach(b => b.onclick = () => { $('p1').value = b.dataset.load; $('status').textContent = `Player 1 set to ${b.textContent === 'load' ? 'that version' : ''}: press ▶ Play to watch a match against it`; });
+    $('arenaBoard').querySelectorAll('[data-load]').forEach(b => b.onclick = () => { $('p1').value = b.dataset.load; $('status').textContent = 'Player 1 set to that version: press ▶ Play to watch a match against it'; });
   }
   async function saveVersion() {
     const name = prompt('Name for this version (e.g. "v3 sonar tracker"):', `v${(state.board || []).filter(r => r.kind === 'version').length + 1}`);
@@ -284,6 +351,8 @@
   }
   async function runArena() {
     if (state.arenaRunning) return;
+    let seed;
+    try { seed = seedValue(); } catch (e) { $('arenaError').textContent = e.message; return; }
     state.arenaRunning = true; $('arenaRun').disabled = true; $('arenaStop').disabled = false; $('arenaError').textContent = '';
     const games = Math.max(1, Math.min(100, +$('arenaGames').value || 4));
     const candidate = $('arenaCand').value === 'me' ? playerSpec('me') : $('arenaCand').value;
@@ -294,38 +363,27 @@
     };
     render();
     const ctrl = state.arenaAbort = new AbortController();
-    let done = 0; const expected = games;
+    let done = 0;
     try {
-      const res = await fetch('/api/arena/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, candidate, opponents: $('arenaOpp').value, games, seed: $('seed').value.trim() || '1', league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
-      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
-      for (;;) {
-        const { value, done: end } = await reader.read();
-        if (end) break;
-        buf += dec.decode(value, { stream: true });
-        let i;
-        while ((i = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, i); buf = buf.slice(i + 1);
-          if (!line.trim()) continue;
-          const ev = JSON.parse(line);
-          if (ev.type === 'match') {
-            const r = results.get(ev.opponent) || { name: ev.name, wins: 0, losses: 0, draws: 0, games: [] };
-            if (ev.outcome === 'win') r.wins++; else if (ev.outcome === 'loss') r.losses++; else if (ev.outcome === 'draw') r.draws++;
-            r.games.push({ outcome: ev.outcome, title: `game ${ev.game + 1} seed ${ev.seed || ''} as P${ev.side}: ${ev.outcome}${ev.scores ? ' ' + ev.scores.join('-') : ''}${ev.dq && ev.dq.length ? ' | ' + ev.dq.join(' | ') : ''}${ev.message ? ' ' + ev.message : ''}` });
-            results.set(ev.opponent, r); done++;
-            $('arenaStatus').textContent = `${done} games played…`; render();
-          } else if (ev.type === 'summary') {
-            state.board = ev.leaderboard || []; refreshOpponents(); renderBoard();
-            $('arenaStatus').textContent = `${ev.aborted ? 'stopped: ' : ''}${ev.candidate}: ${ev.total.wins}-${ev.total.losses}-${ev.total.draws} over ${ev.total.played} games` + (ev.rated ? ' (ratings updated)' : ' (unsaved code is not rated)');
-          } else if (ev.type === 'error') {
-            $('arenaError').textContent = ev.message + (ev.compileLog ? '\n' + ev.compileLog : '');
-          }
+      const res = await fetch('/api/arena/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, candidate, opponents: $('arenaOpp').value, games, seed, league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
+      await readStream(res, ev => {
+        if (ev.type === 'match') {
+          const r = results.get(ev.opponent) || { name: ev.name, wins: 0, losses: 0, draws: 0, games: [] };
+          if (ev.outcome === 'win') r.wins++; else if (ev.outcome === 'loss') r.losses++; else if (ev.outcome === 'draw') r.draws++;
+          r.games.push({ outcome: ev.outcome, title: `game ${ev.game + 1} seed ${ev.seed || ''} as P${ev.side}: ${ev.outcome}${ev.scores ? ' ' + ev.scores.join('-') : ''}${ev.dq && ev.dq.length ? ' | ' + ev.dq.join(' | ') : ''}${ev.message ? ' ' + ev.message : ''}` });
+          results.set(ev.opponent, r); done++;
+          $('arenaStatus').textContent = `${done} games played…`; render();
+        } else if (ev.type === 'summary') {
+          state.board = ev.leaderboard || []; refreshOpponents(); renderBoard();
+          $('arenaStatus').textContent = `${ev.aborted ? 'stopped: ' : ''}${ev.candidate}: ${ev.total.wins}-${ev.total.losses}-${ev.total.draws} over ${ev.total.played} games` + (ev.rated ? ' (ratings updated)' : ' (unsaved code is not rated)');
+        } else if (ev.type === 'error') {
+          $('arenaError').textContent = ev.message + (ev.compileLog ? '\n' + ev.compileLog : '');
         }
-      }
+      });
     } catch (e) {
       if (e.name === 'AbortError') $('arenaStatus').textContent = 'stopped'; else $('arenaError').textContent = e.message;
     } finally {
       state.arenaRunning = false; state.arenaAbort = null; $('arenaRun').disabled = false; $('arenaStop').disabled = true;
-      void expected;
     }
   }
 

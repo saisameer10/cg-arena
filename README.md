@@ -36,7 +36,7 @@ CodinGame's own boss bots are not public, so the arena draws opponents from four
 
 1. **Built-in bosses** (`games/<game>/bosses/`): hand-written heuristic bots at wood / bronze / silver strength, always available. They are ordinary bots, so you can read and improve them.
 2. **Your saved versions**: the **Arena** tab (or `node cli.js submit`) stores a snapshot of your code in `arena/<game>/bots/`. Every snapshot becomes a rated opponent. Run the arena and each version plays the bosses and the other versions, alternating sides, with an Elo leaderboard. This is the self-sustaining supply: the better your bot gets, the stronger the pool it has to beat.
-3. **Any bot source you drop in**: a file from a friend or from a public post-mortem repository goes into `games/<game>/bosses/` with one line in `game.json` (any supported language), or into the pool with `node cli.js submit`.
+3. **Any bot source you drop in**: a `.js` or `.py` file from a friend or from a public post-mortem repository goes into `games/<game>/bosses/` with one line in `game.json`; a bot in any supported language (Java, C++ too) goes into the pool with `node cli.js submit`, which compiles it on each run.
 4. **Bots written on request**: ask for a search-based boss (minimax, beam search, MCTS) for a game and it can be added as a new level.
 
 ```
@@ -82,14 +82,15 @@ Ocean of Code is a port of the official referee ([CodinGameCommunity/ocean-of-co
 ## Adding a game
 
 1. Create `games/<id>/` with `game.json`, `referee.js`, `statement.md`, `viewer.js`, `starters/`, `bosses/`.
-2. `referee.js` exports a class extending `games/base.js` `Referee` and implements:
-   `getInitInput(p)`, `getActors()`, `getTurnInput(p)`, `applyOutput(p, lines)`, `endTurn()`, `isGameOver()`, `getFrame()`, `getResult()`, plus a static `meta` (timeouts, max turns, viewer id).
-   Simultaneous-move games return all alive players from `getActors()`; alternating games return one.
+2. `referee.js` exports a class extending `games/base.js` `Referee` with
+   `static meta = { playerCount, firstTurnTimeout, turnTimeout, maxTurns, viewer }` and these methods:
+   `getStaticInfo()` (sent once to the viewer: map, sizes), `getInitInput(p)`, `getActors()` (player indexes acting this engine turn: all alive players for simultaneous games, one for alternating games), `getTurnInput(p)`, `outputLines(p)` (lines read back, default 1), `applyOutput(p, lines)` (throw `GameError` for an illegal action), `onDisqualify(p, reason)`, `endTurn()`, `isGameOver()`, `getFrame()`, `getResult()` → `{scores, winner}`.
+   The constructor receives `{ seed, playerCount, league }`; `league` is one of the ids in `game.json`'s optional `leagues: [{ id, name, default }]`.
 3. `viewer.js` registers `window.CGViewers[<viewer id>] = { render(ctx, w, h, static, frame, info), hud(...) }`.
 4. Restart the server. The game appears in the dropdown.
 
 ### Porting a real CodinGame puzzle
-CodinGame open-sourced its game engine and most multiplayer referees (Java, `codingame-game-engine` on GitHub; e.g. `CodinGame/SpringChallenge2020` is Ocean of Code). Two options:
+CodinGame open-sourced its game engine (`codingame-game-engine` on GitHub) and many referees are public (Java): Ocean of Code is `CodinGameCommunity/ocean-of-code`, the official contests live under the `CodinGame` organisation (for example `CodinGame/SpringChallenge2020` is Pac-Man). Two options:
 
 - **Re-implement in JS** (what this repo does): small, fast, one file per game, but rules can drift from the original.
 - **Wrap the official Java referee**: add a `java` referee type that launches the SDK runner and converts its JSON replay into frames. Exact fidelity with the original rules and maps. Needs a JDK and Maven.

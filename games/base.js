@@ -14,11 +14,21 @@ function mulberry32(seed) {
   };
 }
 
+// Any seed (number, 64-bit numeric string, or arbitrary text) to a 32-bit value; the same input always
+// gives the same value, and different texts give different maps (unlike Number('abc') -> NaN -> 1).
+function seedToUint32(seed) {
+  const s = String(seed === undefined || seed === null ? 1 : seed).trim();
+  if (/^[+-]?\d+$/.test(s)) return Number(BigInt.asUintN(32, BigInt(s)));
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
 class Referee {
   constructor({ seed = 1, playerCount = 2, league = null } = {}) {
     this.seed = seed;                    // number or numeric string (CodinGame seeds can exceed 2^53)
     this.league = league;
-    this.rng = mulberry32((Number(seed) || 1) >>> 0);
+    this.rng = mulberry32(seedToUint32(seed));
     this.playerCount = playerCount;
     this.turn = 0;             // one engine turn = one call to getActors()
     this.summary = [];
@@ -47,4 +57,4 @@ class Referee {
   getResult() { return { scores: [], winner: null }; }
 }
 
-module.exports = { Referee, GameError, mulberry32 };
+module.exports = { Referee, GameError, mulberry32, seedToUint32 };

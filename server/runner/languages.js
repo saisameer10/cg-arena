@@ -1,20 +1,30 @@
 'use strict';
 const { spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 // Probe with a direct spawn (no shell) so detection matches how bots are actually launched.
-function has(cmd) {
-  const [exe, ...args] = cmd.split(' ');
-  const r = spawnSync(exe, args, { stdio: 'ignore', windowsHide: true });
+function has(cmd, args = ['--version']) {
+  const r = spawnSync(cmd, args, { stdio: 'ignore', windowsHide: true });
   return !r.error && r.status === 0;
 }
 
 const PRELUDE = path.join(__dirname, 'js-prelude.js');
 
-// Find a JDK even when it is not on PATH: JAVA_HOME first, then common Windows install folders.
+// Python: "python3" on macOS/Linux, "python" on Windows; the first one that answers wins.
+let python;
+function PYTHON() {
+  if (python === undefined) python = (process.platform === 'win32' ? ['python', 'python3'] : ['python3', 'python']).find(c => has(c)) || null;
+  return python;
+}
+// -u: unbuffered stdout (every print reaches the referee at once); -B: no __pycache__ in the match dir.
+// No -I/-E/-s: pip --user packages (numpy, ...) stay importable, as on CodinGame.
+const pythonArgs = file => ['-u', '-B', file];
+
+// Find a JDK: JAVA_HOME, then the registry (Windows), then common install folders, newest version first.
 function findJdk() {
-  const fs = require('fs');
   const exe = process.platform === 'win32' ? '.exe' : '';
+  const expand = s => s.replace(/%([^%]+)%/g, (m, v) => process.env[v] || process.env[v.toUpperCase()] || m);
   const candidates = [];
   if (process.env.JAVA_HOME) candidates.push(process.env.JAVA_HOME);
   if (process.platform === 'win32') {
@@ -22,16 +32,19 @@ function findJdk() {
     for (const hive of ['HKCU\\Environment', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment']) {
       const r = spawnSync('reg', ['query', hive, '/v', 'JAVA_HOME'], { encoding: 'utf8', windowsHide: true });
       const m = r.stdout && r.stdout.match(/JAVA_HOME\s+REG_\w+\s+(.+)/);
-      if (m) candidates.push(m[1].trim());
+      if (m) candidates.push(expand(m[1].trim()));
     }
+    const scanned = [];
     for (const root of ['C:\\Program Files\\Microsoft', 'C:\\Program Files\\Eclipse Adoptium', 'C:\\Program Files\\Java', 'C:\\Program Files\\Amazon Corretto', 'C:\\Program Files\\Zulu']) {
-      try { for (const d of fs.readdirSync(root)) if (/jdk/i.test(d)) candidates.push(path.join(root, d)); } catch {}
+      try { for (const d of fs.readdirSync(root)) if (/jdk/i.test(d)) scanned.push(path.join(root, d)); } catch {}
     }
+    const version = p => { const m = path.basename(p).match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/); return m ? Number(m[1]) * 1e6 + Number(m[2] || 0) * 1e3 + Number(m[3] || 0) : 0; };
+    candidates.push(...scanned.sort((a, b) => version(b) - version(a)));
   }
-  for (const home of candidates.sort().reverse()) {
-    if (fs.existsSync(path.join(home, 'bin', 'javac' + exe))) return { javac: path.join(home, 'bin', 'javac' + exe), java: path.join(home, 'bin', 'java' + exe) };
+  for (const home of candidates) {
+    if (fs.existsSync(path.join(home, 'bin', 'javac' + exe))) return { javac: path.join(home, 'bin', 'javac' + exe), java: path.join(home, 'bin', 'java' + exe), home };
   }
-  return has('javac -version') ? { javac: 'javac', java: 'java' } : null;
+  return has('javac', ['-version']) ? { javac: 'javac', java: 'java', home: '(PATH)' } : null;
 }
 let jdk;
 const JDK = () => (jdk === undefined ? (jdk = findJdk()) : jdk);
@@ -41,8 +54,8 @@ const JDK = () => (jdk === undefined ? (jdk = findJdk()) : jdk);
 const LANGUAGES = {
   python: {
     id: 'python', name: 'Python 3', monaco: 'python', fileName: 'bot.py',
-    detect: () => has('python --version'),
-    run: (dir) => ({ cmd: 'python', args: ['-u', '-I', path.join(dir, 'bot.py')], env: { PYTHONUNBUFFERED: '1' } }),
+    detect: () => !!PYTHON(),
+    run: (dir) => ({ cmd: PYTHON(), args: pythonArgs(path.join(dir, 'bot.py')) }),
   },
   javascript: {
     id: 'javascript', name: 'JavaScript (Node)', monaco: 'javascript', fileName: 'bot.js',
@@ -53,15 +66,15 @@ const LANGUAGES = {
   java: {
     id: 'java', name: 'Java', monaco: 'java', fileName: 'Player.java',
     detect: () => !!JDK(),
-    compile: (dir) => ({ cmd: JDK().javac, args: ['-d', dir, path.join(dir, 'Player.java')] }),
+    compile: (dir) => ({ cmd: JDK().javac, args: ['-encoding', 'UTF-8', '-d', dir, path.join(dir, 'Player.java')] }),
     // serial GC, class-data sharing and no perf-data file: faster JVM start and steadier 50 ms turns
     run: (dir) => ({ cmd: JDK().java, args: ['-Xss64m', '-XX:+UseSerialGC', '-Xshare:auto', '-XX:-UsePerfData', '-cp', dir, 'Player'] }),
   },
   cpp: {
     id: 'cpp', name: 'C++ (g++)', monaco: 'cpp', fileName: 'bot.cpp',
-    detect: () => has('g++ --version'),
-    compile: (dir) => ({ cmd: 'g++', args: ['-O2', '-std=c++17', '-o', path.join(dir, 'bot.exe'), path.join(dir, 'bot.cpp')] }),
-    run: (dir) => ({ cmd: path.join(dir, 'bot.exe'), args: [] }),
+    detect: () => has('g++'),
+    compile: (dir) => ({ cmd: 'g++', args: ['-O2', '-std=c++17', '-o', path.join(dir, process.platform === 'win32' ? 'bot.exe' : 'bot'), path.join(dir, 'bot.cpp')] }),
+    run: (dir) => ({ cmd: path.join(dir, process.platform === 'win32' ? 'bot.exe' : 'bot'), args: [] }),
   },
 };
 
@@ -72,5 +85,8 @@ function availableLanguages() {
   }
   return cache;
 }
+function interpreterInfo() {
+  return `python: ${PYTHON() || 'not found'}, java: ${JDK() ? JDK().home : 'not found'}, node: ${process.version}`;
+}
 
-module.exports = { LANGUAGES, availableLanguages };
+module.exports = { LANGUAGES, availableLanguages, interpreterInfo, PYTHON, pythonArgs, PRELUDE };

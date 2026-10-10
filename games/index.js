@@ -1,6 +1,6 @@
 'use strict';
 // Game registry: every sub-folder with a game.json + referee.js is a playable game.
-//   game.json  : { name, bosses:[{id,name,file,args?}], starters:{python:"starters/bot.py",...} }
+//   game.json  : { name, bosses:[{id,name,file,args?}], starters:{python:"starters/bot.py",...}, leagues?:[{id,name,default?}] }
 //   referee.js : exports { Referee } (extends games/base.js Referee)
 //   statement.md, viewer.js : shown / run in the browser
 const fs = require('fs');

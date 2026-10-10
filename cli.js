@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadGames } = require('./games');
-const { runMatch, workRoot, offsetSeed } = require('./server/engine/match');
+const { runMatch, workRoot, sweepWorkRoot, offsetSeed, isSeed } = require('./server/engine/match');
 const arena = require('./server/arena');
 
 const EXT = { '.py': 'python', '.js': 'javascript', '.java': 'java', '.cpp': 'cpp' };
@@ -53,6 +53,8 @@ async function main() {
   const { opts, pos } = parseArgs(process.argv.slice(2));
   const games = loadGames();
   if (!pos.length) usage(games);
+  if (!isSeed(opts.seed)) { console.error(`--seed must be an integer (got "${opts.seed}")`); process.exit(1); }
+  sweepWorkRoot(workRoot());
   const command = games[pos[0]] ? 'match' : pos[0];
   const gameId = command === 'match' ? pos[0] : pos[1];
   const gameDef = games[gameId];
@@ -110,4 +112,4 @@ async function main() {
   if (opts.replay) fs.writeFileSync(opts.replay, JSON.stringify(replays));
 }
 
-main().catch(e => { console.error(e.message || e); process.exit(1); });
+main().catch(e => { console.error(process.env.CG_ARENA_DEBUG && e && e.stack ? e.stack : (e && e.message) || e); process.exit(1); });
