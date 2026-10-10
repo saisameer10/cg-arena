@@ -6,8 +6,10 @@ const path = require('path');
 const { loadGames } = require('../games');
 const { availableLanguages } = require('./runner/languages');
 const { runMatch } = require('./engine/match');
+const arena = require('./arena');
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '127.0.0.1';   // this server runs arbitrary code: localhost only unless HOST=0.0.0.0 is set on purpose
 const WEB = path.join(__dirname, '..', 'web');
 const { workRoot } = require('./engine/match');
 const WORK = workRoot();
@@ -27,6 +29,16 @@ function readBody(req) {
     req.on('end', () => resolve(data));
     req.on('error', reject);
   });
+}
+
+// NDJSON stream + an AbortSignal that fires when the browser disconnects (Stop button, closed tab),
+// so the match/arena loop stops feeding the bots instead of running to the end unseen.
+function stream(req, res) {
+  res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
+  const ctrl = new AbortController();
+  req.on('close', () => { if (!res.writableFinished) ctrl.abort(); });
+  const emit = ev => { if (!res.writableEnded) res.write(JSON.stringify(ev) + '\n'); };
+  return { emit, signal: ctrl.signal };
 }
 
 function serveStatic(res, file) {
@@ -52,15 +64,51 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req) || '{}');
       const gameDef = games[body.game];
       if (!gameDef) return send(res, 400, { error: 'unknown game' });
-      res.writeHead(200, { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
-      const emit = ev => res.write(JSON.stringify(ev) + '\n');
+      const { emit, signal } = stream(req, res);
       try {
         const seed = String(body.seed === undefined || body.seed === '' ? 1 : body.seed).trim();
+        const players = (body.players || []).map(p => arena.resolvePlayer(gameDef, p));
         await runMatch({
-          gameDef, players: body.players, seed: /^[+-]?\d{1,15}$/.test(seed) ? Number(seed) : seed,
+          gameDef, players, seed: /^[+-]?\d{1,15}$/.test(seed) ? Number(seed) : seed,
           league: body.league || null,
           timeoutMultiplier: Math.max(0.1, Number(body.timeoutMultiplier) || 1),
-          workRoot: WORK, emit,
+          workRoot: WORK, emit, signal,
+        });
+      } catch (e) {
+        emit({ type: 'error', message: e.message });
+      }
+      return res.end();
+    }
+    // ---- arena pool: saved versions + bosses with Elo ratings ----
+    if (url.pathname === '/api/arena/pool') {
+      const gameDef = games[url.searchParams.get('game')];
+      if (!gameDef) return send(res, 400, { error: 'unknown game' });
+      return send(res, 200, { leaderboard: arena.leaderboard(gameDef) });
+    }
+    if (url.pathname === '/api/arena/submit' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      const gameDef = games[body.game];
+      if (!gameDef) return send(res, 400, { error: 'unknown game' });
+      try { return send(res, 200, { entry: arena.submit(gameDef, body), leaderboard: arena.leaderboard(gameDef) }); }
+      catch (e) { return send(res, 400, { error: e.message }); }
+    }
+    if (url.pathname === '/api/arena/delete' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      const gameDef = games[body.game];
+      if (!gameDef) return send(res, 400, { error: 'unknown game' });
+      try { arena.remove(gameDef, String(body.id)); return send(res, 200, { leaderboard: arena.leaderboard(gameDef) }); }
+      catch (e) { return send(res, 400, { error: e.message }); }
+    }
+    if (url.pathname === '/api/arena/run' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req) || '{}');
+      const gameDef = games[body.game];
+      if (!gameDef) return send(res, 400, { error: 'unknown game' });
+      const { emit, signal } = stream(req, res);
+      try {
+        await arena.runArena({
+          gameDef, candidate: body.candidate, opponents: body.opponents, games: body.games,
+          seed: Number(body.seed) || 1, league: body.league || null,
+          timeoutMultiplier: Math.max(0.1, Number(body.timeoutMultiplier) || 1), emit, signal,
         });
       } catch (e) {
         emit({ type: 'error', message: e.message });
@@ -79,8 +127,8 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`cg-arena running on http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`cg-arena running on http://localhost:${PORT}` + (HOST !== '127.0.0.1' ? ` (bound to ${HOST}: anyone who can reach this port can run code on this machine)` : ''));
   console.log(`games: ${Object.keys(games).join(', ')}`);
   console.log(`languages: ${availableLanguages().map(l => l.id).join(', ')}`);
 });

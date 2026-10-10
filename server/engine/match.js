@@ -47,12 +47,12 @@ async function buildPlayers(gameDef, players, workRoot) {
  *   emit(event): called with {type:'start'|'frame'|'end'|'error', ...}
  * Resolves with the final result.
  */
-async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMultiplier = 1, workRoot, emit }) {
+async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMultiplier = 1, workRoot, emit, signal = null }) {
   const meta = gameDef.Referee.meta;
   if (players.length !== meta.playerCount) throw new Error(`${gameDef.name} needs ${meta.playerCount} players`);
   const built = await buildPlayers(gameDef, players, workRoot);
   if (built.error) {
-    const ev = { type: 'error', message: `Player ${built.error.player} failed to compile`, compileLog: built.error.compileLog };
+    const ev = { type: 'error', player: built.error.player, message: `Player ${built.error.player} failed to compile`, compileLog: built.error.compileLog };
     emit(ev);
     return ev;
   }
@@ -67,7 +67,9 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
       const init = referee.getInitInput(p);
       if (init.length) procs[p].write(init.join('\n') + '\n');
     }
+    let aborted = false;
     while (!referee.isGameOver() && referee.turn < meta.maxTurns) {
+      if (signal && signal.aborted) { aborted = true; break; }   // client went away: stop feeding the bots
       const actors = referee.getActors();
       if (!actors.length) break;
       const actorEvents = [];
@@ -103,6 +105,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
     const result = referee.getResult();
     result.players = names;
     result.dq = referee.dq;
+    if (aborted) { result.aborted = true; result.winner = null; }
     emit({ type: 'end', result, summary: referee.takeSummary() });
     return result;
   } finally {

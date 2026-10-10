@@ -39,6 +39,16 @@
   .tabs button.active { background: #0b0f1a; color: var(--text); }
   #console { flex: 1; margin: 0; overflow: auto; padding: 8px 10px; font: 12px/1.45 Consolas, monospace; white-space: pre-wrap; background: #0b0f1a; }
   #console .err { color: #ff6a6a; } #console .dim { color: var(--muted); } #console .out { color: #6fe08a; }
+  #arena { flex: 1; overflow: auto; padding: 8px 10px; background: #0b0f1a; font-size: 12px; display: none; }
+  #arena .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  #arena label { color: var(--muted); display: flex; gap: 4px; align-items: center; }
+  #arena h4 { margin: 12px 0 4px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  #arena table { border-collapse: collapse; width: 100%; font: 12px/1.4 Consolas, monospace; }
+  #arena th, #arena td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+  #arena th { color: var(--muted); font-weight: 500; }
+  #arena .win { color: #6fe08a; } #arena .loss { color: #ff6a6a; } #arena .draw { color: var(--accent); }
+  #arena .dim { color: var(--muted); } #arena .bar { display: inline-block; height: 8px; background: #6fe08a; vertical-align: middle; }
+  #arena button.tiny { padding: 1px 6px; font-size: 11px; font-weight: 500; }
   .pill { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
   .pill.p0 { background: var(--p0); color: #111; } .pill.p1 { background: var(--p1); color: #111; }
 </style>
@@ -79,8 +89,27 @@
       <button data-tab="console1">Console P1</button>
       <button data-tab="io">Input / Output</button>
       <button data-tab="log">Game log</button>
+      <button data-tab="arena" title="Save versions of your bot and battle-test them against bosses and each other">Arena</button>
     </div>
     <pre id="console"></pre>
+    <div id="arena">
+      <div class="row">
+        <button id="saveVersion" class="secondary">Save current code as a version…</button>
+        <span class="dim">Saved versions become rated opponents, so there is always someone new to beat.</span>
+      </div>
+      <div class="row">
+        <label>Opponents <select id="arenaOpp"><option value="all">All (bosses + my versions)</option><option value="bosses">Bosses only</option><option value="pool">My versions only</option></select></label>
+        <label>Games each <input id="arenaGames" type="number" value="4" min="1" max="100" style="width:56px"></label>
+        <label>Candidate <select id="arenaCand"><option value="me">Current code (unrated)</option></select></label>
+        <button id="arenaRun">Run arena</button>
+        <button id="arenaStop" class="secondary" disabled>Stop</button>
+        <span id="arenaStatus" class="dim"></span>
+      </div>
+      <div id="arenaError" class="loss" style="white-space:pre-wrap"></div>
+      <table id="arenaResults"></table>
+      <h4>Leaderboard (Elo, this game)</h4>
+      <table id="arenaBoard"></table>
+    </div>
   </section>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>

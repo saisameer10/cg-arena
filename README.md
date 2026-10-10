@@ -30,6 +30,24 @@ node cli.js ocean-of-code my-bots/sub.java boss:silver --games 20 --seed 100
 
 The **Time ×** box multiplies the per-turn limit while debugging (set it back to 1 before trusting a result).
 
+## Where opponents come from (so there is always someone to fight)
+
+CodinGame's own boss bots are not public, so the arena draws opponents from four sources:
+
+1. **Built-in bosses** (`games/<game>/bosses/`): hand-written heuristic bots at wood / bronze / silver strength, always available. They are ordinary bots, so you can read and improve them.
+2. **Your saved versions**: the **Arena** tab (or `node cli.js submit`) stores a snapshot of your code in `arena/<game>/bots/`. Every snapshot becomes a rated opponent. Run the arena and each version plays the bosses and the other versions, alternating sides, with an Elo leaderboard. This is the self-sustaining supply: the better your bot gets, the stronger the pool it has to beat.
+3. **Any bot source you drop in**: a file from a friend or from a public post-mortem repository goes into `games/<game>/bosses/` with one line in `game.json` (any supported language), or into the pool with `node cli.js submit`.
+4. **Bots written on request**: ask for a search-based boss (minimax, beam search, MCTS) for a game and it can be added as a new level.
+
+```
+node cli.js submit ocean-of-code my-bots/sub.java --name "v3 tracker"
+node cli.js arena ocean-of-code my-bots/sub_v4.java --opponents all --games 6 --league wood1
+node cli.js pool ocean-of-code                         # leaderboard
+node cli.js ocean-of-code my-bots/sub_v4.java pool:<id> --games 4   # watchable match vs a saved version
+```
+
+Unsaved code is measured but not rated; saved versions and bosses move on the Elo ladder (K = 32). The pool lives in `arena/` and is committed with the repo, so your history travels with it.
+
 ## Giving a new challenge
 
 Fill in [`challenges/TEMPLATE.md`](challenges/TEMPLATE.md) and read [`docs/ADDING_A_CHALLENGE.md`](docs/ADDING_A_CHALLENGE.md). Short version: paste the statement **as text** from the CodinGame IDE, with the Game Protocol tables kept exact, add the starter code, say which league rules apply, and link the official referee repo if there is one. PDFs and screenshots are a fallback, not the preferred route.
