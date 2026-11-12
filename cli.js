@@ -48,6 +48,7 @@ function usage(games) {
   console.log('                node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games N] [--seed S] [--league id]');
   console.log('  solo puzzle:  node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random N]');
   console.log('  new puzzle:   node cli.js fetch <codingame url or puzzle id>');
+  console.log('  checks:       node cli.js selftest [<game>|all]          (rule and review assertions of each challenge)');
   console.log('  codingame:    node cli.js replay <replay url|id> [--turns key]  |  replay battles <player> [--losses --fetch N]  |  replay top [N]');
   console.log('  bot = source file (.py/.js/.java/.cpp), boss:<id> or pool:<id>');
   for (const g of Object.values(games)) console.log(`  ${g.kind === 'solo' ? 'solo ' : 'multi'}  ${g.id.padEnd(24)} ${g.name}`);
@@ -135,7 +136,7 @@ async function runSolo(gameDef, botArg, opts) {
   for (const id of ids) {
     const t = gameDef.resolveTest(id);
     const events = [];
-    const r = await runMatch({ gameDef, players: [player], test: id, timeoutMultiplier: Number(opts['timeout-mult']), workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); } });
+    const r = await runMatch({ gameDef, players: [player], test: id, seed: opts.seed, timeoutMultiplier: Number(opts['timeout-mult']), workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); } });
     if (opts.replay) replays.push(events);
     if (r.type === 'error') { console.error(r.message); if (r.compileLog) console.error(r.compileLog); return 2; }
     if (r.passed) passed++;
@@ -156,6 +157,24 @@ async function main() {
   if (pos[0] === 'fetch') { if (!pos[1]) usage(loadGames()); await fetchChallenge(pos[1]); return; }
   // CodinGame replays (yours or top players'): download, re-simulate, statistics, review
   if (pos[0] === 'replay') { await require('./tools/cg-replay.js').main(process.argv.slice(3)); return; }
+  // games/<id>/selftest.js: each challenge's own rule and review assertions (exit code 0 = pass)
+  if (pos[0] === 'selftest') {
+    const { spawnSync } = require('child_process');
+    const all = loadGames();
+    const ids = !pos[1] || pos[1] === 'all' ? Object.keys(all) : [pos[1]];
+    let failed = 0, ran = 0;
+    for (const id of ids) {
+      const file = path.join(__dirname, 'games', id, 'selftest.js');
+      if (!fs.existsSync(file)) { if (pos[1] && pos[1] !== 'all') console.log(`${id}: no selftest.js`); continue; }
+      console.log(`=== ${id}`);
+      const r = spawnSync(process.execPath, [file], { cwd: __dirname, stdio: 'inherit' });
+      ran++;
+      if (r.status !== 0) { failed++; console.log(`=== ${id}: FAILED (exit ${r.status})`); } else console.log(`=== ${id}: ok`);
+    }
+    console.log(`\nselftests: ${ran - failed}/${ran} passed`);
+    process.exitCode = failed ? 3 : 0;
+    return;
+  }
   const games = loadGames();
   if (!pos.length) usage(games);
   if (!isSeed(opts.seed)) { console.error(`--seed must be an integer (got "${opts.seed}")`); process.exit(1); }

@@ -266,7 +266,8 @@
       const hint = state.review.length ? `   ·   Review: ${mistakes ? mistakes + ' mistake(s)' : state.review.length + ' note(s)'}, see the Review tab` : '';
       if (r.aborted) { text = 'Stopped'; cls = 'draw'; }
       else if (r.passed !== undefined) {   // solo puzzle
-        text = (r.passed ? '✔ Success: ' : '✘ Failure: ') + r.message + hint; cls = r.passed ? 'win' : 'lose';
+        const msg = String(r.message || '').replace(/^(success|failure)s*:s*/i, '');   // referees may use CodinGame's own wording
+        text = (r.passed ? '✔ Success: ' : '✘ Failure: ') + msg + hint; cls = r.passed ? 'win' : 'lose';
         $('result').textContent = text; $('result').className = cls;
         $('status').textContent = `finished in ${state.frames.length} turns${state.testName ? ' · ' + state.testName : ''}`;
         renderConsole();
