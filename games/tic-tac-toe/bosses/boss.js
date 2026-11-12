@@ -12,7 +12,7 @@
 //           fixed number of playouts. On the Wood 3x3 board: perfect play (minimax) that prefers moves setting traps.
 const level = process.argv[2] || 'bronze';
 const SILVER_PLAYOUTS = 3000;      // fixed for determinism; a time guard stops early only on a very slow machine
-const SILVER_GUARD_MS = 45;        // per turn (first turn: 500 ms), well inside CodinGame's 100 ms
+const SILVER_GUARD_MS = 300;       // safety net only (first turn: 900 ms): bosses get 4x the 100 ms limit here, so the fixed playout count decides and the boss stays deterministic
 
 // ---- java.util.Random (what Boss.java uses: the constructor and nextInt(bound))
 class JavaRandom {
@@ -296,7 +296,7 @@ for (;;) {
       if (level === 'bronze') mv = bronze(pos, legal, rnd);
       else if (lv === 1) mv = silver3(pos, legal);
       else {
-        const r = mcts(pos, legal, SILVER_PLAYOUTS, t0 + (turn === 0 ? 500 : SILVER_GUARD_MS), rnd);
+        const r = mcts(pos, legal, SILVER_PLAYOUTS, t0 + (turn === 0 ? 900 : SILVER_GUARD_MS), rnd);
         mv = r.mv;
         note = `${r.n} playouts, win rate ${r.rate.toFixed(2)}`;
       }
