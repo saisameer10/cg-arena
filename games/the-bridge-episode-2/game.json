@@ -1,0 +1,11 @@
+{
+  "name": "The Bridge - Episode 2",
+  "url": "https://www.codingame.com/ide/puzzle/the-bridge-episode-2",
+  "tests": "tests",
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java",
+    "cpp": "starters/bot.cpp"
+  }
+}

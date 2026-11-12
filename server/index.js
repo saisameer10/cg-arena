@@ -88,9 +88,12 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         languages: availableLanguages(),
         games: Object.values(games).map(g => ({
-          id: g.id, name: g.name, statement: g.statement, starters: g.starters,
+          id: g.id, name: g.name, url: g.url, kind: g.kind, type: g.type, statement: g.statement, starters: g.starters,
           bosses: g.bosses.map(b => ({ id: b.id, name: b.name })),
           leagues: g.leagues,
+          tests: g.tests.map(t => ({ id: t.id, name: t.name })),
+          hasGenerator: !!g.generator,
+          hasOriginal: !!g.originalStatementPath,
           meta: g.Referee.meta,
         })),
       });
@@ -101,12 +104,14 @@ const server = http.createServer(async (req, res) => {
       const seed = String(body.seed === undefined || body.seed === '' ? 1 : body.seed).trim();
       if (!isSeed(seed)) return send(res, 400, { error: 'seed must be an integer (up to 20 digits)' });
       let players;
-      try { players = (body.players || []).map(p => arena.resolvePlayer(gameDef, p)); }
-      catch (e) { return send(res, 400, { error: e.message }); }
+      try {
+        players = (body.players || []).map(p => arena.resolvePlayer(gameDef, p));
+        if (gameDef.kind === 'solo') gameDef.resolveTest(body.test || null);
+      } catch (e) { return send(res, 400, { error: e.message }); }
       return withSlot(res, async () => {
         const { emit, signal } = stream(req, res);
         try {
-          await runMatch({ gameDef, players, seed, league: body.league || null, timeoutMultiplier: clampMult(body.timeoutMultiplier), workRoot: WORK, emit, signal });
+          await runMatch({ gameDef, players, seed, league: body.league || null, test: body.test || null, timeoutMultiplier: clampMult(body.timeoutMultiplier), workRoot: WORK, emit, signal });
         } catch (e) {
           console.error('[match]', e);
           emit({ type: 'error', message: e.message });
@@ -114,7 +119,17 @@ const server = http.createServer(async (req, res) => {
         res.end();
       });
     }
-    // ---- arena pool: saved versions + bosses with Elo ratings ----
+    // original statement saved by "node cli.js fetch" (local copy, shown in a sandboxed iframe)
+    if (url.pathname === '/api/statement') {
+      const gameDef = gameOr400(res, url.searchParams.get('game')); if (!gameDef) return;
+      if (!gameDef.originalStatementPath) return send(res, 404, { error: 'no local copy; run: node cli.js fetch ' + gameDef.id });
+      return send(res, 200, fs.readFileSync(gameDef.originalStatementPath), 'text/html; charset=utf-8');
+    }
+    // ---- arena pool: saved versions + bosses with Elo ratings (multiplayer games only) ----
+    if (url.pathname.startsWith('/api/arena/')) {
+      const id = url.searchParams.get('game') || null;
+      if (id && games[id] && games[id].kind === 'solo') return send(res, 400, { error: `${games[id].name} is a solo puzzle: it is judged on test cases, not in the arena` });
+    }
     if (url.pathname === '/api/arena/pool') {
       const gameDef = gameOr400(res, url.searchParams.get('game')); if (!gameDef) return;
       return send(res, 200, { leaderboard: arena.leaderboard(gameDef) });
@@ -134,6 +149,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/arena/run' && req.method === 'POST') {
       const body = await jsonBody(req, res); if (!body) return;
       const gameDef = gameOr400(res, body.game); if (!gameDef) return;
+      if (gameDef.kind === 'solo') return send(res, 400, { error: `${gameDef.name} is a solo puzzle: run its test cases instead of the arena` });
       const seed = String(body.seed === undefined || body.seed === '' ? 1 : body.seed).trim();
       if (!isSeed(seed)) return send(res, 400, { error: 'seed must be an integer (up to 20 digits)' });
       return withSlot(res, async () => {

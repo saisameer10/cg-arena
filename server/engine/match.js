@@ -49,13 +49,41 @@ async function buildPlayers(gameDef, players, matchDir) {
     } else {
       const lang = LANGUAGES[p.lang];
       if (!lang) throw new Error(`Unknown language ${p.lang}`);
-      const dir = path.join(matchDir, `p${i}`);
-      const prep = await prepareBot(p.lang, p.source, dir);
-      if (!prep.ok) return { error: { player: i, compileLog: prep.log } };
+      let dir;
+      if (lang.compile) {
+        // compiled languages: build once per source and reuse it for every game of a suite or arena run
+        const r = await compiledDir(p.lang, p.source, path.dirname(matchDir));
+        if (!r.ok) return { error: { player: i, compileLog: r.log } };
+        dir = r.dir;
+      } else {
+        dir = path.join(matchDir, `p${i}`);
+        const prep = await prepareBot(p.lang, p.source, dir);
+        if (!prep.ok) return { error: { player: i, compileLog: prep.log } };
+      }
       bots.push({ name: p.name || `${lang.name} bot`, spec: lang.run(dir), cwd: dir });
     }
   }
   return { bots };
+}
+
+// Compile cache: <workRoot>/cache/<sha256 of language + source>/ holds the build output. Built in a
+// temporary folder and renamed, so two matches compiling the same source at once cannot clash.
+const building = new Map();
+async function compiledDir(langId, source, root) {
+  const hash = crypto.createHash('sha256').update(langId + '\0' + source).digest('hex').slice(0, 16);
+  const dir = path.join(root, 'cache', hash);
+  if (fs.existsSync(path.join(dir, '.ok'))) { try { fs.utimesSync(dir, new Date(), new Date()); } catch {} return { ok: true, dir }; }
+  if (building.has(dir)) return building.get(dir);
+  const job = (async () => {
+    const tmp = path.join(root, 'cache', `${hash}-${crypto.randomBytes(3).toString('hex')}`);
+    const prep = await prepareBot(langId, source, tmp);
+    if (!prep.ok) { removeDir(tmp); return { ok: false, log: prep.log.split(tmp).join('.') }; }
+    fs.writeFileSync(path.join(tmp, '.ok'), '');
+    try { fs.renameSync(tmp, dir); } catch { removeDir(tmp); }   // another process won the race: use its build
+    return { ok: true, dir };
+  })();
+  building.set(dir, job);
+  try { return await job; } finally { building.delete(dir); }
 }
 
 function removeDir(dir) {
@@ -63,14 +91,15 @@ function removeDir(dir) {
 }
 
 /**
- * runMatch({ gameDef, players, seed, league, timeoutMultiplier, workRoot, emit, signal })
+ * runMatch({ gameDef, players, seed, league, test, timeoutMultiplier, workRoot, emit, signal })
+ *   test: for solo puzzles, a test id from gameDef.tests or "random:<seed>" (default: the first test)
  *   gameDef: entry from games/index.js
  *   players: [{type:'user', lang, source, name} | {type:'boss', id}]
  *   emit(event): called with {type:'start'|'frame'|'end'|'error', ...}
  *   signal: optional AbortSignal; aborting stops the match at once and kills the bots
  * Resolves with the final result ({type:'error'} if a bot did not compile).
  */
-async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMultiplier = 1, workRoot, emit, signal = null }) {
+async function runMatch({ gameDef, players, seed = 1, league = null, test = null, timeoutMultiplier = 1, workRoot, emit, signal = null }) {
   const meta = gameDef.Referee.meta;
   if (players.length !== meta.playerCount) throw new Error(`${gameDef.name} needs ${meta.playerCount} players`);
   if (gameDef.leagues && gameDef.leagues.length) {
@@ -88,10 +117,13 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
     emit(ev);
     return ev;
   }
-  const referee = new gameDef.Referee({ seed, playerCount: meta.playerCount, league });
+  const testCase = gameDef.kind === 'solo' ? gameDef.resolveTest(test) : null;   // throws for an unknown test id
+  const referee = new gameDef.Referee({ seed, playerCount: meta.playerCount, league, testCase: testCase && testCase.data });
   const procs = built.bots.map(b => new BotProcess(b).start());
   const names = built.bots.map(b => b.name);
-  emit({ type: 'start', game: { id: gameDef.id, name: gameDef.name, viewer: meta.viewer }, players: names, seed, league, static: referee.getStaticInfo() });
+  emit({ type: 'start', game: { id: gameDef.id, name: gameDef.name, viewer: meta.viewer, kind: gameDef.kind }, players: names, seed, league, test: testCase ? { id: testCase.id, name: testCase.name } : null, static: referee.getStaticInfo() });
+  const slow = [];          // turns answered with less than 30 % of the time budget left (timeout risk)
+  let extraLines = 0;
 
   // resolves (never rejects) when the client goes away, so a pending read can be raced against it
   const ABORTED = Symbol('aborted');
@@ -123,6 +155,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
         const extra = input.length ? procs[p].drain() : [];
         if (extra.length) referee.log(`Player ${p} printed ${extra.length} extra line(s) last turn (ignored): ${extra.slice(0, 3).join(' | ').slice(0, 120)}`);
         if (input.length) procs[p].write(input.join('\n') + '\n');
+        if (referee.closeInputAfterTurn) procs[p].endInput();   // classic puzzles: the input is complete, signal end of file
         // The first turn also pays for the interpreter/JVM boot (python ~0.5 s, java ~0.4 s cold on a laptop),
         // which CodinGame's servers do not charge to the bot, so the first turn gets a boot grace on top.
         const first = firstTurn[p];
@@ -152,6 +185,8 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
         // give stderr a tick to arrive so the console lines up with the turn
         await new Promise(r => setImmediate(r));
         actorEvents.push({ player: p, input, output, stderr: procs[p].takeStderr(), ms, error, extraOutput: extra.length || undefined });
+        if (!first && !error && ms > 0.7 * meta.turnTimeout * timeoutMultiplier) slow.push({ turn: referee.turn + 1, player: p, ms });
+        extraLines += extra.length;
       }
       if (aborted) break;
       referee.endTurn();
@@ -161,12 +196,55 @@ async function runMatch({ gameDef, players, seed = 1, league = null, timeoutMult
     result.players = names;
     result.dq = referee.dq;
     if (aborted) { result.aborted = true; result.winner = null; }
-    emit({ type: 'end', result, summary: referee.takeSummary() });
+    result.review = aborted ? [] : buildReview(referee, meta, timeoutMultiplier, slow, extraLines, names);
+    emit({ type: 'end', result, summary: referee.takeSummary(), review: result.review });
     return result;
   } finally {
     await Promise.all(procs.map(p => p.kill()));   // wait for the processes to go away, then drop their work dir
     removeDir(matchDir);
   }
+}
+
+// Post-game review: the referee's own analysis (optional referee.review(), game-specific mistakes)
+// plus engine-level risks every game shares. Items: { turn, player, kind: 'mistake'|'warning'|'tip', message };
+// turn is the replay frame number (1-based) so the viewer can jump to it.
+function buildReview(referee, meta, mult, slow, extraLines, names) {
+  let items = [];
+  if (typeof referee.review === 'function') {
+    try { items = (referee.review() || []).filter(Boolean); }
+    catch (e) { items = [{ turn: null, player: null, kind: 'warning', code: 'review-failed', message: `review failed: ${e.message}` }]; }
+  }
+  const byPlayer = {};
+  for (const s of slow) (byPlayer[s.player] = byPlayer[s.player] || []).push(s);
+  for (const [p, list] of Object.entries(byPlayer)) {
+    const worst = list.reduce((a, b) => (b.ms > a.ms ? b : a));
+    items.push({ turn: worst.turn, player: Number(p), kind: 'warning', code: 'slow-turn', message: `${names[p]}: ${list.length} turn(s) used over 70 % of the ${meta.turnTimeout * mult} ms limit (worst ${worst.ms} ms at turn ${worst.turn}). CodinGame's servers may be slower than this PC: leave a margin.` });
+  }
+  if (extraLines) items.push({ turn: null, player: null, kind: 'warning', code: 'extra-output', message: `${extraLines} extra stdout line(s) were ignored. On CodinGame they would be read as your next answers: print exactly one answer per turn and send debug to stderr.` });
+  return items;
+}
+
+// Patterns: the same review code over many games (arena runs, test suites, CLI batches).
+//   games: [{ review: [...], side: <player index of the bot being judged>, label }]
+// Returns [{ code, kind, games, total, share, example, labels }] sorted by how many games show it.
+const RANK = { mistake: 0, warning: 1, tip: 2 };
+function summarizePatterns(games) {
+  const by = new Map();
+  const n = games.length;
+  for (const g of games) {
+    const seen = new Set();
+    for (const it of g.review || []) {
+      if (it.player !== null && it.player !== undefined && g.side !== undefined && it.player !== g.side) continue;
+      const code = it.code || 'other';
+      const p = by.get(code) || { code, kind: it.kind, games: 0, total: 0, example: it.message, labels: [] };
+      p.total++;
+      if (!seen.has(code)) { seen.add(code); p.games++; if (p.labels.length < 6 && g.label) p.labels.push(g.label); }
+      if (it.kind === 'mistake') p.kind = 'mistake';
+      by.set(code, p);
+    }
+  }
+  return [...by.values()].map(p => ({ ...p, share: n ? p.games / n : 0 }))
+    .sort((a, b) => (RANK[a.kind] ?? 3) - (RANK[b.kind] ?? 3) || b.games - a.games);
 }
 
 // Where bot sources are written, compiled and run. Windows CreateProcess rejects working
@@ -177,4 +255,4 @@ function workRoot() {
   return local.length < 150 ? local : path.join(require('os').tmpdir(), 'cg-arena');
 }
 
-module.exports = { runMatch, workRoot, sweepWorkRoot, offsetSeed, isSeed, BOOT_GRACE_MS };
+module.exports = { runMatch, workRoot, sweepWorkRoot, offsetSeed, isSeed, summarizePatterns, BOOT_GRACE_MS };

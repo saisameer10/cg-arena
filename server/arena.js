@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { runMatch, workRoot, offsetSeed } = require('./engine/match');
+const { runMatch, workRoot, offsetSeed, summarizePatterns } = require('./engine/match');
 const { LANGUAGES } = require('./runner/languages');
 
 const ROOT = process.env.CG_ARENA_POOL || path.join(__dirname, '..', 'arena');
@@ -121,6 +121,7 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
   const keys = expandOpponents(gameDef, pool, opponents).filter(k => k !== candKey);
   games = Math.max(1, Math.min(200, Number(games) || 1));
   const per = [];
+  const reviews = [];          // the candidate's review of every game, for patterns
   const total = { wins: 0, losses: 0, draws: 0 };
   let aborted = false;
   for (const key of keys) {
@@ -153,6 +154,7 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
       const field = outcome === 'win' ? 'wins' : outcome === 'loss' ? 'losses' : 'draws';
       row[field]++; total[field]++;
       if (candKey) elo(pool, candKey, key, outcome === 'win' ? 1 : outcome === 'loss' ? 0 : 0.5);
+      reviews.push({ review: result.review || [], side, label: `${outcome} vs ${row.name} (game ${g + 1})`, outcome });
       const dq = (result.dq || []).map((d, i) => d ? `P${i}: ${d}` : null).filter(Boolean);
       emit({ type: 'match', opponent: key, name: row.name, game: g, side, seed: gameSeed, outcome, scores: result.scores, dq });
     }
@@ -170,6 +172,8 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
   const summary = {
     type: 'summary', candidate: candName, rated: !!candKey, games, league, aborted,
     perOpponent: per, total: { ...total, played: total.wins + total.losses + total.draws },
+    patterns: summarizePatterns(reviews),
+    lossPatterns: summarizePatterns(reviews.filter(r => r.outcome === 'loss')),
     leaderboard: leaderboard(gameDef, pool),
   };
   emit(summary);

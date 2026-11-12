@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 'use strict';
 // Command line runner (like cg-brutaltester), sharing the engine with the web server.
+//
+// Multiplayer games (bosses, arena):
 //   node cli.js <game> <bot1> <bot2> [--games 10] [--seed 1] [--league id] [--timeout-mult 1] [--replay out.json]
 //   node cli.js submit <game> <bot-file> [--name "v3 sonar"]        save a version into the arena pool
 //   node cli.js pool <game>                                           print the leaderboard
 //   node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games 4] [--seed 1] [--league id]
+// Solo puzzles (test cases):
+//   node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random 5]
+// New challenges:
+//   node cli.js fetch <codingame url or puzzle id>                    save the original statement locally
+//
 //   bot = path to a source file (.py/.js/.java/.cpp), boss:<id>, or pool:<id> (a saved version)
 const fs = require('fs');
 const path = require('path');
 const { loadGames } = require('./games');
-const { runMatch, workRoot, sweepWorkRoot, offsetSeed, isSeed } = require('./server/engine/match');
+const { runMatch, workRoot, sweepWorkRoot, offsetSeed, isSeed, summarizePatterns } = require('./server/engine/match');
 const arena = require('./server/arena');
 
 const EXT = { '.py': 'python', '.js': 'javascript', '.java': 'java', '.cpp': 'cpp' };
@@ -23,7 +30,7 @@ function parseBot(arg) {
 const label = p => typeof p === 'string' ? p : p.name;
 
 function parseArgs(argv) {
-  const opts = { games: null, seed: 1, 'timeout-mult': 1, replay: null, league: null, opponents: 'all', name: '' };
+  const opts = { games: null, seed: 1, 'timeout-mult': 1, replay: null, league: null, opponents: 'all', name: '', test: 'all', random: 0 };
   const pos = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith('--')) opts[argv[i].slice(2)] = argv[++i];
@@ -34,12 +41,14 @@ function parseArgs(argv) {
 
 function usage(games) {
   console.log('usage:');
-  console.log('  node cli.js <game> <bot1> <bot2> [--games N] [--seed S] [--league id] [--timeout-mult X] [--replay file.json]');
-  console.log('  node cli.js submit <game> <bot-file> [--name "v3"]');
-  console.log('  node cli.js pool <game>');
-  console.log('  node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games N] [--seed S] [--league id]');
+  console.log('  multiplayer:  node cli.js <game> <bot1> <bot2> [--games N] [--seed S] [--league id] [--timeout-mult X] [--replay file.json]');
+  console.log('                node cli.js submit <game> <bot-file> [--name "v3"]');
+  console.log('                node cli.js pool <game>');
+  console.log('                node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games N] [--seed S] [--league id]');
+  console.log('  solo puzzle:  node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random N]');
+  console.log('  new puzzle:   node cli.js fetch <codingame url or puzzle id>');
   console.log('  bot = source file (.py/.js/.java/.cpp), boss:<id> or pool:<id>');
-  console.log('games:', Object.keys(games).join(', '));
+  for (const g of Object.values(games)) console.log(`  ${g.kind === 'solo' ? 'solo ' : 'multi'}  ${g.id.padEnd(24)} ${g.name}`);
   process.exit(1);
 }
 
@@ -48,9 +57,90 @@ function printBoard(rows) {
   console.log('rating  games  W-L-D        ' + 'name'.padEnd(w) + '  key');
   for (const r of rows) console.log(`${String(r.rating).padStart(6)}  ${String(r.games).padStart(5)}  ${`${r.wins}-${r.losses}-${r.draws}`.padEnd(11)}  ${r.name.padEnd(w)}  ${r.key}`);
 }
+// recurring mistakes over a batch: only codes seen in at least 2 games (or in the only game)
+function printPatterns(list, n, title, unit = 'games') {
+  const shown = (list || []).filter(p => p.games >= 2 || n === 1).slice(0, 8);
+  if (!shown.length) return;
+  console.log(`\n${title}`);
+  for (const p of shown) console.log(`  ${p.kind === 'mistake' ? '✘' : p.kind === 'warning' ? '!' : '·'} ${p.code}: ${p.games}/${n} ${unit}, e.g. ${p.example}`);
+}
+function printReview(review, indent = '    ') {
+  for (const r of review || []) console.log(`${indent}${r.kind === 'mistake' ? '✘' : r.kind === 'warning' ? '!' : '·'} ${r.message}`);
+}
+
+// ---- fetch: a CodinGame link -> the original statement, saved locally (git-ignored) ----
+async function fetchChallenge(ref) {
+  const m = String(ref).match(/codingame\.com\/(?:ide\/puzzle|training\/[^/]+|multiplayer\/[^/]+|contribute\/view|ide)\/([\w-]+)/) || String(ref).match(/^([\w-]+)$/);
+  if (!m) throw new Error(`cannot find a puzzle id in "${ref}" (expected e.g. https://www.codingame.com/ide/puzzle/the-bridge-episode-2)`);
+  const id = m[1];
+  const res = await fetch('https://www.codingame.com/services/Puzzle/findProgressByPrettyId', {
+    method: 'POST', headers: { 'Content-Type': 'application/json;charset=UTF-8' }, body: JSON.stringify([id, null]),
+  });
+  if (!res.ok) throw new Error(`CodinGame answered ${res.status} for "${id}" (is the id right?)`);
+  const p = await res.json();
+  if (!p || !p.statement) throw new Error(`no statement found for "${id}"`);
+  const text = p.statement.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  // CodinGame's own puzzle types: ARENA = bot programming (level "multi"), SOLO = interactive puzzle
+  // with a referee, OPTIM = solo puzzle scored by points, CODE = classic input/output, CODEGOLF = shortest code.
+  const interactive = /game turn|infinite loop|for one game turn/i.test(text);
+  const kind = p.type === 'ARENA' || p.level === 'multi' ? 'multi (bot programming: referee + bosses + arena)'
+    : p.type === 'OPTIM' ? 'solo, scored (optimization: referee + test levels, score instead of pass/fail)'
+    : p.type === 'SOLO' || (p.type !== 'CODE' && p.type !== 'CODEGOLF' && interactive) ? 'solo (interactive: referee + test levels + generator)'
+    : 'io (classic: test input/output files only)';
+  const dir = path.join(__dirname, 'challenges', 'raw');
+  fs.mkdirSync(dir, { recursive: true });
+  const url = `https://www.codingame.com/ide/puzzle/${id}`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${p.title}</title><base target="_blank">
+<style>body{font:14px/1.5 system-ui,sans-serif;background:#0f1420;color:#d9e0ee;margin:12px}a{color:#f2b134}img{max-width:100%}
+table{border-collapse:collapse}td,th{border:1px solid #26304a;padding:3px 6px;vertical-align:top}
+.statement-section{margin-bottom:14px}code,var,const,.statement-inout{font-family:Consolas,monospace}</style></head>
+<body><p style="color:#8a94ab;font-size:12px">Original statement of <a href="${url}">${p.title}</a> (${p.type}, ${p.level}), fetched ${new Date().toISOString().slice(0, 10)} for local practice. Not committed to git.</p>
+${p.statement}</body></html>`;
+  fs.writeFileSync(path.join(dir, `${id}.html`), html);
+  fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify({ id, url, title: p.title, type: p.type, level: p.level, topics: (p.topics || []).map(t => t.handle || t.value || t).slice(0, 12), fetched: new Date().toISOString() }, null, 2));
+  console.log(`${p.title}  [${p.type}, ${p.level}]`);
+  console.log(`  arena kind: ${kind}`);
+  console.log(`  saved: challenges/raw/${id}.html (original statement, shown in the IDE when games/${id}/ exists)`);
+  const exists = fs.existsSync(path.join(__dirname, 'games', id, 'game.json'));
+  console.log(exists ? `  games/${id}/ already exists: restart the server to show the original statement.`
+    : `  next: ask Claude Code in this folder: "add the challenge ${url}" (procedure: .claude/skills/add-challenge/SKILL.md)`);
+}
+
+async function runSolo(gameDef, botArg, opts) {
+  if (opts.test === 'list') {
+    gameDef.tests.forEach((t, i) => console.log(`${String(i + 1).padStart(3)}  ${t.id.padEnd(26)} ${t.name}`));
+    if (gameDef.generator) console.log('  random:<seed>  a generated level (any seed)');
+    return 0;
+  }
+  const player = arena.resolvePlayer(gameDef, parseBot(botArg));
+  let ids = opts.test === 'all' ? gameDef.tests.map(t => t.id) : String(opts.test).split(',');
+  const extra = Number(opts.random) || 0;
+  if (extra && !gameDef.generator) throw new Error(`${gameDef.name} has no level generator`);
+  for (let i = 0; i < extra; i++) ids.push(`random:${offsetSeed(opts.seed, i)}`);
+  if (!ids.length) throw new Error('no tests to run');
+  let passed = 0;
+  const replays = [];
+  const reviews = [];
+  for (const id of ids) {
+    const t = gameDef.resolveTest(id);
+    const events = [];
+    const r = await runMatch({ gameDef, players: [player], test: id, timeoutMultiplier: Number(opts['timeout-mult']), workRoot: workRoot(), emit: ev => { if (opts.replay) events.push(ev); } });
+    if (opts.replay) replays.push(events);
+    if (r.type === 'error') { console.error(r.message); if (r.compileLog) console.error(r.compileLog); return 2; }
+    if (r.passed) passed++;
+    reviews.push({ review: r.review || [], side: 0, label: t.id });
+    console.log(`${r.passed ? 'PASS' : 'FAIL'}  ${t.id.padEnd(24)} ${t.name.padEnd(36)} ${r.message}`);
+    if (!r.passed || (r.review || []).some(x => x.kind !== 'tip')) printReview(r.review);
+  }
+  console.log(`\n${label(player)}: passed ${passed}/${ids.length}${passed === ids.length ? '' : '  (exit code 3 when a test fails)'}`);
+  printPatterns(summarizePatterns(reviews), ids.length, 'patterns across tests (the same mistake in several tests):', 'tests');
+  if (opts.replay) fs.writeFileSync(opts.replay, JSON.stringify(replays));
+  return passed === ids.length ? 0 : 3;
+}
 
 async function main() {
   const { opts, pos } = parseArgs(process.argv.slice(2));
+  if (pos[0] === 'fetch') { if (!pos[1]) usage(loadGames()); await fetchChallenge(pos[1]); return; }
   const games = loadGames();
   if (!pos.length) usage(games);
   if (!isSeed(opts.seed)) { console.error(`--seed must be an integer (got "${opts.seed}")`); process.exit(1); }
@@ -59,6 +149,13 @@ async function main() {
   const gameId = command === 'match' ? pos[0] : pos[1];
   const gameDef = games[gameId];
   if (!gameDef) { console.error(`unknown game "${gameId}"`); usage(games); }
+
+  if (gameDef.kind === 'solo') {
+    if (command !== 'match') { console.error(`${gameDef.name} is a solo puzzle: it has test cases, not an arena. Run: node cli.js ${gameDef.id} <bot> --test all`); process.exit(1); }
+    if (!pos[1] && opts.test !== 'list') usage(games);
+    process.exitCode = await runSolo(gameDef, pos[1], opts);
+    return;
+  }
 
   if (command === 'submit') {
     if (!pos[2]) usage(games);
@@ -83,6 +180,8 @@ async function main() {
     });
     if (summary.type === 'error') process.exit(2);
     console.log(`\n${summary.candidate}: ${summary.total.wins}-${summary.total.losses}-${summary.total.draws} over ${summary.total.played} games` + (summary.rated ? '' : '  (unsaved code: not rated; use "submit" to rate it)'));
+    printPatterns(summary.lossPatterns, summary.perOpponent.reduce((a, o) => a + o.losses, 0), 'patterns in your losses:');
+    printPatterns(summary.patterns, summary.total.played, 'patterns in all your games:');
     console.log('\nleaderboard:');
     printBoard(summary.leaderboard);
     return;
@@ -95,6 +194,8 @@ async function main() {
   const n = Number(opts.games) || 1;
   const wins = [0, 0]; let draws = 0;
   const replays = [];
+  let lastReview = [];
+  const reviews = [];
   for (let g = 0; g < n; g++) {
     const events = [];
     const seed = offsetSeed(opts.seed, g);
@@ -107,8 +208,16 @@ async function main() {
     if (result.winner === null || result.winner === undefined) draws++; else wins[result.winner]++;
     const reasons = (result.dq || []).map((d, i) => d ? ` [P${i}: ${d}]` : '').join('');
     console.log(`game ${g + 1}/${n} seed=${seed} scores=${JSON.stringify(result.scores)} winner=${result.winner === null ? 'draw' : 'P' + result.winner + ' (' + result.players[result.winner] + ')'}${reasons}`);
+    lastReview = result.review || [];
+    reviews.push({ review: lastReview, side: 0, label: `game ${g + 1}` });
+    if (opts.review === 'all') printReview(lastReview);
   }
   console.log(`\n${label(refs[0])} vs ${label(refs[1])}: ${wins[0]} - ${wins[1]} (draws ${draws})  => P0 win rate ${(100 * wins[0] / n).toFixed(1)}%`);
+  if (lastReview.length && opts.review !== 'all' && opts.review !== 'none') {
+    console.log(`\nreview of the last game (--review all for every game, --review none to hide):`);
+    printReview(lastReview.map(r => ({ ...r, message: (r.player === null || r.player === undefined ? '' : `P${r.player}: `) + r.message })), '  ');
+  }
+  if (n > 1) printPatterns(summarizePatterns(reviews), n, `patterns for P0 (${label(refs[0])}) over ${n} games:`);
   if (opts.replay) fs.writeFileSync(opts.replay, JSON.stringify(replays));
 }
 

@@ -96,6 +96,7 @@ class BotProcess {
     return out;
   }
   takeStderr() { const s = this.stderr; this.stderr = ''; return s; }
+  endInput() { try { if (this.proc.stdin.writable) this.proc.stdin.end(); } catch {} }
   // Lines received but not consumed by readLines (a bot that printed more than one answer).
   drain() { const extra = this.lines; this.lines = []; return extra; }
   // Kill the bot and resolve once the OS has reaped it (or after `timeoutMs`), so its files can be deleted.

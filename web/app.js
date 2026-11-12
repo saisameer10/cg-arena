@@ -109,6 +109,8 @@
     document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
     document.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); run(); } });
     $('saveVersion').onclick = saveVersion;
+    $('runTests').onclick = runAllTests;
+    $('stopTests').onclick = () => { state.stopTests = true; state.abort && state.abort.abort(); };
     $('arenaRun').onclick = runArena;
     $('arenaStop').onclick = () => state.arenaAbort && state.arenaAbort.abort();
     window.addEventListener('resize', draw);
@@ -119,9 +121,23 @@
     document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
     renderConsole();
   }
+  // Statement panel: our summary (statement.md) or, when "node cli.js fetch" saved it, the original
+  // CodinGame statement in a sandboxed frame (no scripts).
   function renderStatement() {
     if (!state.game) return;
-    $('statement').innerHTML = window.marked ? marked.parse(state.game.statement) : `<pre style="white-space:pre-wrap">${esc(state.game.statement)}</pre>`;
+    const g = state.game;
+    let view = 'summary';
+    try { view = localStorage.getItem(`cg-arena:stmt:${g.id}`) || (g.hasOriginal ? 'original' : 'summary'); } catch {}
+    if (!g.hasOriginal) view = 'summary';
+    const md = window.marked ? marked.parse(g.statement) : `<pre style="white-space:pre-wrap">${esc(g.statement)}</pre>`;
+    const bar = g.hasOriginal
+      ? `<div class="stmtbar"><button class="secondary tiny ${view === 'original' ? 'on' : ''}" data-view="original">Original statement</button><button class="secondary tiny ${view === 'summary' ? 'on' : ''}" data-view="summary">Arena notes</button>${g.url ? `<a href="${g.url}" target="_blank" rel="noopener">CodinGame ↗</a>` : ''}</div>`
+      : (g.url ? `<div class="stmtbar"><a href="${g.url}" target="_blank" rel="noopener">CodinGame page ↗</a><span class="dim">original statement: node cli.js fetch ${g.id}</span></div>` : '');
+    $('statement').classList.toggle('framed', view === 'original');
+    $('statement').innerHTML = bar + (view === 'original'
+      ? `<iframe class="stmtframe" sandbox="allow-popups allow-popups-to-escape-sandbox" src="/api/statement?game=${encodeURIComponent(g.id)}"></iframe>`
+      : `<div class="stmtbody">${md}</div>`);
+    $('statement').querySelectorAll('[data-view]').forEach(b => b.onclick = () => { try { localStorage.setItem(`cg-arena:stmt:${g.id}`, b.dataset.view); } catch {} renderStatement(); });
   }
 
   function selectGame() {
@@ -132,7 +148,23 @@
     state.board = [];
     refreshOpponents();
     $('p0').value = 'me'; $('p1').value = state.game.bosses.length ? 'boss:' + state.game.bosses[0].id : 'me';
-    loadArena();
+    // solo puzzles: one player, test cases instead of opponents; multiplayer: two slots + arena
+    const solo = state.game.kind === 'solo';
+    $('p0Label').style.display = solo ? 'none' : '';
+    $('p1Label').style.display = solo ? 'none' : '';
+    $('testLabel').style.display = solo ? '' : 'none';
+    for (const [tab, show] of [['console1', !solo], ['arena', !solo], ['tests', solo]]) document.querySelector(`.tabs button[data-tab=${tab}]`).style.display = show ? '' : 'none';
+    document.querySelector('.tabs button[data-tab=console0]').textContent = solo ? 'Console' : 'Console P0';
+    if (solo && (state.tab === 'console1' || state.tab === 'arena')) state.tab = 'console0';
+    if (!solo && state.tab === 'tests') state.tab = 'console0';
+    setTab(state.tab);
+    $('test').innerHTML = (state.game.tests || []).map((t, i) => `<option value="${esc(t.id)}">${i + 1}. ${esc(t.name)}</option>`).join('')
+      + (state.game.hasGenerator ? `<option value="random">Random level (uses Seed)</option>` : '');
+    state.testResults = {};
+    renderTests();
+    state.review = [];
+    renderReview();
+    if (!solo) loadArena();
     const leagues = state.game.leagues || [];
     $('leagueLabel').style.display = leagues.length ? '' : 'none';
     $('league').innerHTML = leagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
@@ -175,32 +207,44 @@
       while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (line.trim()) onLine(JSON.parse(line)); }
     }
   }
-  async function run() {
-    if (state.running) return;
+  // the test selected in the header ("random" = a generated level from the Seed box)
+  const selectedTest = seed => { const v = $('test').value; return v === 'random' ? `random:${seed}` : v; };
+
+  // Runs one match (or one solo test) and streams it into the viewer. Resolves with the events
+  // received, so "Run all tests" can keep each replay. opts.test overrides the selected test.
+  async function run(opts = {}) {
+    if (state.running) return null;
     let seed;
-    try { seed = seedValue(); } catch (e) { $('result').textContent = e.message; $('result').className = 'lose'; return; }
-    const players = ['p0', 'p1'].map(id => playerSpec($(id).value));
-    state.running = true; state.frames = []; state.result = null; state.logs = []; state.idx = 0; state.follow = true;
+    try { seed = seedValue(); } catch (e) { $('result').textContent = e.message; $('result').className = 'lose'; return null; }
+    const solo = state.game.kind === 'solo';
+    const players = solo ? [playerSpec('me')] : ['p0', 'p1'].map(id => playerSpec($(id).value));
+    const test = solo ? (opts.test || selectedTest(seed)) : null;
+    state.running = true; state.frames = []; state.result = null; state.logs = []; state.idx = 0; state.follow = true; state.review = [];
+    renderReview();
     stopPlay();
     $('run').disabled = true; $('stop').disabled = false; $('status').textContent = 'starting…';
     $('result').textContent = ''; $('result').className = '';
     const ctrl = state.abort = new AbortController();
+    const events = [];
     try {
-      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed, league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
-      await readStream(res, onEvent);
+      const res = await fetch('/api/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, players, seed, test, league: (state.game.leagues || []).length ? $('league').value : null, timeoutMultiplier: +$('tmult').value || 1 }), signal: ctrl.signal });
+      await readStream(res, ev => { events.push(ev); onEvent(ev); });
     } catch (e) {
-      if (e.name !== 'AbortError') { $('result').textContent = 'Error: ' + e.message; $('result').className = 'lose'; }
+      if (e.name !== 'AbortError') { $('result').textContent = 'Error: ' + e.message; $('result').className = 'lose'; events.push({ type: 'error', message: e.message }); }
       else $('status').textContent = 'stopped';
     } finally {
       state.running = false; state.abort = null;
       $('run').disabled = false; $('stop').disabled = true;
       if (!state.result) $('status').textContent = $('status').textContent === 'stopped' ? 'stopped' : '';
     }
+    if (solo && test) recordTest(test, events);
+    return events;
   }
   function onEvent(ev) {
     if (ev.type === 'start') {
       state.static = ev.static; state.meta = ev.game; state.names = ev.players; state.frames = []; state.logs = []; state.turnCount = [0, 0];
-      $('status').textContent = `running (seed ${ev.seed}${ev.league ? ', ' + ev.league : ''})`;
+      state.testName = ev.test ? ev.test.name : null;
+      $('status').textContent = ev.test ? `running test: ${ev.test.name}` : `running (seed ${ev.seed}${ev.league ? ', ' + ev.league : ''})`;
       updateControls(); draw();
     } else if (ev.type === 'frame') {
       for (const a of ev.actors) a.turnNo = ++state.turnCount[a.player];   // the player's own turn number
@@ -212,9 +256,20 @@
       state.result = ev.result;
       if (ev.summary && ev.summary.length) state.logs.push(...ev.summary.map(s => ({ turn: state.frames.length, text: s })));
       const r = ev.result;
+      state.review = ev.review || r.review || [];
+      renderReview();
       const me = ['p0', 'p1'].map(id => $(id).value === 'me');
       let text, cls;
+      const mistakes = state.review.filter(x => x.kind === 'mistake').length;
+      const hint = state.review.length ? `   ·   Review: ${mistakes ? mistakes + ' mistake(s)' : state.review.length + ' note(s)'}, see the Review tab` : '';
       if (r.aborted) { text = 'Stopped'; cls = 'draw'; }
+      else if (r.passed !== undefined) {   // solo puzzle
+        text = (r.passed ? '✔ Success: ' : '✘ Failure: ') + r.message + hint; cls = r.passed ? 'win' : 'lose';
+        $('result').textContent = text; $('result').className = cls;
+        $('status').textContent = `finished in ${state.frames.length} turns${state.testName ? ' · ' + state.testName : ''}`;
+        renderConsole();
+        return;
+      }
       else if (r.winner === null || r.winner === undefined) { text = `Draw  (scores ${r.scores.join(' – ')})`; cls = 'draw'; }
       else {
         text = `P${r.winner} ${state.names[r.winner]} wins  (scores ${r.scores.join(' – ')})`;
@@ -222,6 +277,7 @@
       }
       const dq = (r.dq || []).map((d, i) => d ? `P${i}: ${d}` : null).filter(Boolean);
       if (dq.length) text += '  —  ' + dq.join(' | ');
+      text += hint;
       $('result').textContent = text; $('result').className = cls;
       $('status').textContent = `finished in ${state.frames.length} turns`;
       renderConsole();
@@ -276,10 +332,10 @@
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   function renderConsole() {
     const c = $('console');
-    const arenaTab = state.tab === 'arena';
-    $('arena').style.display = arenaTab ? 'block' : 'none';
-    c.style.display = arenaTab ? 'none' : 'block';
-    if (arenaTab) return;
+    const PANELS = { arena: 'arena', tests: 'testsPanel', review: 'reviewPanel' };
+    for (const [tab, id] of Object.entries(PANELS)) $(id).style.display = state.tab === tab ? 'block' : 'none';
+    c.style.display = PANELS[state.tab] ? 'none' : 'block';
+    if (PANELS[state.tab]) return;
     const frame = state.frames[state.idx];
     if (state.tab === 'log') {
       c.innerHTML = state.logs.filter(l => l.turn <= state.idx + 1).map(l => `<span class="dim">[${l.turn}]</span> ${esc(l.text)}`).join('\n') || '<span class="dim">no log yet</span>';
@@ -363,7 +419,7 @@
     if (state.arenaRunning) return;
     let seed;
     try { seed = seedValue(); } catch (e) { $('arenaError').textContent = e.message; return; }
-    state.arenaRunning = true; $('arenaRun').disabled = true; $('arenaStop').disabled = false; $('arenaError').textContent = '';
+    state.arenaRunning = true; $('arenaRun').disabled = true; $('arenaStop').disabled = false; $('arenaError').textContent = ''; $('arenaPatterns').innerHTML = '';
     const games = Math.max(1, Math.min(100, +$('arenaGames').value || 4));
     const candidate = $('arenaCand').value === 'me' ? playerSpec('me') : $('arenaCand').value;
     const results = new Map();   // opponent key -> {name, wins, losses, draws, games:[outcome...]}
@@ -385,6 +441,8 @@
           $('arenaStatus').textContent = `${done} games played…`; render();
         } else if (ev.type === 'summary') {
           state.board = ev.leaderboard || []; refreshOpponents(); renderBoard();
+          const losses = (ev.perOpponent || []).reduce((a, o) => a + o.losses, 0);
+          $('arenaPatterns').innerHTML = patternsHtml(ev.lossPatterns, losses, 'losses', 'Patterns in your losses') + patternsHtml(ev.patterns, ev.total.played, 'games', 'Patterns in all your games');
           $('arenaStatus').textContent = `${ev.aborted ? 'stopped: ' : ''}${ev.candidate}: ${ev.total.wins}-${ev.total.losses}-${ev.total.draws} over ${ev.total.played} games` + (ev.rated ? ' (ratings updated)' : ' (unsaved code is not rated)');
         } else if (ev.type === 'error') {
           $('arenaError').textContent = ev.message + (ev.compileLog ? '\n' + ev.compileLog : '');
@@ -395,6 +453,110 @@
     } finally {
       state.arenaRunning = false; state.arenaAbort = null; $('arenaRun').disabled = false; $('arenaStop').disabled = true;
     }
+  }
+
+  // ---------- review: what went wrong, with a jump to the turn ----------
+  function renderReview() {
+    const items = state.review || [];
+    const tabBtn = document.querySelector('.tabs button[data-tab=review]');
+    const mistakes = items.filter(x => x.kind === 'mistake').length;
+    tabBtn.textContent = items.length ? `Review (${mistakes || items.length})` : 'Review';
+    tabBtn.classList.toggle('alert', mistakes > 0);
+    const icon = k => k === 'mistake' ? '<span class="loss">✘</span>' : k === 'warning' ? '<span class="draw">!</span>' : '<span class="win">·</span>';
+    $('reviewList').innerHTML = items.length
+      ? items.map((r, i) => `<div class="ritem">${icon(r.kind)} ${r.player !== null && r.player !== undefined && state.game.kind !== 'solo' ? `<span class="pill p${r.player}">P${r.player}</span> ` : ''}${esc(r.message)}${r.turn ? ` <button class="secondary tiny" data-jump="${r.turn}">go to turn ${r.turn}</button>` : ''}</div>`).join('')
+      : `<span class="dim">${state.result ? 'Nothing to report for this game.' : 'Run a match: the review lists the decisions that cost the game, risky timings and stray output.'}</span>`;
+    $('reviewList').querySelectorAll('[data-jump]').forEach(b => b.onclick = () => { stopPlay(); goTo(Number(b.dataset.jump) - 1); });
+  }
+
+  // ---------- patterns: the same mistake across many games (same logic as server/engine/match.js) ----------
+  const RANK = { mistake: 0, warning: 1, tip: 2 };
+  function summarizePatterns(games) {
+    const by = new Map();
+    for (const g of games) {
+      const seen = new Set();
+      for (const it of g.review || []) {
+        if (it.player !== null && it.player !== undefined && g.side !== undefined && it.player !== g.side) continue;
+        const code = it.code || 'other';
+        const p = by.get(code) || { code, kind: it.kind, games: 0, total: 0, example: it.message };
+        p.total++; if (!seen.has(code)) { seen.add(code); p.games++; }
+        if (it.kind === 'mistake') p.kind = 'mistake';
+        by.set(code, p);
+      }
+    }
+    return [...by.values()].sort((a, b) => (RANK[a.kind] ?? 3) - (RANK[b.kind] ?? 3) || b.games - a.games);
+  }
+  function patternsHtml(list, n, unit, title) {
+    const shown = (list || []).filter(p => p.games >= 2 || n === 1).slice(0, 8);
+    if (!shown.length) return '';
+    const icon = k => k === 'mistake' ? '<span class="loss">✘</span>' : k === 'warning' ? '<span class="draw">!</span>' : '<span class="win">·</span>';
+    return `<h4>${esc(title)}</h4>` + shown.map(p => `<div class="ritem">${icon(p.kind)} <b>${esc(p.code)}</b> <span class="dim">in ${p.games}/${n} ${unit}</span><br><span class="dim">e.g.</span> ${esc(p.example)}</div>`).join('');
+  }
+
+  // ---------- solo puzzles: test cases, like CodinGame's "Play all testcases" ----------
+  function recordTest(id, events) {
+    const end = events.find(e => e.type === 'end'), err = events.find(e => e.type === 'error');
+    const r = end ? end.result : null;
+    state.testResults[id] = { events, passed: !!(r && r.passed), message: r ? r.message : err ? err.message : 'stopped', turns: events.filter(e => e.type === 'frame').length, name: (events.find(e => e.type === 'start') || {}).test?.name || id, aborted: !r || r.aborted };
+    renderTests();
+  }
+  function testIds() {
+    const ids = (state.game.tests || []).map(t => t.id);
+    const extra = state.game.hasGenerator ? Math.max(0, Math.min(50, +$('randomCount').value || 0)) : 0;
+    let seed = '1'; try { seed = seedValue(); } catch {}
+    for (let i = 0; i < extra; i++) ids.push(`random:${(BigInt(seed) + BigInt(i)).toString()}`);
+    return ids;
+  }
+  function renderTests() {
+    if (!state.game || state.game.kind !== 'solo') return;
+    $('randomRow').style.display = state.game.hasGenerator ? '' : 'none';
+    const ids = testIds();
+    const res = state.testResults || {};
+    const done = ids.filter(id => res[id] && !res[id].aborted);
+    const passed = done.filter(id => res[id].passed).length;
+    $('testsSummary').textContent = done.length ? `${passed}/${ids.length} passed` : '';
+    $('testsSummary').className = done.length === ids.length && passed === ids.length ? 'win' : done.length ? 'loss' : '';
+    $('testsTable').innerHTML = `<tr><th></th><th>test</th><th>result</th><th>turns</th></tr>` + ids.map((id, i) => {
+      const t = (state.game.tests || []).find(t => t.id === id);
+      const r = res[id];
+      const mark = !r ? '<span class="dim">○</span>' : r.running ? '<span class="draw">…</span>' : r.passed ? '<span class="win">✔</span>' : '<span class="loss">✘</span>';
+      return `<tr class="trow" data-test="${esc(id)}"><td>${mark}</td><td>${i + 1}. ${esc(t ? t.name : `Random level (seed ${id.slice(7)})`)}</td><td>${r && !r.running ? esc(r.message) : ''}</td><td>${r && !r.running ? r.turns : ''}</td></tr>`;
+    }).join('');
+    const reviewed = ids.filter(id => res[id] && res[id].events).map(id => ({ review: ((res[id].events.find(e => e.type === 'end') || {}).review) || [], side: 0 }));
+    $('testsPatterns').innerHTML = reviewed.length > 1 ? patternsHtml(summarizePatterns(reviewed), reviewed.length, 'tests', 'Patterns across tests (the same mistake in several tests)') : '';
+    $('testsTable').querySelectorAll('.trow').forEach(row => row.onclick = () => {
+      const r = (state.testResults || {})[row.dataset.test];
+      if (r && r.events && !state.running) loadReplay(r.events);
+      else if (!state.running) run({ test: row.dataset.test });
+    });
+  }
+  async function runAllTests() {
+    if (state.running) return;
+    state.stopTests = false;
+    $('runTests').disabled = true; $('stopTests').disabled = false;
+    state.testResults = {};
+    const ids = testIds();
+    renderTests();
+    for (const id of ids) {
+      if (state.stopTests) break;
+      state.testResults[id] = { running: true };
+      renderTests();
+      await run({ test: id });
+    }
+    $('runTests').disabled = false; $('stopTests').disabled = true;
+    renderTests();
+    // show the first failed test, like CodinGame does
+    const firstFail = ids.find(id => state.testResults[id] && !state.testResults[id].passed && state.testResults[id].events);
+    if (firstFail) loadReplay(state.testResults[firstFail].events);
+  }
+  // replay recorded events through the normal event handler
+  function loadReplay(events) {
+    stopPlay();
+    state.follow = true;
+    for (const ev of events) onEvent(ev);
+    state.follow = false;
+    state.idx = Math.max(0, state.frames.length - 1);
+    updateControls(); draw(); renderConsole();
   }
 
   init();
