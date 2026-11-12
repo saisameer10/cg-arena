@@ -6,7 +6,8 @@ Self-hosted CodinGame-style platform: the user writes bots (mostly Java), plays 
 
 - `server/index.js` HTTP server (binds 127.0.0.1; same-site guard on API POSTs). `server/engine/match.js` match loop, timeouts, boot grace, compile cache, review hook, `summarizePatterns`. `server/runner/` bot processes and language commands. `server/arena.js` saved versions + Elo.
 - `games/<id>/` one challenge each; kinds: **multi** (referee + bosses + leagues), **solo** (referee with `playerCount: 1` + `tests/*.json` + `generator.js`), **io** (`"type": "io"` + `tests/*.in|.out`, generic `games/io-referee.js`). `games/index.js` loads them.
-- `cli.js` everything from the command line (matches, solo tests, arena, `fetch <url>`). Run `node cli.js` for usage.
+- `cli.js` everything from the command line (matches, solo tests, arena, `fetch <url>`, `replay <url>`). Run `node cli.js` for usage.
+- `tools/cg-replay.js` imports CodinGame replays through public services (no login), re-simulates Ocean of Code games with our referee and prints statistics and the review; downloads are cached in `challenges/raw/replays/` (git-ignored). Also behind `POST /api/replay/import` and the Arena tab.
 - `challenges/` hand-off notes per challenge; `challenges/raw/` original statements fetched for local use (git-ignored; never commit them).
 - `my-bots/` the user's bot files (git-ignored).
 

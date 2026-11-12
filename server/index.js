@@ -132,6 +132,15 @@ const server = http.createServer(async (req, res) => {
       try { arena.recordTests(gameDef, String(body.id), Number(body.passed), Number(body.total)); return send(res, 200, { leaderboard: arena.leaderboard(gameDef) }); }
       catch (e) { return send(res, 400, { error: e.message }); }
     }
+    // CodinGame replay -> engine events (re-simulated with our referee), statistics and review
+    if (url.pathname === '/api/replay/import' && req.method === 'POST') {
+      const body = await jsonBody(req, res); if (!body) return;
+      try {
+        const { importEvents } = require('../tools/cg-replay');
+        const r = await importEvents(String(body.ref || '').trim(), { refresh: !!body.refresh });
+        return send(res, 200, r);
+      } catch (e) { return send(res, 400, { error: e.message }); }
+    }
     if (url.pathname === '/api/arena/source') {
       const gameDef = gameOr400(res, url.searchParams.get('game')); if (!gameDef) return;
       try { return send(res, 200, arena.getSource(gameDef, String(url.searchParams.get('id')))); }

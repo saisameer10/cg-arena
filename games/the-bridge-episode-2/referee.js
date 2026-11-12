@@ -14,6 +14,11 @@ class BridgeReferee extends Referee {
     super({ ...opts, playerCount: 1 });
     const t = opts.testCase || generate(opts.seed === undefined ? 1 : opts.seed);
     if (!Array.isArray(t.road) || t.road.length !== LANES || new Set(t.road.map(r => r.length)).size !== 1) throw new Error('test case: road must be 4 lanes of equal length');
+    if (!t.road.every(r => /^[.0]+$/.test(r)) || t.road[0].length >= 500) throw new Error('test case: lanes use only "." and "0" and are shorter than 500 cells');
+    if (!Array.isArray(t.lanes) || !t.lanes.length || t.lanes.length > LANES || new Set(t.lanes).size !== t.lanes.length || !t.lanes.every(y => Number.isInteger(y) && y >= 0 && y < LANES)) throw new Error('test case: lanes must be 1 to 4 distinct lane numbers 0..3');
+    if (t.lanes.some(y => t.road[y][0] !== '.')) throw new Error('test case: every bike must start on a safe cell (X = 0)');
+    if (!Number.isInteger(t.V) || t.V < 1 || t.V > t.lanes.length) throw new Error('test case: V must be between 1 and the number of bikes');
+    if (t.speed !== undefined && !(Number.isInteger(t.speed) && t.speed >= 0 && t.speed < 50)) throw new Error('test case: speed must be 0..49');
     this.road = t.road;
     this.L = t.road[0].length;
     this.V = t.V;
@@ -105,7 +110,8 @@ class BridgeReferee extends Referee {
       return r.x >= this.L || winnable({ x: r.x, s: r.s, lanes }, turnsLeft - 1);
     });
     const lost = st.lanes.length - res.lanes.length;
-    const why = lost > 0 ? `it lost ${lost} bike(s) and fewer than ${this.V} could then cross` : `no command sequence after it gets ${this.V} bike(s) across in the ${turnsLeft - 1} turns left`;
+    const why = lost > 0 && res.lanes.length < this.V ? `it lost ${lost} bike(s), leaving ${res.lanes.length} of the ${this.V} needed`
+      : (lost > 0 ? `it lost ${lost} bike(s), and ` : '') + `no command sequence after it gets ${this.V} bike(s) across in the ${turnsLeft - 1} turns left`;
     items.push({ turn: st.frame, player: 0, kind: 'mistake', code: `decisive-${st.cmd.toLowerCase()}${lost > 0 ? '-into-hole' : '-dead-end'}`, message: `Turn ${st.frame}: ${st.cmd} at ${fmt(st)} decided the game: ${why}.` + (better.length ? ` Still winning there: ${better.join(', ')}.` : '') });
     if (first + 1 < h.length) items.push({ turn: h[h.length - 1].frame, player: 0, kind: 'tip', code: 'lost-earlier-than-it-looks', message: `The game ended at turn ${h[h.length - 1].frame} (${o.message}), but it was lost ${h.length - 1 - first} turn(s) earlier at turn ${st.frame}: look ahead further than one move (try a depth-first search over the 6 commands).` });
     return items;

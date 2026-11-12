@@ -111,6 +111,7 @@
     $('saveVersion').onclick = saveVersion;
     $('runTests').onclick = runAllTests;
     $('saveVersionSolo').onclick = saveVersion;
+    $('replayImport').onclick = importReplay;
     $('stopTests').onclick = () => { state.stopTests = true; state.abort && state.abort.abort(); };
     $('arenaRun').onclick = runArena;
     $('arenaStop').onclick = () => state.arenaAbort && state.arenaAbort.abort();
@@ -587,6 +588,41 @@
     const firstFail = ids.find(id => state.testResults[id] && !state.testResults[id].passed && state.testResults[id].events);
     if (firstFail) loadReplay(state.testResults[firstFail].events);
   }
+  // ---------- CodinGame replays: re-simulated with our referee, then shown like a local game ----------
+  async function importReplay() {
+    const ref = $('replayRef').value.trim();
+    if (!ref || state.running) return;
+    $('replayStatus').textContent = 'downloading and re-simulating…'; $('replayStats').innerHTML = '';
+    try {
+      const res = await fetch('/api/replay/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      const start = data.events.find(e => e.type === 'start');
+      const gid = start && start.game && start.game.id;
+      if (gid && gid !== state.game.id && state.games.some(g => g.id === gid)) { $('game').value = gid; selectGame(); setTab('arena'); }
+      loadReplay(data.events);
+      const checks = data.checks || [];
+      const bad = checks.filter(c => c.ok === false || c.status === 'DIFF');
+      $('replayStatus').textContent = `game ${data.gameId}: ${(data.players || []).map(p => p.name || p.pseudo || p).join(' vs ')}` + (checks.length ? ` · fidelity checks ${checks.length - bad.length}/${checks.length} ok` : '');
+      renderReplayStats(data);
+    } catch (e) {
+      $('replayStatus').textContent = 'import failed: ' + e.message;
+    }
+  }
+  function renderReplayStats(data) {
+    const st = data.stats;
+    if (!st || !Array.isArray(st) || !st.length) { $('replayStats').innerHTML = ''; return; }
+    const names = (data.players || []).map((p, i) => (typeof p === 'string' ? p : p.name || p.pseudo) || `P${i}`);
+    const row = (label, f) => `<tr><td class="dim">${label}</td>${st.map(s => { let v = '–'; try { v = f(s); } catch {} return `<td>${esc(v === undefined || v === null ? '–' : v)}</td>`; }).join('')}</tr>`;
+    $('replayStats').innerHTML = `<tr><th></th>${names.map(n => `<th>${esc(n)}</th>`).join('')}</tr>`
+      + row('torpedoes fired / hit', s => `${s.torp.fired} / ${s.torp.hit}`)
+      + row('mines dropped / triggered / hit', s => `${s.mine.dropped} / ${s.mine.triggered} / ${s.mine.hit}`)
+      + row('sonar used / found you', s => `${s.sonar.used} / ${s.sonar.yes}`)
+      + row('silence used', s => s.silence.used)
+      + row('surfaces', s => s.surface.count)
+      + row('damage taken (torpedo / mine / own / surface)', s => `${s.taken.torpedo} / ${s.taken.mine} / ${s.taken.own} / ${s.taken.surface}`);
+  }
+
   // replay recorded events through the normal event handler
   function loadReplay(events) {
     stopPlay();

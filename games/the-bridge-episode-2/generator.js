@@ -41,8 +41,9 @@ function generate(seed, profile = null) {
     if (!solve(road, V, speed, lanes)) continue;   // cannot happen, but keep the guarantee explicit
     return { name: `Random level (seed ${seed})`, V, speed, lanes, road };
   }
-  // fallback: a single gap, always solvable
-  return { name: `Random level (seed ${seed})`, V: 1, speed: 1, lanes: [1], road: Array.from({ length: LANES }, () => '.....000..........') };
+  // fallback: a single hole across the road, solvable (SPEED, SPEED, JUMP, ...) and not beaten by repeating
+  // SPEED, WAIT or JUMP (speed 0 never moves with WAIT/JUMP; holding SPEED lands in the hole's range)
+  return { name: `Random level (seed ${seed})`, V: 1, speed: 0, lanes: [1], road: Array.from({ length: LANES }, () => '....0.............') };
 }
 
 function passesWith(road, need, s, lanes, cmd) {

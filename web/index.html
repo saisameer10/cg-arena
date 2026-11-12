@@ -138,6 +138,12 @@
         <button id="arenaStop" class="secondary" disabled>Stop</button>
         <span id="arenaStatus" class="dim"></span>
       </div>
+      <div class="row">
+        <label title="A CodinGame replay link or game id: yours, or a top player's. It is replayed here with our referee, with statistics and the review.">CodinGame replay <input id="replayRef" type="text" placeholder="https://www.codingame.com/replay/…" style="width:230px"></label>
+        <button id="replayImport" class="secondary">Import replay</button>
+        <span id="replayStatus" class="dim"></span>
+      </div>
+      <table id="replayStats"></table>
       <div id="arenaError" class="loss" style="white-space:pre-wrap"></div>
       <table id="arenaResults"></table>
       <div id="arenaPatterns"></div>

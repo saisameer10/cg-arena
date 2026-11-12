@@ -9,16 +9,16 @@ You steer 1 to 4 motorbikes along a 4-lane road full of holes. All bikes obey th
 | Command | Effect |
 |---|---|
 | `SPEED` | speed + 1, then move |
-| `SLOW` | speed − 1 (not below 0), then move |
+| `SLOW` | speed − 1 (at speed 0 it stays 0), then move |
 | `WAIT` | move at the current speed |
 | `JUMP` | move at the current speed, flying over everything except the landing cell |
-| `UP` / `DOWN` | move forward and change lane (lane 0 is the top). If any bike would hit the guard rail, no bike changes lane that turn |
+| `UP` / `DOWN` | move forward and change lane (lane 0 is the top). If any running bike would hit the guard rail, no bike changes lane that turn (they go straight); lost bikes do not block |
 
 Each turn the bikes advance by their speed. A bike falls into a hole (and is lost) when:
 
 - **straight move** (SPEED, SLOW, WAIT): any cell after its start up to and including its landing cell is a hole;
 - **JUMP**: its landing cell is a hole;
-- **UP/DOWN**: a hole lies on its current lane from X+1 to X+S−1, or on its new lane from X+1 to X+S.
+- **UP/DOWN**: a hole lies on its current lane from X+1 to X+S−1, or on its new lane from X+1 to X+S (the "black zone" of the original statement). At speed 0 the bike only steps sideways, and it falls if that cell is a hole (the original statement does not cover this case; this arena treats it like any landing cell).
 
 Cells beyond the end of the road are safe. You win when the remaining bikes reach X ≥ road length with at least V of them. You lose when fewer than V remain, or after 50 turns.
 

@@ -18,8 +18,10 @@ Original saved locally in `challenges/raw/the-bridge-episode-2.html` (not commit
 | Speed change | SPEED/SLOW change the speed first, then the bikes move | statement example (turn 1: S=1, SPEED, then X=2) |
 | SLOW at speed 0 | stays 0 | constraint 0 ≤ S |
 | SPEED at 49 | stays 49 | constraint S < 50 |
-| Guard rail | only bikes still running can block a lane change | lost bikes no longer move |
-| Lost bike | stays at the position after the move in which it fell, reported with A = 0 | statement example (turn 3/4: `4 1 0` stays) |
+| Guard rail | only bikes still running can block a lane change; a blocked UP/DOWN becomes a straight move (straight-move hole rule) | lost bikes no longer move |
+| Lost bike | stays at the position after the move in which it fell (including that turn's lane change), reported with A = 0 | statement example (turn 3/4: `4 1 0` stays) |
+| Output | exactly one of the six keywords; trailing spaces are accepted, anything else (lowercase, extra words) loses | CodinGame keyword list |
+| Test data | the referee rejects malformed levels (lanes, V, speed, characters, length, a bike starting on a hole) | statement constraints |
 | Lane change at speed 0 | the new cell itself must be safe | assumption (the diagram starts at speed 1) |
 | Cells past the road | safe; crossing = X ≥ road length | "far side of the bridge" |
 | End of game | win when the running bikes cross with at least V of them; lose as soon as fewer than V remain, or after 50 turns | statement |

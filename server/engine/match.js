@@ -8,7 +8,7 @@ const { GameError } = require('../../games/base');
 const { BotProcess, BotError, prepareBot } = require('../runner/bot');
 const { LANGUAGES, PYTHON, pythonArgs, PRELUDE } = require('../runner/languages');
 
-const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 3000));
+const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 5000));   // CodinGame does not charge interpreter/JVM start-up; a busy PC can need seconds
 
 // Remove leftover work dirs (crashes, killed processes) older than an hour.
 function sweepWorkRoot(root, maxAgeMs = 3600e3) {
@@ -159,7 +159,8 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
         // The first turn also pays for the interpreter/JVM boot (python ~0.5 s, java ~0.4 s cold on a laptop),
         // which CodinGame's servers do not charge to the bot, so the first turn gets a boot grace on top.
         const first = firstTurn[p];
-        const budget = (first ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier + (first ? BOOT_GRACE_MS : 0);
+        const grace = first ? BOOT_GRACE_MS * Math.max(1, timeoutMultiplier) : 0;
+        const budget = (first ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier + grace;
         firstTurn[p] = false;
         const t0 = Date.now();
         let output = [], error = null;
@@ -171,7 +172,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
           output = r;
         } catch (e) {
           error = e instanceof BotError ? e.message : String(e);
-          if (first && /^timeout/.test(error)) error += ` (first turn: ${meta.firstTurnTimeout} ms limit + ${BOOT_GRACE_MS} ms boot grace)`;
+          if (first && /^timeout/.test(error)) error += ` (first turn: ${meta.firstTurnTimeout * timeoutMultiplier} ms limit + ${grace} ms allowance for starting the program)`;
           referee.disqualify(p, error);
         }
         const ms = Date.now() - t0;

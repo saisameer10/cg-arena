@@ -9,8 +9,9 @@
 //   node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games 4] [--seed 1] [--league id]
 // Solo puzzles (test cases):
 //   node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random 5]
-// New challenges:
+// New challenges and CodinGame data:
 //   node cli.js fetch <codingame url or puzzle id>                    save the original statement locally
+//   node cli.js replay <replay url|id> | battles <player> | top [N]   import CodinGame replays (tools/cg-replay.js)
 //
 //   bot = path to a source file (.py/.js/.java/.cpp), boss:<id>, or pool:<id> (a saved version)
 const fs = require('fs');
@@ -47,6 +48,7 @@ function usage(games) {
   console.log('                node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games N] [--seed S] [--league id]');
   console.log('  solo puzzle:  node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random N]');
   console.log('  new puzzle:   node cli.js fetch <codingame url or puzzle id>');
+  console.log('  codingame:    node cli.js replay <replay url|id> [--turns key]  |  replay battles <player> [--losses --fetch N]  |  replay top [N]');
   console.log('  bot = source file (.py/.js/.java/.cpp), boss:<id> or pool:<id>');
   for (const g of Object.values(games)) console.log(`  ${g.kind === 'solo' ? 'solo ' : 'multi'}  ${g.id.padEnd(24)} ${g.name}`);
   process.exit(1);
@@ -149,6 +151,8 @@ async function runSolo(gameDef, botArg, opts) {
 async function main() {
   const { opts, pos } = parseArgs(process.argv.slice(2));
   if (pos[0] === 'fetch') { if (!pos[1]) usage(loadGames()); await fetchChallenge(pos[1]); return; }
+  // CodinGame replays (yours or top players'): download, re-simulate, statistics, review
+  if (pos[0] === 'replay') { await require('./tools/cg-replay.js').main(process.argv.slice(3)); return; }
   const games = loadGames();
   if (!pos.length) usage(games);
   if (!isSeed(opts.seed)) { console.error(`--seed must be an integer (got "${opts.seed}")`); process.exit(1); }

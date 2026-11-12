@@ -514,7 +514,10 @@ class OceanReferee extends Referee {
     if (r.dq) {
       const d = r.dq, reason = /[.!?]$/.test(d.reason) ? d.reason : d.reason + '.';
       let hint = ' Print the orders exactly in the documented format.';
-      if (/^timeout/i.test(d.reason)) hint = ` Aim well under the ${OceanReferee.meta.turnTimeout} ms limit (about 30 ms): CodinGame's servers can be slower than this PC.`;
+      if (/^timeout/i.test(d.reason)) {
+        const limit = d.frame <= 1 ? OceanReferee.meta.firstTurnTimeout : OceanReferee.meta.turnTimeout;   // frame 1 = placement
+        hint = ` Aim well under the ${limit} ms limit (about ${Math.round(limit * 0.6)} ms): CodinGame's servers can be slower than this PC.`;
+      }
       else if (/visit same location/.test(d.reason)) hint = ' Keep your own set of visited cells (SILENCE steps count too) and SURFACE when no unvisited neighbour is left.';
       else if (/outside map or onto island/.test(d.reason)) hint = ' Check the map bounds and islands before every MOVE and SILENCE step.';
       else if (/Unknown command|Invalid power/.test(d.reason)) hint = ` Your league allows ${[...me.commands].join(', ')} (and MSG).`;
