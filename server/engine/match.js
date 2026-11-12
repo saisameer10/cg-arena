@@ -86,6 +86,12 @@ async function compiledDir(langId, source, root) {
   try { return await job; } finally { building.delete(dir); }
 }
 
+// Frames keep at most 400 lines of a turn's input/output, so a 100 000-line test does not flood the browser.
+function clipLines(lines, max = 400) {
+  if (!Array.isArray(lines) || lines.length <= max) return lines;
+  return [...lines.slice(0, max), `… ${lines.length - max} more line(s) not shown`];
+}
+
 function removeDir(dir) {
   try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }); } catch {}
 }
@@ -185,8 +191,10 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
         }
         // give stderr a tick to arrive so the console lines up with the turn
         await new Promise(r => setImmediate(r));
-        actorEvents.push({ player: p, input, output, stderr: procs[p].takeStderr(), ms, error, extraOutput: extra.length || undefined });
-        if (!first && !error && ms > 0.7 * meta.turnTimeout * timeoutMultiplier) slow.push({ turn: referee.turn + 1, player: p, ms });
+        actorEvents.push({ player: p, input: clipLines(input), output: clipLines(output), stderr: procs[p].takeStderr(), ms, error, extraOutput: extra.length || undefined });
+        if (!first && !error && ms > 0.7 * meta.turnTimeout * timeoutMultiplier) slow.push({ turn: referee.turn + 1, player: p, ms, limit: meta.turnTimeout * timeoutMultiplier });
+        // single-turn games (classic puzzles): the only turn is also the first; its time includes start-up
+        else if (meta.maxTurns === 1 && !error && ms > 0.7 * meta.firstTurnTimeout * timeoutMultiplier) slow.push({ turn: referee.turn + 1, player: p, ms, limit: meta.firstTurnTimeout * timeoutMultiplier, withStart: true });
         extraLines += extra.length;
       }
       if (aborted) break;
@@ -219,7 +227,7 @@ function buildReview(referee, meta, mult, slow, extraLines, names) {
   for (const s of slow) (byPlayer[s.player] = byPlayer[s.player] || []).push(s);
   for (const [p, list] of Object.entries(byPlayer)) {
     const worst = list.reduce((a, b) => (b.ms > a.ms ? b : a));
-    items.push({ turn: worst.turn, player: Number(p), kind: 'warning', code: 'slow-turn', message: `${names[p]}: ${list.length} turn(s) used over 70 % of the ${meta.turnTimeout * mult} ms limit (worst ${worst.ms} ms at turn ${worst.turn}). CodinGame's servers may be slower than this PC: leave a margin.` });
+    items.push({ turn: worst.turn, player: Number(p), kind: 'warning', code: 'slow-turn', message: `${names[p]}: ${list.length} turn(s) used over 70 % of the ${worst.limit} ms limit (worst ${worst.ms} ms at turn ${worst.turn}${worst.withStart ? ', including program start-up' : ''}). CodinGame's servers may be slower than this PC: leave a margin.` });
   }
   if (extraLines) items.push({ turn: null, player: null, kind: 'warning', code: 'extra-output', message: `${extraLines} extra stdout line(s) were ignored. On CodinGame they would be read as your next answers: print exactly one answer per turn and send debug to stderr.` });
   return items;

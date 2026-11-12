@@ -39,22 +39,27 @@ Check the statement's "Expert Rules" section and search GitHub for `codingame <n
 - `review()`: required. Returns `{ turn, player, kind: 'mistake'|'warning'|'tip', code, message }`. Name the decisive mistake with coordinates/numbers and what would have been better. Use a stable kebab-case `code` per kind of finding (patterns group by it). Examples: Bridge (solver + binary search for the first losing command), Tron (flood-fill area of the chosen move vs the best), Ocean (self-damage, forced surfaces, skipped orders).
 - `statement.md`: **our own words**: rules summary plus the exact protocol tables (protocols are facts; prose is not ours to copy). Link the CodinGame page. The original stays in `challenges/raw/` and the IDE shows it.
 - `viewer.js`: `window.CGViewers[meta.viewer] = { render(ctx, w, h, static, frame, info), hud(static, frame, info) }`. Show what a player needs to debug: positions, last action, health/score, the event of the turn.
-- `starters/`: `bot.py`, `bot.js`, `Player.java` (class `Player`), `bot.cpp`. Read input in exactly the official order and print a legal default action; debug to stderr. They should run a full game without errors.
+- `starters/`: `bot.py`, `bot.js`, `Player.java`, `bot.cpp`. The public service returns no IDE stubs, so write them from the protocol unless the user pastes CodinGame's stub. Read input in exactly the official order and print a legal default action; debug to stderr. They should run a full game without errors. Java: the runner accepts `class Player` (games) and `class Solution` (classic puzzles), public or not.
 - multi: `bosses/boss.js` with levels as an argument (`wood`, `bronze`, `silver`, more if useful), each legal in every league and deterministic (seeded RNG). Wood = legal and simple; bronze = one clear idea; silver = uses every rule. Bosses are ordinary bots and may read nothing but stdin.
 - solo: `tests/NN-name.json` (designed levels covering each mechanic, then harder generated ones), `generator.js` with `generate(seed)` returning only solvable levels, and a reference solution (spoiler, clearly marked) that passes every test. Prove solvability by search, never by eye.
-- io: `tests/NN-name.in` + `.out`. Generate `.out` with a reference solution in a scratch folder, and include edge cases (empty input, ties, extremes, large input).
+- io: `"type": "io"` in game.json, `tests/NN-name.in` + `.out` (generate `.out` with a reference solution and cross-check it with a brute force), edge cases (empty input, ties, extremes, the largest N). Optional but recommended:
+  - `referee.js` subclassing `makeIoReferee(cfg)` from `games/io-referee.js` that only adds a puzzle-specific `review()`: recompute what typical wrong programs print for the test input and name the matching mistake (example: `games/horse-racing-duals/referee.js`). Design the tests so different common bugs give different wrong answers.
+  - `generator.js` with `generate(seed)` returning `{ name, input, expected }` (unlimited random tests like hidden validators).
+  - `timeLimitMs`: CodinGame publishes none for classic puzzles; 2000 ms is the convention here. The engine adds a start-up allowance to the only turn, so catch slow algorithms with a test large enough that they take many seconds.
+  - Classic puzzles have no public referee: instead look in the puzzle's forum thread for the names of the official tests and validators, and design similar ones.
+- Keep a clearly marked reference solution in the repo (`games/<id>/solution/`, header "SPOILER") for solo and io games, so validation can be re-run later.
 
 ## 5. Validate (all must pass before saying it is done)
 
 ```bash
 node cli.js <id> x --test list                                   # solo/io: tests load
-node cli.js <id> <reference-solution> --test all --random 20     # solo: reference passes everything
+node cli.js <id> <reference-solution> --test all --random 20     # solo/io: reference passes everything (--random needs a generator)
 node cli.js <id> games/<id>/starters/bot.py --test all            # solo/io: runs cleanly (failing is fine)
 node cli.js <id> games/<id>/starters/Player.java boss:wood --games 2   # multi: every starter x language
 node cli.js <id> boss:silver boss:bronze --games 10              # multi: silver wins >= 70 %, no disqualification
 node cli.js <id> boss:bronze boss:wood --games 10                # multi: bronze wins >= 70 %
 ```
-Also: unit-check each rule with `node -e` against the referee (one assertion per rule and per error message), check `review()` names a deliberately bad move, start the server on a spare port (`PORT=3105 node server/index.js`) and play one game in the browser or via `curl` on `/api/match`. Run every starter language that is installed (`node -e "console.log(require('./server/runner/languages').availableLanguages())"`).
+Also: unit-check each rule with `node -e` against the referee (one assertion per rule and per error message; for io: trailing spaces, extra lines, end of file, every review code), check `review()` names a deliberately bad move or wrong program, start the server on any spare port except 3000 (`PORT=3105 node server/index.js`) and play one game in the browser or via `curl` on `/api/match`. Run every starter language that is installed (`node -e "console.log(require('./server/runner/languages').availableLanguages())"`).
 
 ## 6. Document and commit
 

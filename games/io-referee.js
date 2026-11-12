@@ -26,7 +26,8 @@ function makeIoReferee(cfg) {
       this.mismatch = null;
       this.closeInputAfterTurn = true;     // programs may read until end of file
     }
-    getStaticInfo() { return { input: this.input, expected: this.expected, timeLimitMs: limit }; }
+    // the viewer shows the first lines only; huge tests are not shipped to the browser in full
+    getStaticInfo() { const cut = a => a.length > 400 ? [...a.slice(0, 400), `… ${a.length - 400} more line(s)`] : a; return { input: cut(this.input), expected: cut(this.expected), timeLimitMs: limit }; }
     getActors() { return [0]; }
     getTurnInput() { return this.input; }
     outputLines() { return Math.max(1, this.expected.length); }

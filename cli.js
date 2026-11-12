@@ -67,7 +67,8 @@ function printBoard(rows, solo = false) {
 }
 // recurring mistakes over a batch: only codes seen in at least 2 games (or in the only game)
 function printPatterns(list, n, title, unit = 'games') {
-  const shown = (list || []).filter(p => p.games >= 2 || n === 1).slice(0, 8);
+  if (n < 2) return;   // a single game's review is already printed
+  const shown = (list || []).filter(p => p.games >= 2).slice(0, 8);
   if (!shown.length) return;
   console.log(`\n${title}`);
   for (const p of shown) console.log(`  ${p.kind === 'mistake' ? '✘' : p.kind === 'warning' ? '!' : '·'} ${p.code}: ${p.games}/${n} ${unit}, e.g. ${p.example}`);
@@ -116,7 +117,8 @@ ${p.statement}</body></html>`;
 
 async function runSolo(gameDef, botArg, opts) {
   if (opts.test === 'list') {
-    gameDef.tests.forEach((t, i) => console.log(`${String(i + 1).padStart(3)}  ${t.id.padEnd(26)} ${t.name}`));
+    const w = Math.max(10, ...gameDef.tests.map(t => t.id.length));
+    gameDef.tests.forEach((t, i) => console.log(`${String(i + 1).padStart(3)}  ${t.id.padEnd(w)}  ${t.name}`));
     if (gameDef.generator) console.log('  random:<seed>  a generated level (any seed)');
     return 0;
   }
@@ -126,6 +128,7 @@ async function runSolo(gameDef, botArg, opts) {
   if (extra && !gameDef.generator) throw new Error(`${gameDef.name} has no level generator`);
   for (let i = 0; i < extra; i++) ids.push(`random:${offsetSeed(opts.seed, i)}`);
   if (!ids.length) throw new Error('no tests to run');
+  const idW = Math.max(24, ...ids.map(id => String(id).length), ...gameDef.tests.map(t => t.id.length));
   let passed = 0;
   const replays = [];
   const reviews = [];
@@ -137,7 +140,7 @@ async function runSolo(gameDef, botArg, opts) {
     if (r.type === 'error') { console.error(r.message); if (r.compileLog) console.error(r.compileLog); return 2; }
     if (r.passed) passed++;
     reviews.push({ review: r.review || [], side: 0, label: t.id });
-    console.log(`${r.passed ? 'PASS' : 'FAIL'}  ${t.id.padEnd(24)} ${t.name.padEnd(36)} ${r.message}`);
+    console.log(`${r.passed ? 'PASS' : 'FAIL'}  ${t.id.padEnd(idW)} ${t.name.padEnd(36)} ${r.message}`);
     if (!r.passed || (r.review || []).some(x => x.kind !== 'tip')) printReview(r.review);
   }
   console.log(`\n${label(player)}: passed ${passed}/${ids.length}${passed === ids.length ? '' : '  (exit code 3 when a test fails)'}`);

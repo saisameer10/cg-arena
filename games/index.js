@@ -5,7 +5,8 @@
 //  solo   (interactive solo puzzles, e.g. The Bridge): referee.js with meta.playerCount 1 + tests/*.json
 //         + optional generator.js (random "validator" levels: generate(seed) -> test data)
 //  io     (classic puzzles / clash of code: read all input, print the answer): "type": "io" in game.json,
-//         tests/NN-name.in + tests/NN-name.out, no referee.js needed
+//         tests/NN-name.in + tests/NN-name.out; referee.js optional (subclass of makeIoReferee for a
+//         puzzle-specific review); generator.js optional (generate(seed) -> { name, input, expected })
 //
 //   game.json : { name, type?, url?, bosses?:[{id,name,file,args?}], starters:{python:"starters/bot.py",...},
 //                 leagues?:[{id,name,default?}], tests?: "tests", timeLimitMs? (io) }
@@ -49,7 +50,10 @@ function loadGames() {
     try {
       const cfg = JSON.parse(read(cfgPath));
       const isIo = cfg.type === 'io';
-      const Referee = isIo ? makeIoReferee({ ...cfg, id: entry.name }) : require(path.join(dir, 'referee.js')).Referee;
+      // io games use the generic referee unless they ship a referee.js (typically a subclass of
+      // makeIoReferee that only adds a puzzle-specific review())
+      const ownReferee = path.join(dir, 'referee.js');
+      const Referee = isIo && !fs.existsSync(ownReferee) ? makeIoReferee({ ...cfg, id: entry.name }) : require(ownReferee).Referee;
       const starters = {};
       for (const [lang, rel] of Object.entries(cfg.starters || {})) starters[lang] = read(path.join(dir, rel));
       const tests = loadTests(dir, cfg);

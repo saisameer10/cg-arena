@@ -49,6 +49,8 @@ function findJdk() {
 let jdk;
 const JDK = () => (jdk === undefined ? (jdk = findJdk()) : jdk);
 
+const mainClassOf = dir => { try { return fs.readFileSync(path.join(dir, '.mainclass'), 'utf8').trim() || 'Player'; } catch { return 'Player'; } };
+
 // Each language: file name, optional compile step, run command.
 // Commands are plain spawn() calls (no shell), so bot code cannot inject shell syntax.
 const LANGUAGES = {
@@ -64,11 +66,19 @@ const LANGUAGES = {
     run: (dir) => ({ cmd: process.execPath, args: ['-r', PRELUDE, path.join(dir, 'bot.js')] }),
   },
   java: {
+    // CodinGame uses "class Player" for games and "class Solution" for classic puzzles; both work, and a
+    // "public class X" is written to X.java as javac requires. The class to run is stored in .mainclass.
     id: 'java', name: 'Java', monaco: 'java', fileName: 'Player.java',
+    fileFor: source => { const m = source.match(/\bpublic\s+(?:final\s+|abstract\s+)*class\s+([A-Za-z_]\w*)/); return (m ? m[1] : 'Player') + '.java'; },
+    mainFor: source => {
+      const names = [...source.matchAll(/\bclass\s+([A-Za-z_]\w*)/g)].map(m => m[1]);
+      const pub = source.match(/\bpublic\s+(?:final\s+)?class\s+([A-Za-z_]\w*)/);
+      return names.includes('Player') ? 'Player' : names.includes('Solution') ? 'Solution' : pub ? pub[1] : names[0] || 'Player';
+    },
     detect: () => !!JDK(),
-    compile: (dir) => ({ cmd: JDK().javac, args: ['-encoding', 'UTF-8', '-d', dir, path.join(dir, 'Player.java')] }),
+    compile: (dir) => ({ cmd: JDK().javac, args: ['-encoding', 'UTF-8', '-d', dir, ...fs.readdirSync(dir).filter(f => f.endsWith('.java')).map(f => path.join(dir, f))] }),
     // serial GC, class-data sharing and no perf-data file: faster JVM start and steadier 50 ms turns
-    run: (dir) => ({ cmd: JDK().java, args: ['-Xss64m', '-XX:+UseSerialGC', '-Xshare:auto', '-XX:-UsePerfData', '-cp', dir, 'Player'] }),
+    run: (dir) => ({ cmd: JDK().java, args: ['-Xss64m', '-XX:+UseSerialGC', '-Xshare:auto', '-XX:-UsePerfData', '-cp', dir, mainClassOf(dir)] }),
   },
   cpp: {
     id: 'cpp', name: 'C++ (g++)', monaco: 'cpp', fileName: 'bot.cpp',

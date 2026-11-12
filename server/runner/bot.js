@@ -24,7 +24,8 @@ async function prepareBot(langId, source, dir) {
   const lang = LANGUAGES[langId];
   if (!lang) throw new BotError(`Unknown language ${langId}`);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, lang.fileName), source, 'utf8');
+  fs.writeFileSync(path.join(dir, lang.fileFor ? lang.fileFor(source) : lang.fileName), source, 'utf8');
+  if (lang.mainFor) fs.writeFileSync(path.join(dir, '.mainclass'), lang.mainFor(source));
   if (lang.compile) {
     const r = await runToCompletion(lang.compile(dir), dir);
     if (r.code !== 0) return { ok: false, log: (r.out + '\n' + r.err).trim() || `compiler exited with ${r.code}` };
