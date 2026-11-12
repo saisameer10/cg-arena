@@ -1,70 +1,57 @@
 ---
 name: add-challenge
-description: Turn a CodinGame link, a PDF, screenshots or pasted text of a challenge into a playable cg-arena game (referee, viewer, starters, bosses or test cases, mistake review), validated end to end. Use whenever the user gives a puzzle/game link, a PDF or images of a statement, or asks to add a challenge.
+description: Turn a CodinGame link, a PDF, screenshots or pasted text of a challenge into a playable cg-arena challenge (referee, viewer, starters, bosses or tests, review), validated end to end by the generic validator. Use whenever the user gives a puzzle/game link, a PDF or images of a statement, or asks to add a challenge.
 ---
 
 # Add a challenge to cg-arena
 
-Goal: the user gives a link (or PDF / screenshots / text) and ends up with a challenge they can play in the IDE at http://localhost:3000 and from `cli.js`, exactly like on CodinGame: same input/output protocol and rules, an opponent (bosses for multiplayer, test cases for solo), and a review that names their mistakes. Work in this repository; read `CLAUDE.md` first.
+Goal: the user gives a link (or PDF / screenshots / text) and gets a challenge they can play in the IDE (http://localhost:3000) and from `cli.js`, exactly like on CodinGame. Everything except the puzzle's own rules is generic: scaffolding, test generation, validation, review of disqualifications and timing, patterns, arena, versions. Read `CLAUDE.md` first.
 
-## 1. Get the statement
-
-| Input | Do |
-|---|---|
-| CodinGame link or puzzle id | `node cli.js fetch <url>`: saves the original statement to `challenges/raw/<id>.html` (git-ignored) and prints CodinGame's type. Read the `.html`. No login needed. |
-| PDF | Read it with the Read tool (`pages` for long files). Copy it to `challenges/raw/<id>/` (git-ignored). |
-| Screenshots / photos | Read each image. Transcribe the protocol tables carefully; ask for a sharper image of any unreadable number. |
-| Video | Needs ffmpeg (`ffmpeg -version`). If present: `ffmpeg -i in.mp4 -vf fps=1 challenges/raw/<id>/frame-%03d.png`, then read frames. If absent, tell the user (`winget install Gyan.FFmpeg`) and ask for screenshots or replay links instead. |
-| Pasted text | Use it as is. |
-
-The id is the CodinGame prettyId (the last URL segment), e.g. `the-bridge-episode-2`. Without a link, choose a short kebab-case id.
-
-## 2. Classify
-
-| CodinGame type (fetch output) | Arena kind | Copy the structure of |
-|---|---|---|
-| `ARENA` / level `multi` (bot programming) | **multi**: 2+ players, bosses, leagues, arena | `games/ocean-of-code/` (ported official referee) or `games/tron/` |
-| `SOLO` (interactive puzzle with turns) | **solo**: referee + test levels + generator | `games/the-bridge-episode-2/` |
-| `OPTIM` (optimization, scored) | **solo** with a score in `getResult().scores` | `games/the-bridge-episode-2/` |
-| `CODE`, `CODEGOLF`, Clash of Code (read input once, print the answer) | **io**: test files only, no referee | `games/temperatures/` |
-
-## 3. Find the official rules source
-
-Besides the referee source, CodinGame's public puzzle record (`Puzzle/findProgressByPrettyId`) lists `replayIds`; `node cli.js replay <id>` (or `gameResult/findInformationById`) downloads them without login. Replays show the referee's exact game-info messages, frame counting and hidden behaviour the statement omits (for example the moving bombs in the last test of Shadows of the Knight). The puzzle's forum thread often quotes the exact failure messages.
-
-Check the statement's "Expert Rules" section and search GitHub for `codingame <name> referee` (organisations `CodinGame`, `CodinGameCommunity`). If the referee is public, **port it**: same validation order, same error messages, same map generator (use `games/java-random.js` for `java.util.Random`), same turn and frame counting (the SDK's `setMaxTurns` frame cap counts executed actions). `games/ocean-of-code/referee.js` is the worked example. If it is not public, implement from the statement and write every ambiguity and the choice you made into `challenges/<id>.md`.
-
-## 4. Build `games/<id>/`
-
-- `game.json`: `name`, `url`, `type: "io"` for io games, `starters`, `bosses` (multi), `leagues` (multi, if CodinGame has league-gated rules), `tests` (solo/io), `timeLimitMs` (io).
-- `referee.js` (multi/solo): class extending `games/base.js` `Referee`. Contract in README "Adding a game". Key points: `static meta = { playerCount, firstTurnTimeout, turnTimeout, maxTurns, viewer }` with CodinGame's real limits; `getActors()` returns one player for alternating games, all for simultaneous; throw `GameError` with CodinGame's wording for anything that loses the game; solo referees get the level in `opts.testCase` and return `{ scores, winner, passed, message }`.
-- `review()`: required. Returns `{ turn, player, kind: 'mistake'|'warning'|'tip', code, message }`. Name the decisive mistake with coordinates/numbers and what would have been better. Use a stable kebab-case `code` per kind of finding (patterns group by it). Examples: Bridge (solver + binary search for the first losing command), Tron (flood-fill area of the chosen move vs the best), Ocean (self-damage, forced surfaces, skipped orders).
-- `statement.md`: **our own words**: rules summary plus the exact protocol tables (protocols are facts; prose is not ours to copy). Link the CodinGame page. The original stays in `challenges/raw/` and the IDE shows it.
-- `viewer.js`: `window.CGViewers[meta.viewer] = { render(ctx, w, h, static, frame, info), hud(static, frame, info) }`. Show what a player needs to debug: positions, last action, health/score, the event of the turn.
-- `starters/`: `bot.py`, `bot.js`, `Player.java`, `bot.cpp`. The public service returns no IDE stubs, so write them from the protocol unless the user pastes CodinGame's stub. Read input in exactly the official order and print a legal default action; debug to stderr. They should run a full game without errors. Java: the runner accepts `class Player` (games) and `class Solution` (classic puzzles), public or not.
-- multi: `bosses/boss.js` with levels as an argument (`wood`, `bronze`, `silver`, more if useful), each legal in every league and deterministic (seeded RNG). Wood = legal and simple; bronze = one clear idea; silver = uses every rule. Bosses are ordinary bots and may read nothing but stdin.
-- solo: `tests/NN-name.json` (designed levels covering each mechanic, then harder generated ones), `generator.js` with `generate(seed)` returning only solvable levels, and a reference solution (spoiler, clearly marked) that passes every test. Prove solvability by search, never by eye. With hidden information (e.g. an unknown target), "solvable" means solvable for every hidden value (worst case), not by a lucky guess. Tests may depend on the seed (`opts.seed`); the CLI's `--seed` and the IDE's Seed box set it. `getResult().message` should not start with "Success:"/"Failure:" (the IDE adds that). Large boards need a zoomed view in the viewer.
-- io: `"type": "io"` in game.json, `tests/NN-name.in` + `.out` (generate `.out` with a reference solution and cross-check it with a brute force), edge cases (empty input, ties, extremes, the largest N). Optional but recommended:
-  - `referee.js` subclassing `makeIoReferee(cfg)` from `games/io-referee.js` that only adds a puzzle-specific `review()`: recompute what typical wrong programs print for the test input and name the matching mistake (example: `games/horse-racing-duals/referee.js`). Design the tests so different common bugs give different wrong answers.
-  - `generator.js` with `generate(seed)` returning `{ name, input, expected }` (unlimited random tests like hidden validators).
-  - `timeLimitMs`: CodinGame publishes none for classic puzzles; 2000 ms is the convention here. The engine adds a start-up allowance to the only turn, so catch slow algorithms with a test large enough that they take many seconds.
-  - Classic puzzles have no public referee: instead look in the puzzle's forum thread for the names of the official tests and validators, and design similar ones.
-- Keep a clearly marked reference solution in the repo (`games/<id>/solution/`, header "SPOILER") for solo and io games, so validation can be re-run later.
-
-## 5. Validate (all must pass before saying it is done)
+## The flow
 
 ```bash
-node cli.js <id> x --test list                                   # solo/io: tests load
-node cli.js <id> <reference-solution> --test all --random 20     # solo/io: reference passes everything (--random needs a generator)
-node cli.js <id> games/<id>/starters/bot.py --test all            # solo/io: runs cleanly (failing is fine)
-node cli.js <id> games/<id>/starters/Player.java boss:wood --games 2   # multi: every starter x language
-node cli.js <id> boss:silver boss:bronze --games 10              # multi: silver wins >= 70 %, no disqualification
-node cli.js <id> boss:bronze boss:wood --games 10                # multi: bronze wins >= 70 %
+node cli.js new <link or id>        # 1. fetch the original statement + scaffold games/<id>/ for its kind
+#                                     2. write the puzzle-specific parts (below)
+node cli.js make-tests <id>         # 3. solo/io: tests from generator.js + the reference solution
+node cli.js validate <id>           # 4. generic end-to-end validation: repeat 2-4 until "ready" (no FAIL)
 ```
-Put the rule and review assertions in `games/<id>/selftest.js` (plain Node, exits non-zero on failure, runs in under a minute; `node cli.js selftest <id>`), so they can be re-run after any framework change. Also: unit-check each rule against the referee (one assertion per rule and per error message; for io: trailing spaces, extra lines, end of file, every review code), check `review()` names a deliberately bad move or wrong program, start the server on any spare port except 3000 (`PORT=3105 node server/index.js`) and play one game in the browser or via `curl` on `/api/match`. Run every starter language that is installed (`node -e "console.log(require('./server/runner/languages').availableLanguages())"`).
+Then commit, push, and report.
 
-## 6. Document and commit
+## 1. Statement and kind
 
-Write `challenges/<id>.md` from `challenges/TEMPLATE.md`: source links, kind, official referee (or "not public"), every rule decision and ambiguity, what differs from CodinGame (e.g. our own test maps). Add the game to the README "Challenges included" table. Commit with a message naming the challenge, and push if a remote exists. (When you work as a delegated agent that owns only `games/<id>/`, leave the README and the commit to the coordinator and say so in your report.)
+`node cli.js new <link>` saves the original statement to `challenges/raw/<id>.html` (git-ignored, shown in the IDE) and classifies the challenge from CodinGame's own type: `ARENA` → **multi**, `SOLO`/`OPTIM` → **solo**, `CODE`/`CODEGOLF` → **io** (`--kind` overrides). Without a CodinGame link (a PDF, images, another site): read the material (the Read tool handles PDFs and images), save it to `challenges/raw/<id>/`, and scaffold offline with `node cli.js new <id> --kind io|solo|multi --title "Name" [--url <link>]`. Videos need ffmpeg (`ffmpeg -i v.mp4 -vf fps=1 challenges/raw/<id>/f-%03d.png`); without it, ask for screenshots.
 
-Report to the user: what was built, how faithful it is (ported vs implemented from the statement), the validation results, and anything not verified.
+## 2. Write only what is specific to the puzzle
+
+The scaffold marks every place with TODO. Contracts: README "Adding a game by hand".
+
+| Kind | Write | Generic parts that need nothing |
+|---|---|---|
+| io | `solution/` (reference solution, SPOILER header), `generator.js` → `{ name, input }`, the statement's examples as `tests/01-*.in` | judging, expected outputs (`make-tests`), viewer, starters, review of wrong lines |
+| solo | `referee.js` (rules, `getResult()` with `passed`/`message`, `review()`), `solution/`, `generator.js` → level data | test files (`make-tests` keeps only levels the solution passes), generic viewer until a custom one exists |
+| multi | `referee.js` (rules, leagues, `review()`), `bosses/boss.js` levels wood / bronze / silver | arena, versions, Elo, patterns, generic viewer until a custom one exists |
+
+Always:
+- **Rules exactly as CodinGame.** If the official referee is public (statement's "Expert Rules", GitHub `CodinGame` / `CodinGameCommunity`, search "codingame <name> referee"), port it: validation order, error messages, map generation (`games/java-random.js`), frame counting. Otherwise use the statement plus evidence from public replays (`node cli.js replay <id>` on the puzzle record's `replayIds`) and the forum thread, and write every decision in `challenges/<id>.md`.
+- `statement.md` in **our own words** plus the exact protocol (facts). Never commit CodinGame's text.
+- Starters read input in exactly the official order and print a legal default; Java may use `class Player` or `class Solution`.
+- `review()` names the decisive mistake with a stable kebab-case `code` (patterns group by it). The engine already explains disqualifications, timeouts, crashes, slow turns and extra output.
+- Bosses: deterministic, legal in every league; each level must beat the one below.
+- Optional: a custom `viewer.js` (positions, last action, score, events); `selftest.js` for rule assertions.
+
+## 3-4. Tests and validation
+
+`node cli.js make-tests <id> --count 10` writes generated tests next to the designed ones. `node cli.js validate <id>` then checks, for any challenge:
+
+- **structure**: files, statement, starters for every installed language, notes;
+- **referee contract**: construction for every league and test;
+- **starters**: they run cleanly;
+- **misbehaving bots**: generic bots that never answer, print garbage or crash must lose with an explanation;
+- **opponents**: boss legality in every league and the strength ladder (multi), or the reference solution passing every test and generated levels, with a deterministic generator (solo/io);
+- **determinism**, the **review format**, and the optional selftest.
+
+Fix every FAIL; read every WARN.
+
+## 5. Document, commit, report
+
+Fill `challenges/<id>.md` (source, kind, official referee or "not public", rule decisions, what differs from CodinGame). Add a row to the README "Challenges included" table. Commit and push. Tell the user what was built, how faithful it is (ported or from the statement), the `validate` summary, and anything not verified. When working as a delegated agent that owns only `games/<id>/`, leave the README and the commit to the coordinator.

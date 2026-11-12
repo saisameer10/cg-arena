@@ -1,0 +1,11 @@
+{
+ "name": "Bombs placed by the seed (500x500, 9 jumps)",
+ "W": 500,
+ "H": 500,
+ "N": 9,
+ "start": [
+  250,
+  250
+ ],
+ "bomb": "random"
+}

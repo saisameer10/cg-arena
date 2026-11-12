@@ -1,0 +1,14 @@
+{
+ "name": "Generated: small building (39x10, 8 jumps)",
+ "W": 39,
+ "H": 10,
+ "start": [
+  3,
+  3
+ ],
+ "bomb": [
+  30,
+  3
+ ],
+ "N": 8
+}

@@ -1,0 +1,14 @@
+{
+ "name": "Generated: medium building (155x965, 9 jumps)",
+ "W": 155,
+ "H": 965,
+ "start": [
+  33,
+  477
+ ],
+ "bomb": [
+  56,
+  285
+ ],
+ "N": 9
+}

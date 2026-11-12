@@ -61,7 +61,9 @@ function loadGames() {
       const generator = fs.existsSync(genPath) ? require(genPath) : null;
       const kind = isIo || Referee.meta.playerCount === 1 ? 'solo' : 'multi';
       const ownViewer = path.join(dir, 'viewer.js');
-      const raw = path.join(rawDir, entry.name + '.html');
+      // the fetched statement is named after CodinGame's id (last segment of the link), which may differ from the folder
+      const cgId = (String(cfg.url || '').match(/\/([\w-]+)\/?$/) || [])[1];
+      const raw = [cgId, entry.name].filter(Boolean).map(n => path.join(rawDir, n + '.html')).find(f => fs.existsSync(f)) || path.join(rawDir, entry.name + '.html');
       games[entry.name] = {
         id: entry.name,
         name: cfg.name || entry.name,
@@ -77,7 +79,7 @@ function loadGames() {
         starters,
         statement: fs.existsSync(path.join(dir, 'statement.md')) ? read(path.join(dir, 'statement.md')) : '',
         originalStatementPath: fs.existsSync(raw) ? raw : null,
-        viewerPath: fs.existsSync(ownViewer) ? ownViewer : path.join(root, 'io-viewer.js'),
+        viewerPath: fs.existsSync(ownViewer) ? ownViewer : path.join(root, isIo ? 'io-viewer.js' : 'generic-viewer.js'),
         resolveTest(id) { return resolveTest(this, id); },
       };
     } catch (e) {

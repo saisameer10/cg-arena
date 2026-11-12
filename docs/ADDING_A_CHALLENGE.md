@@ -15,6 +15,16 @@ Open Claude Code in this folder and hand over the challenge in any of these form
 
 Also useful, when you have them: the starter code from the IDE (it pins the input order), which league you are in (rules unlock by league), and a link to the official referee if the statement's "Expert Rules" names one.
 
+## The generic pipeline
+
+```bash
+node cli.js new <link>          # statement + scaffold for its kind (offline: node cli.js new <id> --kind io|solo|multi)
+node cli.js make-tests <id>     # solo/io: tests from generator.js + the reference solution
+node cli.js validate <id>       # the same end-to-end battery for every challenge
+```
+
+Only the puzzle's own rules (referee), bosses or reference solution and generator are written per puzzle; scaffolding, test generation, validation, the review of disqualifications and timing, patterns, the arena and versions are generic.
+
 ## What gets built
 
 ```

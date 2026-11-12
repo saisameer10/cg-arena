@@ -1,0 +1,14 @@
+{
+ "name": "Just enough jumps (40x60, 6 jumps)",
+ "W": 40,
+ "H": 60,
+ "N": 6,
+ "start": [
+  35,
+  40
+ ],
+ "bomb": [
+  7,
+  9
+ ]
+}

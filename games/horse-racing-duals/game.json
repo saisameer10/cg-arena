@@ -1,0 +1,13 @@
+{
+  "name": "Horse-racing Duals (classic)",
+  "type": "io",
+  "url": "https://www.codingame.com/ide/puzzle/horse-racing-duals",
+  "timeLimitMs": 2000,
+  "tests": "tests",
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java",
+    "cpp": "starters/bot.cpp"
+  }
+}

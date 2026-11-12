@@ -11,6 +11,10 @@ Self-hosted CodinGame-style platform: the user writes bots (mostly Java), plays 
 - `challenges/` hand-off notes per challenge; `challenges/raw/` original statements fetched for local use (git-ignored; never commit them).
 - `my-bots/` the user's bot files (git-ignored).
 
+## Generic pipeline (any new challenge)
+
+`node cli.js new <link>` (fetch + scaffold for its kind; `--kind` offline) → write only the puzzle-specific parts (referee rules, bosses, or solution + generator) → `node cli.js make-tests <id>` (solo/io) → `node cli.js validate <id>` until "ready" (no FAIL). `tools/validate.js` is the same battery for every challenge; keep it generic: never special-case a puzzle there.
+
 ## Skills
 
 - Adding a challenge from a link, PDF, images or text: `.claude/skills/add-challenge/SKILL.md`.

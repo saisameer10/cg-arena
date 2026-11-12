@@ -1,0 +1,14 @@
+{
+ "name": "Generated: large building (1372x8847, 14 jumps)",
+ "W": 1372,
+ "H": 8847,
+ "start": [
+  716,
+  901
+ ],
+ "bomb": [
+  1201,
+  3235
+ ],
+ "N": 14
+}

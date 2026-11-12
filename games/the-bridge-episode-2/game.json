@@ -7,5 +7,6 @@
     "javascript": "starters/bot.js",
     "java": "starters/Player.java",
     "cpp": "starters/bot.cpp"
-  }
+  },
+  "solution": "rules.js"
 }

@@ -34,7 +34,8 @@ function parseArgs(argv) {
   const opts = { games: null, seed: 1, 'timeout-mult': 1, replay: null, league: null, opponents: 'all', name: '', test: 'all', random: 0 };
   const pos = [];
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith('--')) opts[argv[i].slice(2)] = argv[++i];
+    if (['--quick'].includes(argv[i])) opts[argv[i].slice(2)] = true;   // flags without a value
+    else if (argv[i].startsWith('--')) opts[argv[i].slice(2)] = argv[++i];
     else pos.push(argv[i]);
   }
   return { opts, pos };
@@ -47,8 +48,11 @@ function usage(games) {
   console.log('                node cli.js pool <game>');
   console.log('                node cli.js arena <game> <bot> [--opponents all|bosses|pool|key,key] [--games N] [--seed S] [--league id]');
   console.log('  solo puzzle:  node cli.js <game> <bot> [--test all|list|<n>|<id>|random[:seed]] [--random N]');
-  console.log('  new puzzle:   node cli.js fetch <codingame url or puzzle id>');
-  console.log('  checks:       node cli.js selftest [<game>|all]          (rule and review assertions of each challenge)');
+  console.log('  new puzzle:   node cli.js new <codingame url or puzzle id> [--kind io|solo|multi]   (fetch + scaffold)');
+  console.log('                node cli.js fetch <codingame url or puzzle id>                       (statement only)');
+  console.log('                node cli.js make-tests <game> [--count N] [--seed S]                 (solo/io: generator + reference solution)');
+  console.log('  checks:       node cli.js validate [<game>|all] [--quick]  (generic end-to-end validation of any challenge)');
+  console.log('                node cli.js selftest [<game>|all]          (rule and review assertions of each challenge)');
   console.log('  codingame:    node cli.js replay <replay url|id> [--turns key]  |  replay battles <player> [--losses --fetch N]  |  replay top [N]');
   console.log('  bot = source file (.py/.js/.java/.cpp), boss:<id> or pool:<id>');
   for (const g of Object.values(games)) console.log(`  ${g.kind === 'solo' ? 'solo ' : 'multi'}  ${g.id.padEnd(24)} ${g.name}`);
@@ -79,7 +83,7 @@ function printReview(review, indent = '    ') {
 }
 
 // ---- fetch: a CodinGame link -> the original statement, saved locally (git-ignored) ----
-async function fetchChallenge(ref) {
+async function fetchChallenge(ref, quietNext = false) {
   const m = String(ref).match(/codingame\.com\/(?:ide\/puzzle|training\/[^/]+|multiplayer\/[^/]+|contribute\/view|ide)\/([\w-]+)/) || String(ref).match(/^([\w-]+)$/);
   if (!m) throw new Error(`cannot find a puzzle id in "${ref}" (expected e.g. https://www.codingame.com/ide/puzzle/the-bridge-episode-2)`);
   const id = m[1];
@@ -112,8 +116,9 @@ ${p.statement}</body></html>`;
   console.log(`  arena kind: ${kind}`);
   console.log(`  saved: challenges/raw/${id}.html (original statement, shown in the IDE when games/${id}/ exists)`);
   const exists = fs.existsSync(path.join(__dirname, 'games', id, 'game.json'));
-  console.log(exists ? `  games/${id}/ already exists: restart the server to show the original statement.`
-    : `  next: ask Claude Code in this folder: "add the challenge ${url}" (procedure: .claude/skills/add-challenge/SKILL.md)`);
+  if (!quietNext) console.log(exists ? `  games/${id}/ already exists: restart the server to show the original statement.`
+    : `  next: node cli.js new ${id}   (scaffold), or ask Claude Code here: "add the challenge ${url}"`);
+  return { id, url, title: p.title, cgType: p.type, level: p.level, kind: kind.split(' ')[0].replace(',', '') };
 }
 
 async function runSolo(gameDef, botArg, opts) {
@@ -155,8 +160,54 @@ async function runSolo(gameDef, botArg, opts) {
 async function main() {
   const { opts, pos } = parseArgs(process.argv.slice(2));
   if (pos[0] === 'fetch') { if (!pos[1]) usage(loadGames()); await fetchChallenge(pos[1]); return; }
+  // new challenge: fetch the statement and scaffold games/<id>/ for its kind (io, solo, multi)
+  if (pos[0] === 'new') {
+    if (!pos[1]) usage(loadGames());
+    let info;
+    try { info = await fetchChallenge(pos[1], true); }
+    catch (e) {
+      // not on CodinGame (a PDF, screenshots, another site): scaffold offline when the kind is given
+      if (!opts.kind) throw new Error(`${e.message}\n  For a challenge from a PDF or images: node cli.js new <id> --kind io|solo|multi [--title "Name"] [--url <link>]`);
+      const id = String(pos[1]).replace(/^.*\//, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+      info = { id, url: opts.url || '', title: opts.title || id, cgType: 'not on CodinGame', level: '' };
+      console.log(`${info.title}: scaffolding offline (${e.message.split('\n')[0]})`);
+    }
+    const kind = opts.kind || info.kind;
+    if (!['io', 'solo', 'multi'].includes(kind)) throw new Error(`--kind must be io, solo or multi (got "${kind}")`);
+    const { files } = require('./tools/scaffold').scaffold({ id: info.id, title: info.title, url: info.url, kind, cgType: info.cgType, level: info.level });
+    console.log(`  scaffolded ${files.length} files for a ${kind} challenge:`);
+    for (const f of files) console.log('    ' + f);
+    console.log(`  next: write the rules (${kind === 'io' ? 'solution/ + generator.js, then node cli.js make-tests ' + info.id : kind === 'solo' ? 'referee.js, solution/, generator.js, then node cli.js make-tests ' + info.id : 'referee.js and bosses/boss.js'}),`);
+    console.log(`        then node cli.js validate ${info.id} until it is ready. Claude Code does all of this: "add the challenge ${info.url || info.id}".`);
+    return;
+  }
+  // tests for solo/io challenges from their generator + reference solution
+  if (pos[0] === 'make-tests') {
+    const all = loadGames();
+    const g = all[pos[1]];
+    if (!g) { console.error(`unknown game "${pos[1]}"`); process.exit(1); }
+    const r = await require('./tools/make-tests').makeTests(g, { count: Number(opts.count) || 10, seed: Number(opts.seed) || 1 });
+    console.log(`\n${r.made} test(s) written to ${path.relative(__dirname, r.dir)}${r.skipped ? `, ${r.skipped} level(s) skipped` : ''}`);
+    return;
+  }
   // CodinGame replays (yours or top players'): download, re-simulate, statistics, review
   if (pos[0] === 'replay') { await require('./tools/cg-replay.js').main(process.argv.slice(3)); return; }
+  // generic end-to-end validation of any challenge (tools/validate.js): exit code 0 = no FAIL
+  if (pos[0] === 'validate') {
+    const { validate } = require('./tools/validate');
+    const all = loadGames();
+    const ids = !pos[1] || pos[1] === 'all' ? Object.keys(all) : [pos[1]];
+    const summary = [];
+    for (const id of ids) {
+      if (!all[id]) { console.error(`unknown game "${id}"`); process.exitCode = 1; continue; }
+      console.log(`\n=== ${id} (${all[id].kind})`);
+      summary.push(await validate(all[id], { quick: opts.quick === true, games: opts.games, timeoutMult: Number(opts['timeout-mult']) || 1 }));
+    }
+    console.log('\nsummary:');
+    for (const s of summary) console.log(`  ${s.fail ? 'NOT READY' : 'ready    '}  ${s.id.padEnd(34)} ${s.pass} pass, ${s.warn} warn, ${s.fail} fail`);
+    if (summary.some(s => s.fail)) process.exitCode = 3;
+    return;
+  }
   // games/<id>/selftest.js: each challenge's own rule and review assertions (exit code 0 = pass)
   if (pos[0] === 'selftest') {
     const { spawnSync } = require('child_process');

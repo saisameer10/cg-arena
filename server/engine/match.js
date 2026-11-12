@@ -8,7 +8,9 @@ const { GameError } = require('../../games/base');
 const { BotProcess, BotError, prepareBot } = require('../runner/bot');
 const { LANGUAGES, PYTHON, pythonArgs, PRELUDE } = require('../runner/languages');
 
-const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 5000));   // CodinGame does not charge interpreter/JVM start-up; a busy PC can need seconds
+// CodinGame does not charge interpreter/JVM start-up; a busy PC can need seconds
+const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 5000));
+const BOSS_TIME_MULT = Math.max(1, Number(process.env.CG_ARENA_BOSS_TIME_MULT ?? 4));   // extra time for built-in bosses
 
 // Remove leftover work dirs (crashes, killed processes) older than an hour.
 function sweepWorkRoot(root, maxAgeMs = 3600e3) {
@@ -45,7 +47,7 @@ async function buildPlayers(gameDef, players, matchDir) {
     if (p.type === 'boss') {
       const boss = gameDef.bosses.find(b => b.id === p.id);
       if (!boss) throw new Error(`Unknown boss "${p.id}" for ${gameDef.id}`);
-      bots.push({ name: boss.name, spec: bossSpec(gameDef, boss), cwd: gameDef.dir });
+      bots.push({ name: boss.name, spec: bossSpec(gameDef, boss), cwd: gameDef.dir, isBoss: true });
     } else {
       const lang = LANGUAGES[p.lang];
       if (!lang) throw new Error(`Unknown language ${p.lang}`);
@@ -129,6 +131,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
   const names = built.bots.map(b => b.name);
   emit({ type: 'start', game: { id: gameDef.id, name: gameDef.name, viewer: meta.viewer, kind: gameDef.kind }, players: names, seed, league, test: testCase ? { id: testCase.id, name: testCase.name } : null, static: referee.getStaticInfo() });
   const slow = [];          // turns answered with less than 30 % of the time budget left (timeout risk)
+  const dqInfo = {};        // player -> { turn, kind, reason, budget }: explained by the review even if the referee does not
   let extraLines = 0;
 
   // resolves (never rejects) when the client goes away, so a pending read can be raced against it
@@ -166,7 +169,9 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
         // which CodinGame's servers do not charge to the bot, so the first turn gets a boot grace on top.
         const first = firstTurn[p];
         const grace = first ? BOOT_GRACE_MS * Math.max(1, timeoutMultiplier) : 0;
-        const budget = (first ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier + grace;
+        // bosses are reference opponents, not the player's code: a busy PC must not make them lose on time
+        const bossMult = built.bots[p].isBoss ? BOSS_TIME_MULT : 1;
+        const budget = (first ? meta.firstTurnTimeout : meta.turnTimeout) * timeoutMultiplier * bossMult + grace;
         firstTurn[p] = false;
         const t0 = Date.now();
         let output = [], error = null;
@@ -180,12 +185,13 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
           error = e instanceof BotError ? e.message : String(e);
           if (first && /^timeout/.test(error)) error += ` (first turn: ${meta.firstTurnTimeout * timeoutMultiplier} ms limit + ${grace} ms allowance for starting the program)`;
           referee.disqualify(p, error);
+          dqInfo[p] = { turn: referee.turn + 1, kind: /^timeout/.test(error) ? 'timeout' : /exited|failed to start/.test(error) ? 'crashed' : 'other', reason: error, budget, first };
         }
         const ms = Date.now() - t0;
         if (!error) {
           try { referee.applyOutput(p, output); }
           catch (e) {
-            if (e instanceof GameError) { error = e.message; referee.disqualify(p, error); }
+            if (e instanceof GameError) { error = e.message; referee.disqualify(p, error); dqInfo[p] = { turn: referee.turn + 1, kind: 'invalid-output', reason: error, output }; }
             else throw e;
           }
         }
@@ -205,7 +211,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
     result.players = names;
     result.dq = referee.dq;
     if (aborted) { result.aborted = true; result.winner = null; }
-    result.review = aborted ? [] : buildReview(referee, meta, timeoutMultiplier, slow, extraLines, names);
+    result.review = aborted ? [] : buildReview(referee, meta, timeoutMultiplier, slow, extraLines, names, dqInfo);
     emit({ type: 'end', result, summary: referee.takeSummary(), review: result.review });
     return result;
   } finally {
@@ -217,11 +223,21 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
 // Post-game review: the referee's own analysis (optional referee.review(), game-specific mistakes)
 // plus engine-level risks every game shares. Items: { turn, player, kind: 'mistake'|'warning'|'tip', message };
 // turn is the replay frame number (1-based) so the viewer can jump to it.
-function buildReview(referee, meta, mult, slow, extraLines, names) {
+function buildReview(referee, meta, mult, slow, extraLines, names, dqInfo = {}) {
   let items = [];
   if (typeof referee.review === 'function') {
     try { items = (referee.review() || []).filter(Boolean); }
     catch (e) { items = [{ turn: null, player: null, kind: 'warning', code: 'review-failed', message: `review failed: ${e.message}` }]; }
+  }
+  // Generic: every game ends with an explanation of a disqualification, whatever the referee reviews.
+  for (const [p, d] of Object.entries(dqInfo)) {
+    const pl = Number(p);
+    if (items.some(x => x.player === pl && x.kind === 'mistake' && x.turn === d.turn)) continue;   // the referee already explained it
+    const who = names.length > 1 ? `${names[pl]}: ` : '';
+    const hint = d.kind === 'timeout' ? `no answer within ${d.budget} ms${d.first ? ' (first turn, start-up included)' : ''}. Print exactly one answer per turn and flush it (Python print, Java System.out.println); look for an infinite loop, a missing print, or a search without a time check.`
+      : d.kind === 'crashed' ? 'your program stopped. Look at the Console tab for an exception or traceback; a program that leaves its main loop (or reads past the end of input) also stops.'
+      : `the referee rejected the answer${d.output && d.output.length ? ` "${String(d.output.join(' | ')).slice(0, 80)}"` : ''}. Check the output format in the statement's protocol.`;
+    items.unshift({ turn: d.turn, player: pl, kind: 'mistake', code: d.kind === 'other' ? 'disqualified' : d.kind, message: `${who}Turn ${d.turn}: ${d.reason}: ${hint}` });
   }
   const byPlayer = {};
   for (const s of slow) (byPlayer[s.player] = byPlayer[s.player] || []).push(s);

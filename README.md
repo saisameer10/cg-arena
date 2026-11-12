@@ -8,7 +8,7 @@ A self-hosted, CodinGame-style platform that runs on your own computer. Give it 
 
 After every game a **Review** names the decisions that cost it: the turn, the move, and what would have worked. Batches of games or tests show **patterns**, the same mistake coming back across games. You can import **CodinGame replays** of your own games or of top players and study them with the same viewer, statistics and review.
 
-New challenges are added by Claude Code from a link or a PDF with a repeatable, validated procedure, so the platform grows with whatever you practise next.
+New challenges are added from a link or a PDF through a **generic pipeline**. It scaffolds the challenge for its kind, generates tests from a reference solution, and runs the same end-to-end validation for every puzzle. Claude Code writes only what is specific to the puzzle (its rules, bosses or solution), so the platform grows with whatever you practise next.
 
 ## Contents
 
@@ -68,9 +68,13 @@ First game in two minutes: pick **Ocean of Code**, language **Java**, Player 1 *
 | `ocean-of-code` | multi | Port of the official referee ([CodinGameCommunity/ocean-of-code](https://github.com/CodinGameCommunity/ocean-of-code)): leagues Wood 2 / Wood 1 / Bronze+, validation order, error messages, the 1000-frame cap, and the map generator (`java.util.Random` port, so a CodinGame seed gives the same map). CodinGame replays re-simulate here with identical results. | bosses wood / bronze / silver |
 | `tron` | multi | Implemented from the Tron Battle statement. | bosses wood (random) / bronze (flood fill) / silver (Voronoi) |
 | `the-bridge-episode-2` | solo | Implemented from the statement; the UP/DOWN rule was checked against the official diagram and by an independent re-implementation (1.1 million moves, no difference). | 10 levels + random levels; solver-based review |
-| `temperatures` | io | Classic puzzle. | 8 tests |
+| `tic-tac-toe` | multi | Port of the official referee ([CodinGame/game-ultimate-tictactoe](https://github.com/CodinGame/game-ultimate-tictactoe)), leagues Wood (3×3) and Bronze+ (ultimate 9×9). Added from the link alone by the pipeline. | bosses wood / bronze / silver |
+| `shadows-of-the-knight-episode-1` | solo | Implemented from the statement plus evidence from CodinGame's public replays (exact messages, the moving bombs of the last test). Added from the link alone by the pipeline. | 17 levels + random levels |
+| `temperatures` | io | Classic puzzle. | designed tests + generated tests |
+| `horse-racing-duals` | io | Classic puzzle; its review recognises typical wrong programs (unsorted neighbours, text sort, loop bounds, O(N²) timeouts). Added from the link alone by the pipeline. | 15 tests + random tests |
+| `unary` | io | Classic puzzle, added end to end with the generic pipeline: `new` → solution + input generator → `make-tests` → `validate`. | 2 statement examples + 12 generated tests |
 
-Each challenge has notes in `challenges/<id>.md`: sources, every rule decision, and what differs from CodinGame.
+Each challenge has notes in `challenges/<id>.md`: sources, every rule decision, and what differs from CodinGame. `node cli.js validate all` checks every challenge with the same generic battery; all are "ready".
 
 ## The web IDE
 
@@ -124,6 +128,16 @@ node cli.js temperatures my-bots/Temps.py
 ```
 Solo runs exit with code 3 when a test fails, so they fit in scripts.
 
+**New challenges (generic pipeline)**
+```bash
+node cli.js new https://www.codingame.com/training/easy/unary      # fetch the statement + scaffold games/<id>/ for its kind
+node cli.js new my-puzzle --kind solo --title "My Puzzle"          # from a PDF or images: scaffold offline
+node cli.js make-tests unary --count 12                            # solo/io: tests from generator.js + the reference solution
+node cli.js validate unary                                         # generic end-to-end validation ("ready" = no FAIL)
+node cli.js validate all --quick                                   # every challenge, faster
+node cli.js selftest all                                           # optional challenge-specific assertions
+```
+
 **CodinGame**
 ```bash
 node cli.js fetch https://www.codingame.com/ide/puzzle/the-bridge-episode-2       # original statement, saved locally
@@ -151,7 +165,7 @@ Every game ends with a review: a short ranked list of `{ turn, kind, code, messa
 
 | Challenge | What the review finds (codes) |
 |---|---|
-| all games (engine) | turns using over 70 % of the time limit (`slow-turn`), extra stdout lines that CodinGame would read as answers (`extra-output`) |
+| all games (engine) | disqualifications explained with the turn and a concrete hint (`timeout`, `crashed`, `invalid-output`, `disqualified`), turns using over 70 % of the time limit (`slow-turn`), extra stdout lines that CodinGame would read as answers (`extra-output`) |
 | The Bridge | the first command after which the level could no longer be won, and the commands that would still have won (`decisive-<command>-into-hole` / `-dead-end`); a pass with fewer bikes or many more turns than needed (`fewer-survivors`, `slow-plan`); a loss that was decided earlier than it looks (`lost-earlier-than-it-looks`) |
 | Tron | moves into a much smaller region than the best alternative (`smaller-region`), the death cause (`death-wall`, `death-own-trail`, `death-opponent-trail`, `death-timeout`, `death-invalid`), board cut-offs (`cut-off`), poor filling of your own region (`poor-fill`) |
 | Ocean of Code | self-damage, forced and voluntary surfaces, orders skipped and the SURFACE fallback, torpedo misses, the biggest hit taken, charged but unused devices, wasted charges, disqualification with the failing order (`self-damage`, `forced-surface`, `voluntary-surface`, `skipped-order`, `surface-fallback`, `torpedo-misses`, `big-damage-taken`, `unused-charges`, `wasted-charges`, `disqualified`, ...) |
@@ -174,16 +188,26 @@ Every game ends with a review: a short ranked list of `{ turn, kind, code, messa
 
 ## Adding a new challenge
 
-Open Claude Code in this folder and give it the challenge in any form. It follows `.claude/skills/add-challenge/SKILL.md`:
+Open Claude Code in this folder and give it the challenge in any form: "add the challenge &lt;link&gt;", or a PDF or screenshots. It follows `.claude/skills/add-challenge/SKILL.md`, where everything except the puzzle's own rules is generic:
 
-1. **Get the statement.** For a link, `node cli.js fetch <url>` saves the original locally (no login). A PDF, screenshots or text are read directly.
-2. **Classify** it as multi, solo or io, from CodinGame's own type.
-3. **Find the official referee**, and **port** it when it is public (as for Ocean of Code). Otherwise implement from the statement and write every ambiguity in `challenges/<id>.md`.
-4. **Build** `games/<id>/`: referee with review, viewer, starters in four languages, and either bosses with a strength ladder (multi), designed and generated levels with a reference solution (solo), or input/output test files (io).
-5. **Validate** with real runs: every starter in every installed language, the boss ladder or the reference solution on every test, one check per rule, the review on a deliberately bad bot, and the HTTP API.
-6. **Document and commit.**
+1. **`node cli.js new <link>`** fetches the original statement (no login) and classifies it from CodinGame's own type: multi, solo or io. It then scaffolds `games/<id>/` with every file the platform needs: config, statement page, starters in four languages, referee skeleton, bosses or solution and generator, and notes. The challenge is loadable and playable at once, using the generic viewer. For a PDF or images, `--kind` scaffolds offline.
+2. **The puzzle-specific part**:
+   - io: a reference solution and an input generator;
+   - solo: the referee, a solution and a level generator;
+   - multi: the referee and the boss levels.
 
-What each input gives, and what helps most, is in [`docs/ADDING_A_CHALLENGE.md`](docs/ADDING_A_CHALLENGE.md). The procedure was itself tested by giving fresh agents nothing but a link. The challenges they built this way are listed in the table above.
+   When CodinGame published the official referee it is ported exactly. Otherwise the rules come from the statement and from public replays, and every decision goes into `challenges/<id>.md`.
+3. **`node cli.js make-tests <id>`** generates tests. For classic puzzles the reference solution computes the expected outputs; for solo puzzles only levels the solution passes are kept, which proves they are solvable.
+4. **`node cli.js validate <id>`** runs the same generic battery on any challenge:
+   - structure;
+   - referee contract for every league and test;
+   - starters in every installed language;
+   - misbehaving bots (never answers, garbage, crash) that must lose with an explanation;
+   - boss legality and strength ladder (multi), or the reference solution passing every test and generated level (solo/io);
+   - determinism, the review format, and the optional selftest.
+5. **Document, commit, push.**
+
+What each input gives, and what helps most, is in [`docs/ADDING_A_CHALLENGE.md`](docs/ADDING_A_CHALLENGE.md). The pipeline was tested by giving fresh agents nothing but a link (Tic-Tac-Toe, Shadows of the Knight, Horse-racing Duals) and end to end with the generic commands (Unary).
 
 ## Coaching your bot with Claude Code
 
@@ -208,7 +232,8 @@ Ask Claude Code in this folder why your bot loses or how to improve it. It follo
 
 - **Protocol** is exactly CodinGame's. The referee writes input lines to the bot's stdin, the bot prints its answer to stdout, and stderr goes to the console. A CodinGame bot runs here unchanged, and vice versa. Classic puzzles get the whole input followed by end of file.
 - **Timing.** Each turn is limited to the challenge's CodinGame limit. The first turn also gets an allowance for starting Java, Python or Node (5 s, times the Time × multiplier), because CodinGame does not charge start-up to the bot either. The review warns about turns over 70 % of the limit, since CodinGame's servers may be slower than your PC.
-- **Referees** (`games/<id>/referee.js`, or the generic `games/io-referee.js`) own the rules, the frames and the review. The engine records every frame, so you can scrub back and forth.
+- **Bosses** get 4 times the turn limit (`CG_ARENA_BOSS_TIME_MULT`): they are reference opponents, and a busy PC must not make them lose on time. Your code always runs at CodinGame's limits.
+- **Referees** (`games/<id>/referee.js`, or the generic `games/io-referee.js`) own the rules, the frames and the review. The engine records every frame, so you can scrub back and forth. A challenge without its own `viewer.js` is shown by the generic text viewer (`games/generic-viewer.js`).
 - **Compiled bots** (Java, C++) are built once per source and cached in `.runs/cache/`, so a 10-test suite compiles once.
 - **Security.** The server runs your code, so it listens on `127.0.0.1` only, refuses cross-site requests, and stops a match when the browser disconnects. Bots are not sandboxed: use it on your own machine.
 
@@ -224,8 +249,13 @@ server/arena.js            saved versions, Elo, arena runs
 games/index.js             challenge registry (multi / solo / io)
 games/base.js              referee contract
 games/io-referee.js        generic referee for classic puzzles (+ io-viewer.js)
+games/generic-viewer.js    text viewer for challenges without their own viewer
 games/java-random.js       java.util.Random port (CodinGame map generators)
-games/<id>/                one challenge: game.json, referee.js, viewer.js, statement.md, starters/, bosses/ or tests/
+games/<id>/                one challenge: game.json, referee.js, viewer.js, statement.md, starters/, bosses/ or tests/,
+                           generator.js, solution/ (spoiler), selftest.js (optional)
+tools/scaffold.js          node cli.js new: a new challenge's files for its kind
+tools/make-tests.js        node cli.js make-tests: tests from a generator + the reference solution
+tools/validate.js          node cli.js validate: the generic end-to-end validation
 tools/cg-replay.js         CodinGame replay import
 web/                       the IDE (index.html, app.js)
 challenges/<id>.md         sources and rule decisions per challenge
@@ -237,6 +267,8 @@ CLAUDE.md                  architecture notes for Claude Code
 ```
 
 ## Adding a game by hand
+
+`node cli.js new <id> --kind io|solo|multi` creates all of this with TODO markers; the contract is:
 
 1. Create `games/<id>/` with `game.json`, `statement.md`, `viewer.js` and `starters/`. Then add, depending on the kind:
    - multi: `referee.js` and `bosses/`;

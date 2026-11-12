@@ -1,0 +1,19 @@
+{
+  "name": "Ultimate Tic-Tac-Toe",
+  "url": "https://www.codingame.com/multiplayer/bot-programming/tic-tac-toe",
+  "leagues": [
+    { "id": "wood", "name": "Wood: one 3x3 board" },
+    { "id": "bronze", "name": "Bronze and above: nine boards (Ultimate)", "default": true }
+  ],
+  "bosses": [
+    { "id": "wood", "name": "Boss Wood (official CodinGame boss: random valid action)", "file": "bosses/boss.js", "args": ["wood"] },
+    { "id": "bronze", "name": "Boss Bronze (wins boards, never hands one over)", "file": "bosses/boss.js", "args": ["bronze"] },
+    { "id": "silver", "name": "Boss Silver (Monte Carlo tree search; perfect play on 3x3)", "file": "bosses/boss.js", "args": ["silver"] }
+  ],
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java",
+    "cpp": "starters/bot.cpp"
+  }
+}

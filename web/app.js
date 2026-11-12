@@ -319,7 +319,7 @@
     if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) { canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr); }
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const viewer = state.meta && window.CGViewers && window.CGViewers[state.meta.viewer];
+    const viewer = state.meta && window.CGViewers && (window.CGViewers[state.meta.viewer] || (state.static && window.CGViewers.generic));   // generic text view until a game has its own viewer
     const frame = state.frames[state.idx];
     const info = { playerColors: PLAYER_COLORS, playerNames: state.names.map((n, i) => `P${i} ${n}`) };
     if (!viewer || !state.static) {

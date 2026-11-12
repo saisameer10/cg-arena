@@ -1,0 +1,13 @@
+{
+ "name": "Generated: moving bombs (9937x5879, 14 jumps)",
+ "W": 9937,
+ "H": 5879,
+ "start": [
+  8885,
+  449
+ ],
+ "bomb": "random",
+ "evasive": true,
+ "seed": "606",
+ "N": 14
+}

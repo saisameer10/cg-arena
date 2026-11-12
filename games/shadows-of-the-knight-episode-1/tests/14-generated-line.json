@@ -1,0 +1,14 @@
+{
+ "name": "Generated: tower or corridor (1x8040, 12 jumps)",
+ "W": 1,
+ "H": 8040,
+ "start": [
+  0,
+  2876
+ ],
+ "bomb": [
+  0,
+  2565
+ ],
+ "N": 12
+}

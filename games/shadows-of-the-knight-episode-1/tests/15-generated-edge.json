@@ -1,0 +1,14 @@
+{
+ "name": "Generated: bombs on the border (3565x8977, 14 jumps)",
+ "W": 3565,
+ "H": 8977,
+ "start": [
+  2918,
+  781
+ ],
+ "bomb": [
+  0,
+  8976
+ ],
+ "N": 14
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Unary",
+  "url": "https://www.codingame.com/ide/puzzle/unary",
+  "type": "io",
+  "timeLimitMs": 2000,
+  "tests": "tests",
+  "solution": "solution/solution.py",
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java",
+    "cpp": "starters/bot.cpp"
+  }
+}
