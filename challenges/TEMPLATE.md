@@ -10,10 +10,11 @@ See [docs/ADDING_A_CHALLENGE.md](../docs/ADDING_A_CHALLENGE.md) for what matters
 - Target league / rule set: <e.g. "Bronze rules, everything unlocked">
 - Players: <2 | 2-4 | 1 (optimization)>  Turn order: <simultaneous | alternating>
 
-## Statement (verbatim)
+## Statement
 
-<Paste the full statement text from the CodinGame IDE here, including the Rules, Victory conditions,
-Expert rules / league notes, and the Game Protocol section. Keep tables as tables.>
+<Where the statement came from: CodinGame link (saved locally with `node cli.js fetch <url>`), PDF or
+screenshots in challenges/raw/<id>/ (git-ignored), or pasted text. Summarise the rules in your own words
+here; the original text is never committed.>
 
 ## Protocol (exact)
 

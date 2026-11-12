@@ -37,9 +37,28 @@ function entryName(gameDef, pool, key) {
 function leaderboard(gameDef, pool = loadPool(gameDef)) {
   const rows = [];
   for (const b of gameDef.bosses) rows.push({ key: 'boss:' + b.id, kind: 'boss', name: b.name, ...pool.ratings['boss:' + b.id] });
-  for (const b of pool.bots) rows.push({ key: 'pool:' + b.id, kind: 'version', id: b.id, name: b.name, lang: b.lang, created: b.created, ...pool.ratings['pool:' + b.id] });
-  rows.sort((a, b) => b.rating - a.rating || (b.games || 0) - (a.games || 0));
+  for (const b of pool.bots) rows.push({ key: 'pool:' + b.id, kind: 'version', id: b.id, name: b.name, lang: b.lang, created: b.created, tests: b.tests || null, ...pool.ratings['pool:' + b.id] });
+  if (gameDef.kind === 'solo') rows.sort((a, b) => ((b.tests ? b.tests.passed / b.tests.total : -1) - (a.tests ? a.tests.passed / a.tests.total : -1)) || String(b.created).localeCompare(String(a.created)));
+  else rows.sort((a, b) => b.rating - a.rating || (b.games || 0) - (a.games || 0));
   return rows;
+}
+
+// A saved version's code, to open it again in the editor.
+function getSource(gameDef, id) {
+  const pool = loadPool(gameDef);
+  const b = pool.bots.find(b => b.id === id);
+  if (!b) throw new Error(`no version ${id}`);
+  return { id: b.id, name: b.name, lang: b.lang, source: fs.readFileSync(path.join(dirFor(gameDef.id), b.file), 'utf8') };
+}
+
+// Solo puzzles: remember the last full test-suite score of a saved version.
+function recordTests(gameDef, id, passed, total) {
+  const pool = loadPool(gameDef);
+  const b = pool.bots.find(b => b.id === id);
+  if (!b) throw new Error(`no version ${id}`);
+  if (!(total > 0) || !(passed >= 0) || passed > total) throw new Error('bad test score');
+  b.tests = { passed, total, at: new Date().toISOString() };
+  savePool(gameDef.id, pool);
 }
 
 // Save the current code as a rated version.
@@ -180,4 +199,4 @@ async function runArena({ gameDef, candidate, opponents, games = 2, seed = 1, le
   return summary;
 }
 
-module.exports = { ROOT, loadPool, leaderboard, submit, remove, resolvePlayer, expandOpponents, runArena };
+module.exports = { ROOT, loadPool, leaderboard, submit, remove, recordTests, getSource, resolvePlayer, expandOpponents, runArena };

@@ -8,7 +8,7 @@ const { GameError } = require('../../games/base');
 const { BotProcess, BotError, prepareBot } = require('../runner/bot');
 const { LANGUAGES, PYTHON, pythonArgs, PRELUDE } = require('../runner/languages');
 
-const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 1500));
+const BOOT_GRACE_MS = Math.max(0, Number(process.env.CG_ARENA_BOOT_GRACE_MS ?? 3000));
 
 // Remove leftover work dirs (crashes, killed processes) older than an hour.
 function sweepWorkRoot(root, maxAgeMs = 3600e3) {
@@ -236,6 +236,7 @@ function summarizePatterns(games) {
     for (const it of g.review || []) {
       if (it.player !== null && it.player !== undefined && g.side !== undefined && it.player !== g.side) continue;
       const code = it.code || 'other';
+      if (/-summary$/.test(code)) continue;   // per-game summaries are not mistakes
       const p = by.get(code) || { code, kind: it.kind, games: 0, total: 0, example: it.message, labels: [] };
       p.total++;
       if (!seen.has(code)) { seen.add(code); p.games++; if (p.labels.length < 6 && g.label) p.labels.push(g.label); }

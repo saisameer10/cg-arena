@@ -9,45 +9,9 @@ Worked example of the hand-off format. This is what was used to build `games/oce
 - Target league / rule set: all leagues (Wood 2 = level 1, Wood 1 = level 2, Bronze+ = level 3), selectable in the arena
 - Players: 2. Turn order: alternating, player 0 first
 
-## Statement (verbatim, Wood 1 version as shown in the IDE on 2026-10-08)
+## Statement
 
-> **Welcome to the Wood1 league!** In Wood 1, you can now use SONAR and SILENCE
->
-> **The Goal.** This game is based on the board game Captain Sonar. You pilot a submarine and you know that an enemy is present near you because you are listening to its radio frequency communication. You don't know exactly where it is but you can hear all its orders. You and your opponent have 6 hit points. When a player's hit points reach 0, the player loses.
->
-> **Rules — Definitions.** Submarines move on a map constituted of water and islands. They can only move on cells with water. They can share the same cell without colliding. The map is 15 cells in width and 15 cells in height. Coordinates start at (0,0) which is the top left cell of the map. The map is split in 9 sectors, which contain 25 cells each (5x5 blocks of cells). The top left sector is 1. The bottom right sector is 9.
->
-> **Beginning of the game.** At the beginning of the game, you'll receive a map (15x15 cells) that indicates the position of islands. Islands are obstacles. You cannot move or fire through islands. Then, you will decide where you want to place your submarine by indicating a coordinate (x,y).
->
-> **Each turn.** This is a turn based game which means that each player plays a turn one after the other. The player with the id 0 begins. During your turn, thankfully to your radio frequency analysis, you will receive an indication of what your opponent has done. For example, you can receive that it moved to the north. It's up to you to use this valuable information to detect where it is. Then, you must perform at least one action.
->
-> **Actions.** Each turn you must perform at least one action. You can do several actions by chaining them using the pipe |. But you can use each type of action only once per turn (you can move one time per turn, no more). If you fail to output a valid action, you will SURFACE in that turn.
->
-> **Move.** A move action moves your submarine 1 cell in a given direction (north, east, south, west) and charges a power of your choice. When you move, you must respect the following rules: You cannot move through islands. You cannot move on a cell you already visited before. You can decide, what to charge. Different devices require a different amount of charges to be ready. In this league you can charge the torpedo, the sonar and the silence mode.
->
-> **Surface.** By using surface you will reset your path of visited cells so that you can freely move to a cell that you have previously visited. But surfacing has a major impact: your opponent will know in which sector you are surfacing and you lose 1 hit point.
->
-> **Torpedo.** A torpedo requires 3 charge actions to be ready. When fully charged, the torpedo can be fired at an arbitrary water position within a range of 4 cells. This allows the torpedo's path to contain corners and go around islands, but not through them. The damage of the explosion is 2 on the cell itself and 1 on all neighbors (including diagonal ones). You can also damage yourself with a torpedo.
->
-> **Sonar.** Sonar requires 4 charge actions to load. It allows you to check, if the opponent's submarine is in a given sector. You will get the response in your next turn. This is in respect to the time of issuing the command, not after the opponent moved.
->
-> **Silence.** Silence requires 6 charge actions to load. This allows you to move 0 to 4 cells in a given direction (not visiting already visited cells or islands). Your opponent will not know in which direction or how far you've moved.
->
-> | Your action | Shown to opponent | comment |
-> |---|---|---|
-> | MOVE N TORPEDO | MOVE N | The opponent will see the movement direction (in this case: north), but not which power is charged |
-> | SURFACE | SURFACE 3 | The opponent will see, that you surfaced in sector 3 |
-> | TORPEDO 3 5 | TORPEDO 3 5 | The opponent will see, that you fired a torpedo at the cell (3,5) |
-> | SONAR 4 | SONAR 4 | The opponent will see, that you used a sonar on sector 4. You will receive the sonar result (Y/N for yes/no) in the next turn. |
-> | SILENCE N 4 | SILENCE | The opponent will see, that you moved silently - but not where or how far |
->
-> **Victory Conditions.** Have more lifes than your enemy at the end of the game. Each player has 300 turns including the initial placement.
->
-> **Lose Conditions.** Output an invalid command or don't respond in time. Reach 0 lives. Intersect your own path, move into an island or out of the map.
->
-> **Expert Rules.** The source code can be found here: https://github.com/CodinGameCommunity/ocean-of-code.
-
-Bronze league additions (from the referee source, `MinePower.java` / `TriggerCommand.java`): `MINE direction` needs 3 charges and drops a mine on the adjacent water cell (not on an island, not on one of your existing mines); it is armed from your next turn. `TRIGGER x y` explodes one of your armed mines with torpedo damage. Opponent sees `MINE` and `TRIGGER x y`.
+The original statement is not stored in the repository. Run `node cli.js fetch ocean-of-code` to save it locally (`challenges/raw/ocean-of-code.html`, git-ignored); the IDE then shows it next to the editor. Rules in short, in our words: two submarines on a 15×15 map with islands and 9 sectors; each turn a player sends one or more orders separated by `|` (MOVE with a power to charge, SURFACE, TORPEDO, SONAR, SILENCE, MINE, TRIGGER, MSG), each type at most once; the opponent sees a summary of your orders; 6 lives; 300 turns per player including the placement; devices unlock by league (Wood 2: torpedo; Wood 1: + sonar, silence; Bronze: + mines). `games/ocean-of-code/statement.md` has the full summary.
 
 ## Protocol (exact)
 

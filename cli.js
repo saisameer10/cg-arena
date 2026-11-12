@@ -52,8 +52,14 @@ function usage(games) {
   process.exit(1);
 }
 
-function printBoard(rows) {
+function printBoard(rows, solo = false) {
   const w = Math.max(10, ...rows.map(r => r.name.length));
+  if (solo) {
+    if (!rows.length) { console.log('no saved versions yet: node cli.js submit <game> <file> --name v1'); return; }
+    console.log('tests      ' + 'name'.padEnd(w) + '  lang        saved                 key');
+    for (const r of rows) console.log(`${(r.tests ? `${r.tests.passed}/${r.tests.total}` : '-').padEnd(9)}  ${r.name.padEnd(w)}  ${String(r.lang).padEnd(10)}  ${String(r.created).slice(0, 19).replace('T', ' ')}   ${r.key}`);
+    return;
+  }
   console.log('rating  games  W-L-D        ' + 'name'.padEnd(w) + '  key');
   for (const r of rows) console.log(`${String(r.rating).padStart(6)}  ${String(r.games).padStart(5)}  ${`${r.wins}-${r.losses}-${r.draws}`.padEnd(11)}  ${r.name.padEnd(w)}  ${r.key}`);
 }
@@ -134,6 +140,8 @@ async function runSolo(gameDef, botArg, opts) {
   }
   console.log(`\n${label(player)}: passed ${passed}/${ids.length}${passed === ids.length ? '' : '  (exit code 3 when a test fails)'}`);
   printPatterns(summarizePatterns(reviews), ids.length, 'patterns across tests (the same mistake in several tests):', 'tests');
+  // a saved version run on the full suite keeps its score (shown by: node cli.js pool <game>)
+  if (String(botArg).startsWith('pool:') && opts.test === 'all' && !extra) { try { arena.recordTests(gameDef, botArg.slice(5), passed, ids.length); } catch {} }
   if (opts.replay) fs.writeFileSync(opts.replay, JSON.stringify(replays));
   return passed === ids.length ? 0 : 3;
 }
@@ -151,10 +159,12 @@ async function main() {
   if (!gameDef) { console.error(`unknown game "${gameId}"`); usage(games); }
 
   if (gameDef.kind === 'solo') {
-    if (command !== 'match') { console.error(`${gameDef.name} is a solo puzzle: it has test cases, not an arena. Run: node cli.js ${gameDef.id} <bot> --test all`); process.exit(1); }
-    if (!pos[1] && opts.test !== 'list') usage(games);
-    process.exitCode = await runSolo(gameDef, pos[1], opts);
-    return;
+    if (command === 'arena') { console.error(`${gameDef.name} is a solo puzzle: it has test cases, not an arena. Run: node cli.js ${gameDef.id} <bot> --test all (save versions with submit, list them with pool)`); process.exit(1); }
+    if (command === 'match') {
+      if (!pos[1] && opts.test !== 'list') usage(games);
+      process.exitCode = await runSolo(gameDef, pos[1], opts);
+      return;
+    }
   }
 
   if (command === 'submit') {
@@ -165,7 +175,7 @@ async function main() {
     console.log(`saved ${entry.name} as pool:${entry.id} (${entry.lang})`);
     return;
   }
-  if (command === 'pool') { printBoard(arena.leaderboard(gameDef)); return; }
+  if (command === 'pool') { printBoard(arena.leaderboard(gameDef), gameDef.kind === 'solo'); return; }
   if (command === 'arena') {
     if (!pos[2]) usage(games);
     const candidate = parseBot(pos[2]);

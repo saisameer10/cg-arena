@@ -111,14 +111,18 @@
     <div id="reviewPanel" class="panel"><div id="reviewList"></div></div>
     <div id="testsPanel" class="panel">
       <div class="row">
+        <label>Run <select id="testCand"><option value="me">Current code</option></select></label>
         <button id="runTests">Run all tests</button>
         <button id="stopTests" class="secondary" disabled>Stop</button>
+        <button id="saveVersionSolo" class="secondary" title="Keep this code as a named version; its test score is remembered">Save as version…</button>
         <label id="randomRow">+ random levels <input id="randomCount" type="number" value="3" min="0" max="50" style="width:52px"></label>
         <span id="testsSummary"></span>
       </div>
       <span class="dim">Click a test to replay it (or run it). Random levels are generated from the Seed box and are always solvable, like CodinGame's hidden validators.</span>
       <table id="testsTable"></table>
       <div id="testsPatterns"></div>
+      <h4>My saved versions</h4>
+      <table id="versionsTable"></table>
     </div>
     <pre id="console"></pre>
     <div id="arena">

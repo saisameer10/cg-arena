@@ -110,6 +110,7 @@
     document.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); run(); } });
     $('saveVersion').onclick = saveVersion;
     $('runTests').onclick = runAllTests;
+    $('saveVersionSolo').onclick = saveVersion;
     $('stopTests').onclick = () => { state.stopTests = true; state.abort && state.abort.abort(); };
     $('arenaRun').onclick = runArena;
     $('arenaStop').onclick = () => state.arenaAbort && state.arenaAbort.abort();
@@ -135,7 +136,7 @@
       : (g.url ? `<div class="stmtbar"><a href="${g.url}" target="_blank" rel="noopener">CodinGame page ↗</a><span class="dim">original statement: node cli.js fetch ${g.id}</span></div>` : '');
     $('statement').classList.toggle('framed', view === 'original');
     $('statement').innerHTML = bar + (view === 'original'
-      ? `<iframe class="stmtframe" sandbox="allow-popups allow-popups-to-escape-sandbox" src="/api/statement?game=${encodeURIComponent(g.id)}"></iframe>`
+      ? `<iframe class="stmtframe" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" src="/api/statement?game=${encodeURIComponent(g.id)}"></iframe>`
       : `<div class="stmtbody">${md}</div>`);
     $('statement').querySelectorAll('[data-view]').forEach(b => b.onclick = () => { try { localStorage.setItem(`cg-arena:stmt:${g.id}`, b.dataset.view); } catch {} renderStatement(); });
   }
@@ -164,7 +165,7 @@
     renderTests();
     state.review = [];
     renderReview();
-    if (!solo) loadArena();
+    loadArena();   // saved versions (and, for multiplayer, the Elo board)
     const leagues = state.game.leagues || [];
     $('leagueLabel').style.display = leagues.length ? '' : 'none';
     $('league').innerHTML = leagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
@@ -217,7 +218,7 @@
     let seed;
     try { seed = seedValue(); } catch (e) { $('result').textContent = e.message; $('result').className = 'lose'; return null; }
     const solo = state.game.kind === 'solo';
-    const players = solo ? [playerSpec('me')] : ['p0', 'p1'].map(id => playerSpec($(id).value));
+    const players = solo ? [playerSpec(opts.candidate || 'me')] : ['p0', 'p1'].map(id => playerSpec($(id).value));
     const test = solo ? (opts.test || selectedTest(seed)) : null;
     state.running = true; state.frames = []; state.result = null; state.logs = []; state.idx = 0; state.follow = true; state.review = [];
     renderReview();
@@ -387,6 +388,10 @@
     const cand = $('arenaCand'); const curCand = cand.value;
     cand.innerHTML = `<option value="me">Current code (unrated)</option>` + versions.map(r => `<option value="${r.key}">${esc(r.name)} (rated)</option>`).join('');
     if ([...cand.options].some(o => o.value === curCand)) cand.value = curCand;
+    const tc = $('testCand'); const curTc = tc.value;
+    tc.innerHTML = `<option value="me">Current code</option>` + versions.map(r => `<option value="${r.key}">${esc(r.name)}${r.tests ? ` (${r.tests.passed}/${r.tests.total})` : ''}</option>`).join('');
+    if ([...tc.options].some(o => o.value === curTc)) tc.value = curTc;
+    renderVersions(versions);
   }
   async function loadArena() {
     try {
@@ -406,14 +411,36 @@
     });
     $('arenaBoard').querySelectorAll('[data-load]').forEach(b => b.onclick = () => { $('p1').value = b.dataset.load; $('status').textContent = 'Player 1 set to that version: press ▶ Play to watch a match against it'; });
   }
+  // solo puzzles: saved versions with their last full-suite score; load one back into the editor
+  function renderVersions(versions) {
+    if (!$('versionsTable')) return;
+    $('versionsTable').innerHTML = versions.length
+      ? `<tr><th>version</th><th>tests</th><th>saved</th><th></th></tr>` + versions.map(r => `<tr><td>${esc(r.name)} <span class="dim">${esc(r.lang)}</span></td><td>${r.tests ? `<span class="${r.tests.passed === r.tests.total ? 'win' : 'loss'}">${r.tests.passed}/${r.tests.total}</span>` : '<span class="dim">not run</span>'}</td><td class="dim">${new Date(r.created).toLocaleString()}</td><td><button class="secondary tiny" data-edit="${r.id}">open in editor</button> <button class="secondary tiny" data-del="${r.id}">delete</button></td></tr>`).join('')
+      : `<tr><td class="dim">No saved versions yet. "Save as version…" keeps your code with its test score.</td></tr>`;
+    $('versionsTable').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('Delete this saved version?')) return;
+      const res = await (await fetch('/api/arena/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, id: b.dataset.del }) })).json();
+      state.board = res.leaderboard || []; refreshOpponents(); renderBoard();
+    });
+    $('versionsTable').querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
+      const res = await fetch(`/api/arena/source?game=${encodeURIComponent(state.game.id)}&id=${encodeURIComponent(b.dataset.edit)}`);
+      if (!res.ok) { $('status').textContent = 'could not load that version'; return; }
+      const v = await res.json();
+      if (v.lang !== state.lang.id) { $('lang').value = v.lang; state.lang = state.languages.find(l => l.id === v.lang) || state.lang; }
+      if (!confirm(`Replace the editor content (${state.lang.name}) with "${v.name}"?`)) return;
+      setCode(v.source, state.lang.monaco); saveCode();
+      $('status').textContent = `loaded version "${v.name}" into the editor`;
+    });
+  }
   async function saveVersion() {
     const name = prompt('Name for this version (e.g. "v3 sonar tracker"):', `v${(state.board || []).filter(r => r.kind === 'version').length + 1}`);
     if (name === null) return;
     const res = await (await fetch('/api/arena/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, lang: state.lang.id, source: getCode(), name }) })).json();
-    if (res.error) { $('arenaError').textContent = res.error; return; }
+    if (res.error) { $('arenaError').textContent = res.error; $('status').textContent = res.error; return; }
     $('arenaError').textContent = '';
     state.board = res.leaderboard || []; refreshOpponents(); renderBoard();
-    $('arenaStatus').textContent = `saved "${res.entry.name}"`;
+    $('arenaStatus').textContent = $('status').textContent = `saved "${res.entry.name}"`;
+    if (state.game.kind === 'solo') $('testCand').value = 'pool:' + res.entry.id;   // next "Run all tests" scores this version
   }
   async function runArena() {
     if (state.arenaRunning) return;
@@ -478,6 +505,7 @@
       for (const it of g.review || []) {
         if (it.player !== null && it.player !== undefined && g.side !== undefined && it.player !== g.side) continue;
         const code = it.code || 'other';
+      if (/-summary$/.test(code)) continue;   // per-game summaries are not mistakes
         const p = by.get(code) || { code, kind: it.kind, games: 0, total: 0, example: it.message };
         p.total++; if (!seen.has(code)) { seen.add(code); p.games++; }
         if (it.kind === 'mistake') p.kind = 'mistake';
@@ -536,15 +564,25 @@
     $('runTests').disabled = true; $('stopTests').disabled = false;
     state.testResults = {};
     const ids = testIds();
+    const candidate = $('testCand').value;
     renderTests();
     for (const id of ids) {
       if (state.stopTests) break;
       state.testResults[id] = { running: true };
       renderTests();
-      await run({ test: id });
+      await run({ test: id, candidate });
     }
     $('runTests').disabled = false; $('stopTests').disabled = true;
     renderTests();
+    // a saved version keeps its score on the designed tests (random levels change with the seed)
+    const designed = (state.game.tests || []).map(t => t.id);
+    if (candidate.startsWith('pool:') && !state.stopTests && designed.every(id => state.testResults[id] && !state.testResults[id].aborted)) {
+      const passed = designed.filter(id => state.testResults[id].passed).length;
+      try {
+        const res = await (await fetch('/api/arena/tests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: state.game.id, id: candidate.slice(5), passed, total: designed.length }) })).json();
+        if (res.leaderboard) { state.board = res.leaderboard; refreshOpponents(); renderBoard(); }
+      } catch {}
+    }
     // show the first failed test, like CodinGame does
     const firstFail = ids.find(id => state.testResults[id] && !state.testResults[id].passed && state.testResults[id].events);
     if (firstFail) loadReplay(state.testResults[firstFail].events);

@@ -125,10 +125,17 @@ const server = http.createServer(async (req, res) => {
       if (!gameDef.originalStatementPath) return send(res, 404, { error: 'no local copy; run: node cli.js fetch ' + gameDef.id });
       return send(res, 200, fs.readFileSync(gameDef.originalStatementPath), 'text/html; charset=utf-8');
     }
-    // ---- arena pool: saved versions + bosses with Elo ratings (multiplayer games only) ----
-    if (url.pathname.startsWith('/api/arena/')) {
-      const id = url.searchParams.get('game') || null;
-      if (id && games[id] && games[id].kind === 'solo') return send(res, 400, { error: `${games[id].name} is a solo puzzle: it is judged on test cases, not in the arena` });
+    // ---- saved versions (all kinds) + bosses with Elo ratings and arena runs (multiplayer) ----
+    if (url.pathname === '/api/arena/tests' && req.method === 'POST') {   // solo: remember a version's test score
+      const body = await jsonBody(req, res); if (!body) return;
+      const gameDef = gameOr400(res, body.game); if (!gameDef) return;
+      try { arena.recordTests(gameDef, String(body.id), Number(body.passed), Number(body.total)); return send(res, 200, { leaderboard: arena.leaderboard(gameDef) }); }
+      catch (e) { return send(res, 400, { error: e.message }); }
+    }
+    if (url.pathname === '/api/arena/source') {
+      const gameDef = gameOr400(res, url.searchParams.get('game')); if (!gameDef) return;
+      try { return send(res, 200, arena.getSource(gameDef, String(url.searchParams.get('id')))); }
+      catch (e) { return send(res, 404, { error: e.message }); }
     }
     if (url.pathname === '/api/arena/pool') {
       const gameDef = gameOr400(res, url.searchParams.get('game')); if (!gameDef) return;
