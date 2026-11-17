@@ -14,7 +14,7 @@
   header label { color: var(--muted); font-size: 12px; display: flex; flex-direction: row; align-items: center; gap: 4px; white-space: nowrap; }
   header select { max-width: 200px; }
   header button { padding: 5px 12px; }
-  #status { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #status { flex: 1 1 0; min-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   select, input[type=number] { background: #0b0f1a; color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 13px; }
   input[type=number] { width: 72px; }
   button { background: var(--accent); color: #111; border: 0; border-radius: 4px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
@@ -22,6 +22,23 @@
   button:disabled { opacity: .5; cursor: default; }
   main { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(200px, 22%) minmax(280px, 1fr) minmax(340px, 38%); }
   main > * { min-height: 0; }
+  /* laptops (e.g. 15.6" at 125-150 % Windows scaling): one-row header, bigger share for the game view */
+  @media (max-width: 1600px) {
+    header { gap: 4px 8px; padding: 4px 8px; }
+    header .brand { display: none; }
+    header select { max-width: 150px; font-size: 12px; padding: 3px 4px; }
+    header input[type=number], #seed { width: 60px !important; font-size: 12px; padding: 3px 4px; }
+    header .pill { display: none !important; }
+    header button { padding: 4px 9px; font-size: 13px; }
+  }
+  @media (max-height: 820px) {
+    #viewer { flex: 2 1 0; min-height: 140px; }
+    #hud { max-height: 40px; white-space: pre; overflow: auto; font-size: 11px; padding: 3px 8px; }
+    #result { max-height: 38px; font-size: 12px; padding: 3px 8px; }
+    .tabs button { padding: 3px 7px; font-size: 12px; }
+    #console, #arena, .panel { min-height: 70px; }
+    aside { padding: 10px; }
+  }
   aside { border-right: 1px solid var(--border); overflow: auto; padding: 14px; font-size: 13px; }
   aside h1 { font-size: 18px; margin: 0 0 8px; } aside h2 { font-size: 14px; margin: 16px 0 6px; color: var(--accent); }
   aside table { border-collapse: collapse; font-size: 12px; } aside td, aside th { border: 1px solid var(--border); padding: 3px 5px; text-align: left; vertical-align: top; }
