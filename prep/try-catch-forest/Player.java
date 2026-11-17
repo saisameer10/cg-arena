@@ -4,7 +4,7 @@ import java.util.*;
  * Try Catch Forest (Unleash the Geek 2026) - preparation kit.
  *
  * Built before the statement was available, from two replay videos and from the referee's text logs of
- * 320 Gold-league games. Values marked MEASURED come from those logs; values marked CONFIRM are still
+ * 1100 Gold-league games. Values marked MEASURED come from those logs; values marked CONFIRM are still
  * estimates and must be checked against the statement.
  * Solid: circular arena centred on (0,0), circular trees that block movement, sight and nets,
  * three teams in a rock-paper-scissors cycle, one output line of commands joined by ';':
@@ -18,16 +18,20 @@ import java.util.*;
 class Player {
     // ---- parameters (prefer reading them from the input if the statement provides them) ----
     static double ARENA_R = 8000;        // MEASURED: no unit centre was ever further than 7780 from (0,0)
-    static double VISION = 2500;         // CONFIRM: sight radius (outlines in the videos: 2400-2700)
+    static double VISION = 2200;         // CONFIRM: sight radius (bots stop reacting between 2000 and 2400)
     static double UNIT_R = 220;          // MEASURED: 8000 - 7780
     static double MOVE_SPEED = 600;      // MEASURED: distance per turn with MOVE
     static double DASH_SPEED = 1200;     // MEASURED: distance per turn with DASH
     static int DASH_EVERY = 2;           // MEASURED: after a dash on turn t the next dash is possible on turn t+2
-    static double CATCH_RANGE = 450;     // CONFIRM: distance at which a hunter catches its prey (nets grab at ~470)
+    static double CATCH_RANGE = 400;     // MEASURED: a dash catches a unit walking away from 900, not from 1050
+    static double STRIKE = DASH_SPEED - MOVE_SPEED + CATCH_RANGE - 50;   // 950: dash reach against a unit that walks away
     static double NET_RANGE = 2000;      // MEASURED: a net flies at most 2000, stops at the first tree
-    static double NET_MIN = 750;         // MEASURED: nets thrown from closer than 750 hit under 20 %
-    static int NET_HOLD = 4;             // MEASURED: a netted unit cannot move for 4 turns
-    static double KILL_ZONE = DASH_SPEED + CATCH_RANGE;   // a predator with a dash catches from here in one turn
+    static double NET_MIN = 800;         // nets from closer are rarely needed: walk in instead
+    static double NET_GOOD = 1400;       // MEASURED: inside this distance a net hits 72 % even if the target can dash
+    static int NET_HOLD = 4;             // MEASURED: a netted unit cannot move for 4 turns (it can still use items)
+    static double SMOKE_R = 1200;        // CONFIRM: cloud radius (no net ever landed within 1200 of a fresh cloud)
+    static double SMOKE_TRIGGER = 2200;  // smoke when a predator is this close: one turn before its net can come
+    static double WALL_RING = 6500;      // MEASURED: threatened units beyond this radius die twice as often
     static double DANGER = 3000;         // start fleeing when a predator is this close (tuning value)
     static int TURNS = 100;
 
@@ -49,8 +53,12 @@ class Player {
         Circle(V c, double r) { this.c = c; this.r = r; }
     }
     static final class Unit {
-        int id, owner; V pos; boolean alive = true; int lastSeen = -1, lastDash = -99;
+        int id, owner; V pos; boolean alive = true; int lastSeen = -1, lastDash = -99, nettedUntil = -1;
         Unit(int id, int owner, V pos) { this.id = id; this.owner = owner; this.pos = pos; }
+        boolean netted(int turn) { return turn <= nettedUntil; }
+        boolean dashReady(int turn) { return turn - lastDash >= DASH_EVERY && !netted(turn); }
+        /** Call from readTurn with the new position: a jump of more than a walk means the unit dashed last turn. */
+        void seen(V now, int turn) { if (lastSeen == turn - 1 && pos.dist(now) > MOVE_SPEED + 100) lastDash = turn - 1; pos = now; lastSeen = turn; }
     }
 
     // ---- rock-paper-scissors cycle. In both videos: player 0 = scissors, 1 = paper, 2 = rock,
@@ -125,7 +133,7 @@ class Player {
             for (V e : predators) { double d = p.dist(e); if (d < nearest) { nearest = d; who = e; } }
             double score = nearest;
             if (who != null && firstBlocking(p, who, obstacles, 0) != null) score += 800;       // out of its sight
-            score -= Math.max(0, p.len() - (ARENA_R - 1200)) * 1.5;                              // do not get cornered
+            score -= Math.max(0, p.len() - (WALL_RING - 300)) * 2;                               // stay out of the wall ring
             if (score > bestScore) { bestScore = score; best = p; }
         }
         return best;
@@ -150,59 +158,104 @@ class Player {
     static List<Circle> smokes = new ArrayList<>();
     static Map<Integer, Unit> units = new HashMap<>();          // every unit ever seen, with lastSeen for fog of war
 
-    /** True when a net thrown from a to b is worth it: in range, not point-blank, no tree on the way. */
+    /** True when a net thrown from a to b can arrive: in range, not point-blank, no tree on the way. */
     static boolean netLine(V a, V b) {
         double d = a.dist(b);
         return d >= NET_MIN && d <= NET_RANGE && firstBlocking(a, b, obstacles, 0) == null;
     }
 
-    /** Aim point of a net: the full range along the line through the target. A net stops at its aim point, so a
-     *  net aimed exactly at a moving unit often stops short; aimed long, it still grabs the first unit on its way. */
+    /** Aim point of a net: the full range along the line through the target (a net stops at its aim point). */
     static V netAim(V from, V target) { return from.add(target.sub(from).norm().mul(NET_RANGE)); }
+
+    /** Position after one MOVE or DASH order from `from` towards `to`. */
+    static V after(V from, V to, double speed) {
+        double d = from.dist(to);
+        return d <= speed ? to : from.add(to.sub(from).mul(speed / d));
+    }
+
+    /** True when p is inside a smoke cloud (known clouds plus the ones ordered this turn). No net landed within
+     *  1200 of a fresh cloud in 1100 games, so a covered unit needs no second smoke and is no net target. */
+    static boolean covered(V p, List<Circle> extra) {
+        for (Circle c : smokes) if (c.c.dist(p) < c.r) return true;
+        for (Circle c : extra) if (c.c.dist(p) < c.r) return true;
+        return false;
+    }
+
+    static Unit nearestUnit(V me, List<Unit> list) {
+        Unit best = null; double bd = Double.MAX_VALUE;
+        for (Unit u : list) { double d = me.dist(u.pos); if (d < bd) { bd = d; best = u; } }
+        return best;
+    }
 
     /**
      * One turn of decisions: returns the output line. Uses only the state above.
-     * Rules taken from the 320-game study (challenges/try-catch-forest-prep.md):
-     *  - keep the dash for the turn it decides something: the catch, or the escape from a predator's kill zone;
-     *  - a net is thrown only with a free line between 750 and 2000, aimed at full range through the target,
-     *    at prey to set up a catch, or at a predator that is about to reach us;
-     *  - smoke goes on the unit itself when a predator is close;
-     *  - two hunters never take the same prey while another prey is known; nobody shares a destination.
+     * The referee resolves a turn as: decoys appear, everybody moves, catches, then nets and smoke of the
+     * survivors (from their new positions). Rules, all measured on 1100 Gold games (challenges/try-catch-forest-prep.md):
+     *  - FLEE: a walking hunter never catches a unit that walks away; a dashing one does from STRIKE (950) or less.
+     *    So dash away exactly when the hunter can dash and is inside that distance, otherwise walk and keep the dash.
+     *  - SMOKE is ordered one turn early (it lands after the catches) on the spot we move to: no unit inside smoke
+     *    was ever netted. A unit held by a net smokes itself, or nets the hunter back.
+     *  - CATCH: dash at free prey within STRIKE, or at netted prey within dash reach.
+     *  - NET: thrown from the position after the move, at prey that cannot dodge (dash on cooldown) or is close,
+     *    never into smoke and never on the first turn (everybody can still dash: 28 % hits); then the pack walks in. Up to two hunters per prey: pairs convert twice as often.
      */
     static String decide() {
         List<String> moves = new ArrayList<>(), items = new ArrayList<>();
-        List<V> prey = new ArrayList<>(), predators = new ArrayList<>();
+        List<Unit> prey = new ArrayList<>(), predators = new ArrayList<>(), mine = new ArrayList<>();
+        List<V> predatorPos = new ArrayList<>();
         for (Unit u : units.values()) {
-            if (!u.alive || turn - u.lastSeen > 3) continue;      // forget positions older than 3 turns
-            if (u.owner == preyOf(myId)) prey.add(u.pos);
-            if (u.owner == predatorOf(myId)) predators.add(u.pos);
+            if (!u.alive) continue;
+            if (u.owner == myId) { mine.add(u); continue; }
+            if (turn - u.lastSeen > 3) continue;                    // forget positions older than 3 turns
+            if (u.owner == preyOf(myId)) prey.add(u);
+            if (u.owner == predatorOf(myId)) { predators.add(u); if (!u.netted(turn)) predatorPos.add(u.pos); }
         }
-        List<Unit> mine = new ArrayList<>();
-        for (Unit u : units.values()) if (u.owner == myId && u.alive) mine.add(u);
-        mine.sort((a, b) -> a.id - b.id);
-        Set<V> claimed = Collections.newSetFromMap(new IdentityHashMap<>());
+        // the most threatened units choose first, so they get the smoke when it is scarce
+        final Map<Unit, Double> danger = new IdentityHashMap<>();
+        for (Unit u : mine) { Unit t = nearestUnit(u.pos, predators); danger.put(u, t == null ? Double.MAX_VALUE : u.pos.dist(t.pos)); }
+        mine.sort((a, b) -> danger.get(a).equals(danger.get(b)) ? a.id - b.id : Double.compare(danger.get(a), danger.get(b)));
+        Map<Unit, Integer> hunters = new IdentityHashMap<>();
+        List<Circle> newSmoke = new ArrayList<>();
         for (Unit u : mine) {
-            V threat = nearest(u.pos, predators);
-            List<V> free = new ArrayList<>();
-            for (V p : prey) if (!claimed.contains(p)) free.add(p);
-            V target = nearest(u.pos, free.isEmpty() ? prey : free);
-            boolean canDash = turn - u.lastDash >= DASH_EVERY, dash = false;
+            Unit threat = nearestUnit(u.pos, predators);
+            double td = threat == null ? Double.MAX_VALUE : u.pos.dist(threat.pos);
+            if (u.netted(turn)) {                                   // held: cannot move, can still use an item
+                if (td < DANGER) {
+                    if (smokeLeft > 0 && !covered(u.pos, newSmoke)) { items.add("SMOKE " + u.id + " " + u.pos); smokeLeft--; newSmoke.add(new Circle(u.pos, SMOKE_R)); }
+                    else if (netLeft > 0 && netLine(u.pos, threat.pos)) { items.add("NET " + u.id + " " + netAim(u.pos, threat.pos)); netLeft--; }
+                }
+                moves.add("MOVE " + u.id + " " + u.pos + " HELD");
+                continue;
+            }
+            // prey: a netted one within reach first, else the nearest that has fewer than two hunters
+            Unit target = null; double best = Double.MAX_VALUE;
+            for (Unit p : prey) {
+                double d = u.pos.dist(p.pos);
+                double score = p.netted(turn) && d < 2400 ? d - 5000 : hunters.getOrDefault(p, 0) >= 2 ? d + 5000 : d;
+                if (score < best) { best = score; target = p; }
+            }
+            boolean canDash = u.dashReady(turn), dash = false;
             String mode; V goal;
-            if (threat != null && u.pos.dist(threat) < DANGER) {
-                double td = u.pos.dist(threat);
-                boolean close = td < KILL_ZONE + MOVE_SPEED;       // it can reach us this turn or the next
-                mode = "FLEE"; dash = canDash && close;
-                goal = flee(u.pos, predators, obstacles, dash ? DASH_SPEED : MOVE_SPEED);
-                if (close && smokeLeft > 0) { items.add("SMOKE " + u.id + " " + u.pos); smokeLeft--; }
-                else if (close && netLeft > 0 && netLine(u.pos, threat)) { items.add("NET " + u.id + " " + netAim(u.pos, threat)); netLeft--; }
+            if (threat != null && !threat.netted(turn) && td < DANGER) {
+                boolean threatDash = threat.dashReady(turn);
+                mode = "FLEE";
+                dash = canDash && threatDash && td < STRIKE + 150;      // dash parity: answer its dash, never waste ours
+                goal = flee(u.pos, predatorPos, obstacles, dash ? DASH_SPEED : MOVE_SPEED);
+                V end = after(u.pos, goal, dash ? DASH_SPEED : MOVE_SPEED);
+                if (td < SMOKE_TRIGGER && smokeLeft > 0 && !covered(end, newSmoke)) { items.add("SMOKE " + u.id + " " + end); smokeLeft--; newSmoke.add(new Circle(end, SMOKE_R)); }
+                else if (td < 1700 && !threatDash && netLeft > 0 && netLine(end, threat.pos)) { items.add("NET " + u.id + " " + netAim(end, threat.pos)); netLeft--; }
             } else if (target != null) {
-                claimed.add(target);
-                double d = u.pos.dist(target);
-                if (canDash && d <= KILL_ZONE && firstBlocking(u.pos, target, obstacles, UNIT_R) == null) {
-                    mode = "CATCH"; dash = true; goal = target;
+                hunters.merge(target, 1, Integer::sum);
+                double d = u.pos.dist(target.pos);
+                boolean held = target.netted(turn);
+                boolean clear = firstBlocking(u.pos, target.pos, obstacles, UNIT_R) == null;
+                if (canDash && clear && (d <= STRIKE || (held && d <= DASH_SPEED + CATCH_RANGE))) {
+                    mode = "CATCH"; dash = true; goal = target.pos;
                 } else {
-                    mode = "HUNT"; goal = steer(u.pos, target, obstacles);
-                    if (netLeft > 0 && netLine(u.pos, target)) { items.add("NET " + u.id + " " + netAim(u.pos, target)); netLeft--; }
+                    mode = "HUNT"; goal = steer(u.pos, target.pos, obstacles);
+                    V end = after(u.pos, goal, MOVE_SPEED);
+                    boolean dodges = target.dashReady(turn) && end.dist(target.pos) > NET_GOOD;
+                    if (turn > 0 && netLeft > 0 && !held && !dodges && netLine(end, target.pos) && !covered(target.pos, newSmoke)) { items.add("NET " + u.id + " " + netAim(end, target.pos)); netLeft--; }
                 }
             } else {
                 mode = "SEEK";                                      // patrol a ring, each unit at its own angle

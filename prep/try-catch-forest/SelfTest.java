@@ -55,56 +55,106 @@ class SelfTest {
         Player.V aim = Player.intercept(o, new Player.V(2000, 0), new Player.V(0, 300), 500);
         check("intercept aims ahead of the prey", aim.y > 600);
 
-        // decide(): a hunter with prey in net range hunts and nets; a unit next to a predator dashes away and smokes
+        // decide(): a hunter nets prey it cannot reach yet, from where it will stand after its move;
+        // a unit with a dash-ready predator inside strike distance dashes away and smokes the spot it runs to
         setup(1, 1);
-        add(0, 0, 0, 0); add(1, 0, 5000, 5000);
-        add(2, 1, 1900, 0);              // prey of player 0, in net range of unit 0 but outside its kill zone
-        add(4, 2, 5000, 4200);           // predator of player 0, next to unit 1
+        add(0, 0, 0, 0); add(1, 0, 3000, 3000);
+        add(2, 1, 1900, 0);              // prey of player 0: too far to strike, close enough to net
+        add(4, 2, 3000, 2200);           // predator of player 0, 800 from unit 1
         String out = Player.decide();
-        check("unit 0 hunts and nets at full range through the prey: " + out, out.contains("MOVE 0") && out.contains("HUNT") && out.contains("NET 0 2000 0"));
-        check("unit 1 dashes away and smokes", out.contains("DASH 1") && out.contains("FLEE") && out.contains("SMOKE 1"));
+        check("unit 0 walks in and nets from its new position: " + out, out.contains("MOVE 0") && out.contains("HUNT") && out.contains("NET 0 2600 0"));
+        check("unit 1 dashes away and smokes where it lands", out.contains("DASH 1") && out.contains("FLEE") && out.contains("SMOKE 1 3000 4200"));
         check("one line, commands joined by ';'", !out.contains("\n") && out.split(";").length == 4);
 
-        // the dash is kept for the catch, and it is not available on the next turn
-        setup(1, 0);
+        // strike distance: a dash catches a walking unit from 950, not from 1500
+        setup(0, 0);
+        add(0, 0, 0, 0); add(2, 1, 900, 0);
+        out = Player.decide();
+        check("prey at 900: dash to catch: " + out, out.equals("DASH 0 900 0 CATCH"));
+        Player.turn++;
+        check("no second dash on the following turn", Player.decide().startsWith("MOVE 0"));
+        Player.turn++;
+        check("dash again two turns later", Player.decide().startsWith("DASH 0"));
+        setup(0, 0);
         add(0, 0, 0, 0); add(2, 1, 1500, 0);
-        out = Player.decide();
-        check("prey inside the kill zone: dash to catch, no net: " + out, out.contains("DASH 0 1500 0 CATCH") && !out.contains("NET"));
-        Player.turn++;
-        out = Player.decide();
-        check("no second dash on the following turn: " + out, out.startsWith("MOVE 0"));
-        Player.turn++;
-        out = Player.decide();
-        check("dash again two turns later", out.startsWith("DASH 0"));
+        check("prey at 1500: keep the dash, walk", Player.decide().startsWith("MOVE 0"));
+        setup(0, 0);
+        add(0, 0, 0, 0); add(2, 1, 1500, 0); Player.units.get(2).nettedUntil = Player.turn + 3;
+        check("netted prey at 1500: dash onto it", Player.decide().equals("DASH 0 1500 0 CATCH"));
 
-        // nets: not through a tree, not at point-blank range
+        // nets: only at prey that cannot dodge or is close, never through a tree, never into smoke
         setup(1, 0);
-        Player.obstacles.add(new Player.Circle(new Player.V(1000, 0), 300));
+        add(0, 0, 0, 0); add(2, 1, 2400, 0);
+        check("prey at 2400 with its dash ready: no net yet", !Player.decide().contains("NET"));
+        setup(1, 0);
+        add(0, 0, 0, 0); add(2, 1, 2400, 0); Player.units.get(2).lastDash = Player.turn - 1;
+        check("same prey with its dash on cooldown: net", Player.decide().contains("NET 0 2600 0"));
+        setup(1, 0);
+        Player.obstacles.add(new Player.Circle(new Player.V(1250, 300), 250));
+        add(0, 0, 0, 0); add(2, 1, 1900, 600); Player.units.get(2).lastDash = Player.turn - 1;
+        out = Player.decide();
+        check("no net through a tree: " + out, !out.contains("NET"));
+        setup(1, 0);
+        Player.smokes.add(new Player.Circle(new Player.V(1900, 0), Player.SMOKE_R));
         add(0, 0, 0, 0); add(2, 1, 1900, 0);
-        check("no net through a tree", !Player.decide().contains("NET"));
-        setup(1, 0);
-        add(0, 0, 0, 0); Player.units.get(0).lastDash = Player.turn; add(2, 1, 600, 0);
-        check("no net at point-blank range", !Player.decide().contains("NET"));
+        check("no net into smoke", !Player.decide().contains("NET"));
 
-        // a predator closing in with no smoke left gets the net
-        setup(1, 0);
-        add(0, 0, 0, 0); add(4, 2, 1500, 0);
+        setup(1, 0); Player.turn = 0;
+        add(0, 0, 0, 0); add(2, 1, 1900, 0);
+        check("no net on the first turn", !Player.decide().contains("NET"));
+
+        // fleeing: dash parity
+        setup(0, 0);
+        add(0, 0, 0, 0); add(4, 2, 900, 0); Player.units.get(4).lastDash = Player.turn - 1;
         out = Player.decide();
-        check("defensive net on the predator: " + out, out.contains("FLEE") && out.contains("NET 0 2000 0"));
+        check("hunter without dash at 900: walk away, keep the dash: " + out, out.startsWith("MOVE 0") && out.contains("FLEE"));
+        setup(0, 0);
+        add(0, 0, 0, 0); add(4, 2, 900, 0);
+        check("hunter with dash at 900: dash away", Player.decide().startsWith("DASH 0"));
+        setup(0, 0);
+        add(0, 0, 0, 0); add(4, 2, 1500, 0);
+        check("hunter with dash at 1500: walking away is enough", Player.decide().startsWith("MOVE 0"));
+        setup(1, 0);
+        add(0, 0, 0, 0); add(4, 2, 1300, 0); Player.units.get(4).lastDash = Player.turn - 1;
+        out = Player.decide();
+        check("no smoke left, hunter cannot dodge: net it while fleeing: " + out, out.contains("FLEE") && out.contains("NET 0"));
+        setup(0, 2);
+        Player.smokes.add(new Player.Circle(new Player.V(-600, 0), Player.SMOKE_R));
+        add(0, 0, 0, 0); add(4, 2, 1500, 0);
+        check("already running into smoke: no second smoke", !Player.decide().contains("SMOKE"));
 
-        // two hunters, two prey: one each
+        // a unit held by a net cannot move but still protects itself
+        setup(1, 1);
+        add(0, 0, 0, 0); Player.units.get(0).nettedUntil = Player.turn + 2; add(4, 2, 1500, 0);
+        out = Player.decide();
+        check("held unit smokes itself: " + out, out.contains("MOVE 0 0 0 HELD") && out.contains("SMOKE 0 0 0") && !out.contains("NET"));
+        setup(1, 0);
+        add(0, 0, 0, 0); Player.units.get(0).nettedUntil = Player.turn + 2; add(4, 2, 1500, 0);
+        check("held unit without smoke nets the hunter back", Player.decide().contains("NET 0 2000 0"));
+
+        // hunters: one prey each when there are two, a pair when there is one
         setup(0, 0);
         add(0, 0, 0, 0); add(1, 0, 0, 400); add(2, 1, 2500, 0); add(3, 1, 2500, 3000);
         out = Player.decide();
-        String[] parts = out.split(";");
-        check("hunters take different prey: " + out, parts.length == 2 && !parts[0].substring(7).equals(parts[1].substring(7)));
+        check("two prey, both hunted: " + out, out.split(";").length == 2 && out.contains("HUNT"));
+        setup(0, 0);
+        add(0, 0, 0, 0); add(1, 0, 0, 400); add(5, 0, 400, 0); add(2, 1, 2500, 0); add(3, 1, 2500, 6000);
+        out = Player.decide();
+        int toFar = 0; for (String c : out.split(";")) { String[] f = c.split(" "); if (Double.parseDouble(f[3]) > 700) toFar++; }
+        check("three hunters, two prey: the third goes for the other prey: " + out, toFar == 1);
+
+        // seen(): a jump longer than a walk marks a dash
+        setup(0, 0);
+        add(4, 2, 0, 0); Player.units.get(4).lastSeen = Player.turn - 1;
+        Player.units.get(4).seen(new Player.V(1200, 0), Player.turn);
+        check("an enemy that jumped 1200 has its dash on cooldown", !Player.units.get(4).dashReady(Player.turn) && Player.units.get(4).dashReady(Player.turn + 1));
 
         System.out.println((n - fails) + "/" + n + " checks passed");
         System.exit(fails == 0 ? 0 : 1);
     }
     static void setup(int nets, int smokes) {
         Player.myId = 0; Player.unitsPerPlayer = 2; Player.turn = 5; Player.netLeft = nets; Player.smokeLeft = smokes;
-        Player.obstacles = new ArrayList<>(); Player.units.clear();
+        Player.obstacles = new ArrayList<>(); Player.smokes = new ArrayList<>(); Player.units.clear();
     }
     static void add(int id, int owner, double x, double y) {
         Player.Unit u = new Player.Unit(id, owner, new Player.V(x, y)); u.lastSeen = Player.turn; Player.units.put(id, u);
