@@ -1,88 +1,148 @@
-# Try Catch Forest: preparation notes (before the statement)
+# Try Catch Forest (Unleash the Geek 2026): preparation notes
 
-Built on 2026-11-17 from two replay videos of the game's viewer. The statement arrives later; everything here is **inferred** and each section says how sure it is. When the statement arrives, go through "Questions the statement must answer" first.
+Written on 2026-11-17, **before the statement was available**. Two sources:
 
-## Sources
+1. Two replay videos of the viewer (first version of these notes).
+2. The referee's text logs of **320 finished Gold-league games** between the top 12 teams of the leaderboard, read through the CodinGame API (2643 catches, 4138 nets, 3736 decoys). Everything marked *measured* comes from these logs.
 
-| Video | Game | Result |
+The statement is still the authority: go through "Still unknown" as soon as it opens.
+
+## The contest
+
+| | |
+|---|---|
+| Contest | Unleash the Geek 2026, id `unleash-the-geek-2026-opp35`, game "Try Catch Forest" (private event game) |
+| Account | `leosam10`, registered, squad "The Final Boss" (2 of 3 members) |
+| Play windows for this site | 18 Nov 09:00-18:00 IST and 19 Nov 09:00-12:00 IST. Outside them the statement, test games and submissions answer "paused"; leaderboard and finished games stay readable |
+| Leaderboard on 17 Nov | 171 players: Gold 143, Silver 23, Bronze 5 |
+| API limits | 120 requests/min; test games 10/min and 600/day; submissions 5 per 5 minutes |
+
+Nothing has been tested or submitted for the account yet.
+
+## Rules, as measured
+
+| Rule | Value | Confidence |
 |---|---|---|
-| `UTG battle 250(1,2,4).mp4` (85 s, 100 turns) | 5 units per team; items 6 smoke / 3 decoy / 6 net; seed -5129465133391384000; about 19 equal obstacles | Commit Happens (rock) 4, Invalid FOP (paper) 3, GoToVictory (scissors) 1 |
-| `Media1.mp4` (72 s, 100 turns) | 3 units per team; items 1 smoke / 2 decoy / 3 net; seed 6709949125715584000; about 25 obstacles of mixed sizes | Invalid FOP (paper) 2 "(earliest catch)", BitingBytes (rock) 2, GoToVictory (scissors) 1 |
+| Players, length | 3 players, 100 turns | measured |
+| Cycle | player 0 scissors, 1 paper, 2 rock. Player i catches player (i+1)%3 and is caught by (i+2)%3 | measured, 2643 catches, no exception |
+| **Score** | **number of catches. Ties: the team whose first catch came earlier** | measured: ranking follows it in 640/640 comparisons, 161 ties |
+| Units per team | 3, 4, 5 or 6 (about equally often); ids are global, player p owns p*N .. p*N+N-1 | measured |
+| Trees | 6 to 33 circles of different sizes; they block movement, sight and nets | measured |
+| Item pools | per team, different every game (seen 1 to 10 of a kind) | measured |
+| Arena | circle, centre (0,0), radius 8000, y downwards; a unit's centre never goes beyond 7780 (unit radius about 220) | measured |
+| MOVE | 600 per turn | measured |
+| DASH | 1200 per turn; after a dash on turn t the next one is possible on turn t+2 | measured |
+| NET | flies up to 2000 in a straight line and stops at the first tree, at the first unit or decoy on its way, or **at its aim point**. Grabs units within about 470 of its path, several at once, own units too (24 cases) | measured |
+| Netted unit | cannot move for 4 turns | measured |
+| SMOKE | placed up to 2000 away; most teams drop it on the unit itself | measured |
+| DECOY | starts at the unit and walks to the given point; an enemy that walks into it destroys it; it absorbs a net | measured |
+| Caught unit | becomes a ghost: still accepts MOVE, cannot use items | measured |
+| A unit may | move or dash, and use one item, in the same turn | measured |
+| Sight radius | 2400 to 2700 | estimate from the videos |
+| Catch distance | about 450 | estimate |
+| "Sprites collected", "trees touched" in the end screen | no effect on the score | measured |
 
-The viewer is CodinGame's (frame counter, "Game information", "Standard output stream", seed). The title on the end screen is **Try Catch Forest**; its logo shows a rock, a sheet of paper and scissors. Nothing public exists about the game (web search, CodinGame puzzle list), so it is a private event game. Neither video has sound.
+Output: one line, commands joined by `;`:
 
-## What is certain (read directly from the screen)
+```
+MOVE id x y [message]     DASH id x y [message]     NET id x y     SMOKE id x y     DECOY id x y
+```
 
-- **Three players, 100 turns.** Player colours: orange, teal, grey.
-- **Rock-paper-scissors between teams.** Orange units are scissors, teal units are paper, grey units are rock. Every catch seen follows the cycle: scissors caught paper, paper caught rock, rock caught scissors. Each team is hunter of one team and prey of the other, at the same time.
-- **Score = catches made.** One point per caught unit. A tie is broken by "earliest catch" (shown on the end screen).
-- **A caught unit becomes a ghost.** The HUD shows two counters per team: units alive, and ghosts. Ghosts stay on the map as faint shapes, and teams keep sending them commands (`MOVE 3 5500 -4500` for a ghost; one team labels them "GHOST").
-- **Output: one line, commands separated by `;`**, each naming a unit id:
+## What decides a game (320 games)
 
-  ```
-  MOVE id x y [message]
-  DASH id x y [message]
-  NET id x y
-  SMOKE id x y
-  DECOY id x y
-  ```
-  Example from turn 1: `DASH 0 1108 -4853;DASH 1 -1151 3775;...;NET 4 -1770 329;DECOY 1 -2297 7015`.
-  A unit can move **and** use an item in the same turn. The optional message is shown as a label above the unit.
-- **Unit ids are global**: with N units per team, player 0 has 0..N-1, player 1 has N..2N-1, player 2 has 2N..3N-1.
-- **Items are a team pool**, shown in the HUD: smoke (bomb icon), decoy (pink figure), net (web). The counts go down as any unit of the team uses one. The pool size changes between games (6/3/6 and 1/2/3), and so does the number of units (5 and 3): **read them from the input, never hard-code them**.
-- **Coordinates**: origin at the centre of a circular arena, x to the right, y downwards. Commands with targets outside the arena are accepted (seen up to 7590).
-- **Vision**: each unit has a sight circle that obstacles cut into (the viewer draws its outline). A unit inside smoke has no sight outline at all.
-- **Obstacles** are circles (tree stumps) that block movement and sight. Their number and sizes change with the seed.
+- **The opening.** 25 % of all catches happen in turns 1-10, 12 % in turns 1-5. The team that makes the first catch wins 51 % of the games and is last in 17 %; the team that loses the first unit wins 17 % and is last in 52 %.
+- **Seat does not matter**: wins by seat 111 / 111 / 98.
+- **Catches per game**: 4.9 with 3 units per team, 7.1 with 4, 9.9 with 5, 12.0 with 6. In 168 games one team was wiped out (median turn 69); its hunter won 98 % of those.
+- **How units die**
+  - 32 % of the victims were held by a net. A netted unit is caught within 3 turns in 38 % of the cases.
+  - 68 % were free. Of these, **80 % still had their dash available** and only 8 % of all victims had ordered a DASH on the turn they died. They walked while the hunter dashed.
+  - The hunter dashed on the catch turn in 40 % of the catches, from about 1060 away (median), up to 1800.
+  - 28 % of the catches happen beyond 6000 from the centre (against the wall), 26 % inside 3000 (the opening crowd).
+- **Nets**
+  - Hit rate rises with the aim distance: under 750: 20 %; 750-1500: 46 %; 1500-1950: 55 %; full range: 56 %. The reason is "stopped by aim": 58 % of the short nets stop before reaching anyone, against 26 % at full range. **Aim the net at full range along the line through the target**, never at the target's current position.
+  - Nets on turns 1-2 hit 44 %, later ones 51 to 66 %.
+  - 13 % of the nets are absorbed by a decoy, 4 % by a tree.
+  - 39 % of the net hits are on the team's own predator (defence), 61 % on its prey.
+- **Decoys**: half are destroyed by an enemy walking into them, 14 % absorb a net. They buy time and soak nets; they do not score.
 
-## Estimates (measured on screen; confirm)
+### First, second and third place in the same game
 
-| Quantity | Estimate | How |
-|---|---|---|
-| Arena radius | about 8000 | viewer tooltips `(1173, 7556)` at the bottom edge and `(5928, 3123)`; about 39 units per pixel |
-| Sight radius | 2400 to 2700 | sight outlines |
-| Obstacle radius | about 700 (game 1); 600 to 1300 (game 2) | pixels |
-| Smoke cloud radius | 1500 to 1800, lasting several turns | pixels; clouds from turn 1 are still there at turn 7 |
-| DASH | faster than MOVE, not usable every turn | teams alternate DASH and MOVE; one unit dashed on turns 1 and 3 |
-| NET | thrown at a point; a netted unit is held in place for some turns and is then easy to catch | web drawn around a rock unit that was caught right after |
-| DECOY | a fake copy of the unit that enemies see | two extra scissors appeared after two DECOY commands |
-| Start positions | all three teams mixed together near the centre | first frames |
+| Average per game | 1st | 2nd | 3rd |
+|---|---|---|---|
+| Catches | 3.85 | 2.82 | 1.59 |
+| Units lost | 2.26 | 2.78 | 3.22 |
+| Catches by turn 10 | 0.97 | 0.71 | 0.40 |
+| Units lost by turn 10 | 0.46 | 0.61 | 1.01 |
+| Nets thrown | 4.34 | 4.30 | 4.28 |
+| Net hit rate | 54 % | 53 % | 45 % |
+| Nets that hit nothing | 1.24 | 1.27 | 1.55 |
+| Smokes used | 3.31 | 2.85 | 2.68 |
+| Own units netted | 2.08 | 2.10 | 2.43 |
+| Enemy decoys destroyed | 2.11 | 1.81 | 1.94 |
 
-## Questions the statement must answer
+Everybody throws the same number of nets and dashes about as often (8-9 % of the moves). Winners differ in **when they lose units** (half as many in the first 10 turns), in **net accuracy**, and in using more smoke.
 
-1. Exact input per turn: what do I see (only units in sight? ghosts? decoys marked or not? smoke clouds? nets?), and do I get item counts and cooldowns?
-2. Catch rule: distance, and what happens when A hunts B while C hunts A at the same spot (order of resolution).
-3. MOVE and DASH distances per turn, the DASH cooldown, collisions with obstacles and the arena wall.
-4. NET: range, radius, duration, whether it also stops my own units, whether a netted hunter can still catch.
-5. SMOKE: radius, duration, whether it blocks sight through it or only inside it.
-6. DECOY: lifetime, whether it moves, whether catching a decoy costs anything.
-7. Ghosts: can they see (scouts), block, be revived, or score? What does "x/5 sprites collected" on the end screen count?
-8. Are the roles fixed by player index (0 scissors, 1 paper, 2 rock), or given in the input?
-9. Time limits per turn, and whether the game parameters depend on the league.
+### Teams
 
-## What the two games teach
+| Team | Games | Win | Last | What stands out |
+|---|---|---|---|---|
+| Les Gens Bons | 59 | 64 % | 14 % | best in the sample. 2.8 of its 4.4 nets in turns 1-3, 57 % hits, 1.17 catches by turn 10, only 0.41 losses by turn 10, 3.9 smokes, dashes least of all (5 %), never two units to one point |
+| Agave | 57 | 51 % | 23 % | 3.0 nets in turns 1-3, 56 % hits, 1.16 catches by turn 10, almost no early smoke, dashes most (11 %) |
+| CodePistols (leaderboard #2) | 66 | 41 % | 29 % | most catches overall (3.29) but slow start: 0.47 catches and 0.89 losses by turn 10 |
+| INVALID FOP (leaderboard #1) | 60 | 37 % | 28 % | defensive: 4.4 smokes, 2.2 of them by turn 10, 0.43 losses by turn 10; only 49 % net hits |
+| ATA | 42 | 38 % | 48 % | all or nothing: 1.17 losses by turn 10, 32 % net hits |
+| BitingBytes | 57 | 25 % | - | 38 % net hits, most units sent to a shared point, decoys on almost every unit on turn 1 |
+| GoToVictory | 39 | 23 % | 36 % | 2.3 decoys in turns 1-3, units sent to shared points, smoke kept for later |
 
-- **The first 5 turns decide most of the score.** Teams start interleaved in the centre: in game 1, three of the eight catches happened by turn 7. On turn 1 every unit must already know which neighbour is prey and which is a predator.
-- **Game 1, scissors (orange) lost two units by turn 4** while standing in the central crowd next to rock units. Its orders show why:
-  - It spent nets and decoys at once (all 6 nets and 3 decoys gone by turn 7) but **never used smoke while in danger**; its 6 smokes were first used from turn 14, away from any fight.
-  - Later it sent several units to **the same coordinates** (`MOVE 0 4619 135;MOVE 1 4619 135;MOVE 3 4619 135`), so a single rock unit could threaten all of them, and it lost two more between turns 46 and 62.
-- **Rock (the winner of game 1) labelled every unit with a state**: HUNT, FLEE, SEEK, GHOST. It switches each unit between chasing prey and running from predators every turn. That per-unit state machine is the baseline to beat.
-- **Paper (second in game 1, first in game 2)** kept all 5 units alive until turn 8 and lost only one in each game: it uses smoke early and often (5 of 6 smokes in the first 7 turns), dashes to open distance, and spreads its units to different sectors.
-- **Long quiet middle game.** Between turns 15 and 45 of game 1 nobody was caught: once the teams separate, sight range and obstacles make hunting slow. Points after the opening come from cornering a unit near the wall or a net at the right time.
-- **Ties are common with few units** (2 vs 2 in game 2), and "earliest catch" decides: an early safe catch is worth more than a late one.
+Turn 1 of the strong teams: almost every unit dashes, one or two throw a net at prey standing next to them, Les Gens Bons and INVALID FOP also drop a smoke on a unit that has a predator next to it.
+
+Most teams run the same per-unit state machine, visible in their labels: `HUNT / FLEE / SEEK / GHOST`, `scout / patrol / chase / flee / lie-low / avoid-net`, `pincer / cornered / dash-flee / dash-chase`, `shadow / hunt / search`.
+
+## Mistakes of the losing teams
+
+1. **Losing units in the opening crowd.** Third place loses 1.0 unit by turn 10, the winner 0.46.
+2. **Walking away from a hunter that can dash.** The dash was spent earlier on travelling, or never ordered. A predator with a dash reaches about 1650 (1200 + catch distance) in one turn.
+3. **Aiming the net at the target's position.** It stops there and the target has moved. Short-range nets (under 750) are nearly always wasted.
+4. **Nets into decoys and trees** (17 % of all nets).
+5. **Several units ordered to the same point**: one predator, or one net, threatens all of them.
+6. **Items at the wrong time**: decoys on turn 1 with no predator near, smoke kept until the fight is over, every net gone before turn 5.
+7. **Fleeing to the wall**: 28 % of the catches happen in the outer ring.
 
 ## Plan for the bot
 
-1. **Parse everything, hard-code nothing**: units per team, item counts, obstacle list, any ranges the input gives.
-2. **Per-unit state each turn**: FLEE if a predator is within a danger distance (run to the point that gains the most distance, prefer breaking line of sight behind a stump, stay off the wall); else HUNT the best prey (intercept, steer around stumps); else SEEK (spread units over different sectors, never the same target point).
-3. **Items by rule**: SMOKE on myself when a predator is close and I am fleeing; NET on a prey that is within range and not yet catchable, or on a predator that is about to catch me; DECOY when fleeing with a predator in sight. Keep one net and one smoke per surviving unit for the late game.
-4. **Memory**: remember where enemies were last seen for a few turns (fog of war), and ignore positions that are too old.
-5. **Opening book**: turn 1 dash away from adjacent predators, net adjacent prey.
-6. **Three-player thinking**: the team that hunts my predator is my own prey. So when I flee, running **towards my prey's units** puts my hunter in danger from them and brings me closer to my food. Running towards empty space only delays the catch.
+1. **Parse everything, hard-code nothing**: units per team, item pools, trees.
+2. **Per unit, every turn**: FLEE if a predator is within the danger distance, else HUNT the best prey, else SEEK in its own sector.
+3. **Dash discipline**: travel with MOVE. Dash only (a) to catch: prey within 1650 and a free line, (b) to escape: a predator within 2250, (c) on turn 1.
+4. **Kill zone**: never end a turn within 1650 of a predator that may still have its dash; track every enemy's last dash.
+5. **Nets**: free line, target 750 to 2000 away, **aimed at full range through the target's predicted position**, at a unit and not at a decoy (a real unit was there last turn; a decoy appears next to a unit and walks straight). Then send the nearest hunter with its dash: a netted unit stands for 4 turns. Use a net on a predator that is about to reach a unit with no dash and no smoke.
+6. **Smoke** on the unit itself when a predator is within 2250.
+7. **Decoy** when fleeing with a predator in sight, sent across the predator's path.
+8. **Spread**: different prey per hunter while more than one is known; no shared destination; stay off the outer ring when fleeing.
+9. **Three-player thinking**: my predator's predator is my prey. Fleeing towards my prey's units brings my hunter into danger and me closer to food.
+10. **Ties**: with 3 units per team, scores like 2-2 are common and the earlier first catch wins. An early safe catch outweighs a late one.
 
-`prep/try-catch-forest/Player.java` holds this plan as code with tested geometry (sight lines, steering around obstacles, fleeing, interception) and stubs where the input format is needed. `SelfTest.java` checks it (21 checks).
+`prep/try-catch-forest/Player.java` holds rules 2 to 6 and 8 as code with the measured constants; `SelfTest.java` checks it (28 checks). The input parsing (`readInit`, `readTurn`) is still a stub.
 
-## When the statement arrives
+## Still unknown (ask the statement)
 
-1. Give Claude Code the link or the PDF: "add the challenge ..." builds it locally (`node cli.js new`), with a referee from the statement, three bosses and the review.
-2. If the game is on CodinGame, the installed CodinGame skill can read the statement and the input format through the API, run test games against the boss and read their logs.
-3. Fill `readInit` / `readTurn`, replace the estimated constants, then iterate with the arena and the review.
+1. Input per turn: what is visible (ghosts, decoys marked or not, smoke clouds, nets, enemy item counts), and whether dash cooldown and net state are given.
+2. Exact catch distance and the order of resolution in a turn (move, net, catch).
+3. Sight radius; smoke radius and duration; whether smoke blocks sight through it or only inside it.
+4. Whether a netted hunter can still catch, and whether a netted unit can use items.
+5. Decoy lifetime and speed.
+6. What ghosts are good for (sight? blocking?).
+7. Time limit per turn; differences between leagues.
+
+## Sources
+
+| Source | What it gave |
+|---|---|
+| `UTG battle 250(1,2,4).mp4` | 5 units per team, items 6/3/6: Commit Happens (rock) 4, INVALID FOP (paper) 3, GoToVictory (scissors) 1 |
+| `Media1.mp4` | 3 units per team, items 1/2/3: INVALID FOP 2 "(earliest catch)", BitingBytes 2, GoToVictory 1 |
+| 320 game logs | everything marked measured. Scripts in `prep/try-catch-forest/research/`; the downloaded logs stay outside the repository |
+
+## When the window opens
+
+1. Read the statement and the stub generator through the API (CodinGame skill), settle the unknowns above.
+2. Fill `readInit` / `readTurn`, correct the two estimated constants, play test games against the boss, read the logs.
+3. Add the game to cg-arena (`node cli.js new`, add-challenge skill) for local iteration, then submit when asked.

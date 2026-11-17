@@ -1,26 +1,33 @@
 import java.util.*;
 
 /**
- * Try Catch Forest - preparation kit (built from two replay videos, BEFORE the statement was available).
+ * Try Catch Forest (Unleash the Geek 2026) - preparation kit.
  *
- * Everything marked CONFIRM is an estimate from the videos and must be checked against the statement.
- * What is solid: circular arena centred on (0,0), circular obstacles that block movement and sight,
+ * Built before the statement was available, from two replay videos and from the referee's text logs of
+ * 320 Gold-league games. Values marked MEASURED come from those logs; values marked CONFIRM are still
+ * estimates and must be checked against the statement.
+ * Solid: circular arena centred on (0,0), circular trees that block movement, sight and nets,
  * three teams in a rock-paper-scissors cycle, one output line of commands joined by ';':
  *   MOVE id x y [msg] | DASH id x y [msg] | NET id x y | SMOKE id x y | DECOY id x y
+ * A unit may move (or dash) and use one item in the same turn.
  *
  * The parts that depend on the input format (readInit / readTurn) are stubs: fill them from the
  * statement's protocol or the API's stub generator. The geometry and decision helpers below are tested
  * by SelfTest.java and do not depend on the protocol.
  */
 class Player {
-    // ---- parameters: CONFIRM every value with the statement (prefer reading them from the input) ----
-    static double ARENA_R = 8000;        // arena radius (tooltip showed y=7556 near the edge; scale ~39 units/px)
-    static double VISION = 2500;         // sight radius of a unit (outlines measured at ~2400-2700)
-    static double UNIT_R = 200;          // body radius used for obstacle clearance (guess)
-    static double MOVE_SPEED = 500;      // distance per turn with MOVE (guess)
-    static double DASH_SPEED = 1000;     // distance per turn with DASH (guess; DASH is not usable every turn)
-    static double CATCH_RANGE = 400;     // distance at which a hunter catches its prey (guess)
-    static double NET_RANGE = 2000;      // how far a net can be thrown (guess)
+    // ---- parameters (prefer reading them from the input if the statement provides them) ----
+    static double ARENA_R = 8000;        // MEASURED: no unit centre was ever further than 7780 from (0,0)
+    static double VISION = 2500;         // CONFIRM: sight radius (outlines in the videos: 2400-2700)
+    static double UNIT_R = 220;          // MEASURED: 8000 - 7780
+    static double MOVE_SPEED = 600;      // MEASURED: distance per turn with MOVE
+    static double DASH_SPEED = 1200;     // MEASURED: distance per turn with DASH
+    static int DASH_EVERY = 2;           // MEASURED: after a dash on turn t the next dash is possible on turn t+2
+    static double CATCH_RANGE = 450;     // CONFIRM: distance at which a hunter catches its prey (nets grab at ~470)
+    static double NET_RANGE = 2000;      // MEASURED: a net flies at most 2000, stops at the first tree
+    static double NET_MIN = 750;         // MEASURED: nets thrown from closer than 750 hit under 20 %
+    static int NET_HOLD = 4;             // MEASURED: a netted unit cannot move for 4 turns
+    static double KILL_ZONE = DASH_SPEED + CATCH_RANGE;   // a predator with a dash catches from here in one turn
     static double DANGER = 3000;         // start fleeing when a predator is this close (tuning value)
     static int TURNS = 100;
 
@@ -42,12 +49,12 @@ class Player {
         Circle(V c, double r) { this.c = c; this.r = r; }
     }
     static final class Unit {
-        int id, owner; V pos; boolean alive = true; int lastSeen = -1;
+        int id, owner; V pos; boolean alive = true; int lastSeen = -1, lastDash = -99;
         Unit(int id, int owner, V pos) { this.id = id; this.owner = owner; this.pos = pos; }
     }
 
     // ---- rock-paper-scissors cycle. In both videos: player 0 = scissors, 1 = paper, 2 = rock,
-    //      so player i catches player (i+1)%3 and is caught by player (i+2)%3. CONFIRM. ----
+    //      so player i catches player (i+1)%3 and is caught by player (i+2)%3 (MEASURED: 2643 catches, no exception). ----
     static int preyOf(int player) { return (player + 1) % 3; }
     static int predatorOf(int player) { return (player + 2) % 3; }
 
@@ -143,33 +150,70 @@ class Player {
     static List<Circle> smokes = new ArrayList<>();
     static Map<Integer, Unit> units = new HashMap<>();          // every unit ever seen, with lastSeen for fog of war
 
-    /** One turn of decisions: returns the output line. Uses only the state above. */
+    /** True when a net thrown from a to b is worth it: in range, not point-blank, no tree on the way. */
+    static boolean netLine(V a, V b) {
+        double d = a.dist(b);
+        return d >= NET_MIN && d <= NET_RANGE && firstBlocking(a, b, obstacles, 0) == null;
+    }
+
+    /** Aim point of a net: the full range along the line through the target. A net stops at its aim point, so a
+     *  net aimed exactly at a moving unit often stops short; aimed long, it still grabs the first unit on its way. */
+    static V netAim(V from, V target) { return from.add(target.sub(from).norm().mul(NET_RANGE)); }
+
+    /**
+     * One turn of decisions: returns the output line. Uses only the state above.
+     * Rules taken from the 320-game study (challenges/try-catch-forest-prep.md):
+     *  - keep the dash for the turn it decides something: the catch, or the escape from a predator's kill zone;
+     *  - a net is thrown only with a free line between 750 and 2000, aimed at full range through the target,
+     *    at prey to set up a catch, or at a predator that is about to reach us;
+     *  - smoke goes on the unit itself when a predator is close;
+     *  - two hunters never take the same prey while another prey is known; nobody shares a destination.
+     */
     static String decide() {
-        List<String> out = new ArrayList<>();
+        List<String> moves = new ArrayList<>(), items = new ArrayList<>();
         List<V> prey = new ArrayList<>(), predators = new ArrayList<>();
         for (Unit u : units.values()) {
             if (!u.alive || turn - u.lastSeen > 3) continue;      // forget positions older than 3 turns
             if (u.owner == preyOf(myId)) prey.add(u.pos);
             if (u.owner == predatorOf(myId)) predators.add(u.pos);
         }
-        for (Unit u : units.values()) {
-            if (u.owner != myId || !u.alive) continue;
-            V threat = nearest(u.pos, predators), target = nearest(u.pos, prey);
+        List<Unit> mine = new ArrayList<>();
+        for (Unit u : units.values()) if (u.owner == myId && u.alive) mine.add(u);
+        mine.sort((a, b) -> a.id - b.id);
+        Set<V> claimed = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Unit u : mine) {
+            V threat = nearest(u.pos, predators);
+            List<V> free = new ArrayList<>();
+            for (V p : prey) if (!claimed.contains(p)) free.add(p);
+            V target = nearest(u.pos, free.isEmpty() ? prey : free);
+            boolean canDash = turn - u.lastDash >= DASH_EVERY, dash = false;
             String mode; V goal;
             if (threat != null && u.pos.dist(threat) < DANGER) {
-                mode = "FLEE"; goal = flee(u.pos, predators, obstacles, MOVE_SPEED * 2);
-                if (smokeLeft > 0 && u.pos.dist(threat) < 1200) { out.add("SMOKE " + u.id + " " + u.pos); smokeLeft--; }
+                double td = u.pos.dist(threat);
+                boolean close = td < KILL_ZONE + MOVE_SPEED;       // it can reach us this turn or the next
+                mode = "FLEE"; dash = canDash && close;
+                goal = flee(u.pos, predators, obstacles, dash ? DASH_SPEED : MOVE_SPEED);
+                if (close && smokeLeft > 0) { items.add("SMOKE " + u.id + " " + u.pos); smokeLeft--; }
+                else if (close && netLeft > 0 && netLine(u.pos, threat)) { items.add("NET " + u.id + " " + netAim(u.pos, threat)); netLeft--; }
             } else if (target != null) {
-                mode = "HUNT"; goal = steer(u.pos, target, obstacles);
-                if (netLeft > 0 && u.pos.dist(target) < NET_RANGE && u.pos.dist(target) > CATCH_RANGE) { out.add("NET " + u.id + " " + target); netLeft--; }
+                claimed.add(target);
+                double d = u.pos.dist(target);
+                if (canDash && d <= KILL_ZONE && firstBlocking(u.pos, target, obstacles, UNIT_R) == null) {
+                    mode = "CATCH"; dash = true; goal = target;
+                } else {
+                    mode = "HUNT"; goal = steer(u.pos, target, obstacles);
+                    if (netLeft > 0 && netLine(u.pos, target)) { items.add("NET " + u.id + " " + netAim(u.pos, target)); netLeft--; }
+                }
             } else {
                 mode = "SEEK";                                      // patrol a ring, each unit at its own angle
                 double a = (u.id % Math.max(1, unitsPerPlayer)) * 2 * Math.PI / Math.max(1, unitsPerPlayer) + turn * 0.15;
                 goal = steer(u.pos, V.polar(a, ARENA_R * 0.55), obstacles);
             }
-            out.add(0, "MOVE " + u.id + " " + clampToArena(goal, UNIT_R) + " " + mode);
+            if (dash) u.lastDash = turn;
+            moves.add((dash ? "DASH " : "MOVE ") + u.id + " " + clampToArena(goal, UNIT_R) + " " + mode);
         }
-        return out.isEmpty() ? "MOVE 0 0 0" : String.join(";", out);
+        moves.addAll(items);
+        return moves.isEmpty() ? "MOVE 0 0 0" : String.join(";", moves);
     }
 
     // ---- protocol: STUBS, to be written from the statement ----

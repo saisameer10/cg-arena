@@ -55,19 +55,56 @@ class SelfTest {
         Player.V aim = Player.intercept(o, new Player.V(2000, 0), new Player.V(0, 300), 500);
         check("intercept aims ahead of the prey", aim.y > 600);
 
-        // decide(): a hunter next to prey hunts and nets; a unit next to a predator flees and smokes
-        Player.myId = 0; Player.unitsPerPlayer = 2; Player.turn = 5; Player.netLeft = 1; Player.smokeLeft = 1;
-        Player.obstacles = new ArrayList<>(); Player.units.clear();
+        // decide(): a hunter with prey in net range hunts and nets; a unit next to a predator dashes away and smokes
+        setup(1, 1);
         add(0, 0, 0, 0); add(1, 0, 5000, 5000);
-        add(2, 1, 1500, 0);              // prey of player 0, near unit 0
-        add(4, 2, 5000, 4200);           // predator of player 0, near unit 1
+        add(2, 1, 1900, 0);              // prey of player 0, in net range of unit 0 but outside its kill zone
+        add(4, 2, 5000, 4200);           // predator of player 0, next to unit 1
         String out = Player.decide();
-        check("unit 0 hunts: " + out, out.contains("MOVE 0") && out.contains("HUNT") && out.contains("NET 0 1500 0"));
-        check("unit 1 flees and smokes", out.contains("MOVE 1") && out.contains("FLEE") && out.contains("SMOKE 1"));
+        check("unit 0 hunts and nets at full range through the prey: " + out, out.contains("MOVE 0") && out.contains("HUNT") && out.contains("NET 0 2000 0"));
+        check("unit 1 dashes away and smokes", out.contains("DASH 1") && out.contains("FLEE") && out.contains("SMOKE 1"));
         check("one line, commands joined by ';'", !out.contains("\n") && out.split(";").length == 4);
+
+        // the dash is kept for the catch, and it is not available on the next turn
+        setup(1, 0);
+        add(0, 0, 0, 0); add(2, 1, 1500, 0);
+        out = Player.decide();
+        check("prey inside the kill zone: dash to catch, no net: " + out, out.contains("DASH 0 1500 0 CATCH") && !out.contains("NET"));
+        Player.turn++;
+        out = Player.decide();
+        check("no second dash on the following turn: " + out, out.startsWith("MOVE 0"));
+        Player.turn++;
+        out = Player.decide();
+        check("dash again two turns later", out.startsWith("DASH 0"));
+
+        // nets: not through a tree, not at point-blank range
+        setup(1, 0);
+        Player.obstacles.add(new Player.Circle(new Player.V(1000, 0), 300));
+        add(0, 0, 0, 0); add(2, 1, 1900, 0);
+        check("no net through a tree", !Player.decide().contains("NET"));
+        setup(1, 0);
+        add(0, 0, 0, 0); Player.units.get(0).lastDash = Player.turn; add(2, 1, 600, 0);
+        check("no net at point-blank range", !Player.decide().contains("NET"));
+
+        // a predator closing in with no smoke left gets the net
+        setup(1, 0);
+        add(0, 0, 0, 0); add(4, 2, 1500, 0);
+        out = Player.decide();
+        check("defensive net on the predator: " + out, out.contains("FLEE") && out.contains("NET 0 2000 0"));
+
+        // two hunters, two prey: one each
+        setup(0, 0);
+        add(0, 0, 0, 0); add(1, 0, 0, 400); add(2, 1, 2500, 0); add(3, 1, 2500, 3000);
+        out = Player.decide();
+        String[] parts = out.split(";");
+        check("hunters take different prey: " + out, parts.length == 2 && !parts[0].substring(7).equals(parts[1].substring(7)));
 
         System.out.println((n - fails) + "/" + n + " checks passed");
         System.exit(fails == 0 ? 0 : 1);
+    }
+    static void setup(int nets, int smokes) {
+        Player.myId = 0; Player.unitsPerPlayer = 2; Player.turn = 5; Player.netLeft = nets; Player.smokeLeft = smokes;
+        Player.obstacles = new ArrayList<>(); Player.units.clear();
     }
     static void add(int id, int owner, double x, double y) {
         Player.Unit u = new Player.Unit(id, owner, new Player.V(x, y)); u.lastSeen = Player.turn; Player.units.put(id, u);
