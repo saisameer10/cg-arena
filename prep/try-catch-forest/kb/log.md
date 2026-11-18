@@ -331,3 +331,41 @@ just above; in 34 of the 49 we ended with two or more units alive, in 32 we made
 Not built yet: (1) friends checked along the whole flight of a net, (2) when the predator team is already above us
 late in the game, the soft terms against predators are scaled down and the last net may go at any prey in range,
 (3) the behind-or-level pressing rule of `vuser1.java` (`F_USER_AGGRO`), which did raise dash catches in the arena.
+
+## Night of 2026-11-18: the wall and bad movements over the 273 games of the live code
+
+Tools: `tools/wallmove.py`, `tools/pingpong.py` (plain arena logs, positions rebuilt as in `recon.py`),
+`tools/ppcause.py` (causes, from 21 debug games of v10, which has the same movement code and the same rate).
+
+**The wall.** Only the last 600 before the wall is dangerous, and it is for every team.
+
+| Radius | Ours: share of time | share of losses | losses per 100 unit-turns | Other teams: losses per 100 unit-turns |
+|---|---|---|---|---|
+| 0 to 4000 | 37 % | 34 % | 0.74 | 1.15 |
+| 4000 to 5500 | 29 % | 25 % | 0.70 | 0.94 |
+| 5500 to 6500 | 22 % | 21 % | 0.78 | 0.76 |
+| 6500 to 7200 | 8 % | 7 % | 0.68 | 0.82 |
+| 7200 to the wall | 4 % | 15 % | 2.85 | 2.43 |
+| all | | | 0.82 | 1.06 |
+
+- With a predator within 2,500: 7.6 losses per 100 turns in the last strip, 1.7 to 2.4 everywhere else.
+- Losses beyond 6,500: 138 of 655 (21 %). 83 % of those units were free (inside: 53 %), 59 % had moved outward by
+  800 or more in the last six turns, the last order was FLEE (a predator in sight) in 114.
+- Our units enter the last strip 3.0 times per game. Entering in flight from a predator within 1,500: 232 times,
+  42 % caught within 8 turns. Entering while hunting or searching with no predator within 3,600: 220 times, none caught.
+- Flight steps that start between 6,500 and 7,200: outward 21 % caught within 6 turns, along the wall 10 %,
+  inward 15 %. From 5,500 to 6,500: outward 13 %, others 9 to 10 %. Outward dashes that end beyond 6,500: 267, 18 %.
+- Games with two or more wall losses: 25, mean rank 2.24 (none: 170 games, 1.98).
+- We lose fewer units per unit-turn than the other teams everywhere inside 5,500: the bot is the more careful one.
+
+**Steps that undo the step before (back on the spot of two turns ago).** Ours 7 % of steps, other teams 4 %
+(same method); 18 per game. v5-to-live share the code and the rate (v10: 7 %).
+- By tags: hunt then hunt 34 %, flee then flee 14 %, hunt then flee 13 %, flee then hunt 12 %, search 11 %.
+- Causes (300 cases in 21 debug games): a predator between 2,500 and 3,700 of the straight step 47 % (the chase
+  forecast acts up to 3,600 with 1.5 per unit, the prey pulls with 1); the target changes to another prey 16 %;
+  the way round a tree changes side 15 %; the goal point of the same target jumps (lead point, or the unit has
+  reached a remembered place and nothing is there) 13 %; not explained 7 %.
+- A hunt given up by turning round with the nearest predator beyond 2,000 and prey within 2,200: 149 times
+  (0.55 per game), 96 of them in the first 20 turns.
+- Not a problem: steps deflected by a tree or the wall (6 % of steps, no more losses after them than after any
+  step), standing still (237 steps in 273 games).
