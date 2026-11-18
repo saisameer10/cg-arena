@@ -23,6 +23,22 @@ resubmitted at 17:55 and stood at 19.99 after 32 %.
    vgo_b that act after a net has landed (commit to netted prey, hunt first when a point is near, ghost plan). It
    compiles and is crash-checked locally; it has no real-field game yet.
 
+## Checked at 18:19 IST: one run of the arena is worth plus or minus a point
+
+The resubmission of 17:55 (41749025, the same program as 41748059, byte for byte) finished its ranking games at
+**18.99, 302nd of 429** (first / second / last in the 79 games fetched: 24 / 26 / 29, mean rank 2.06).
+The run before it, same program, had reached **20.47** at 90 % (46 / 41 / 40 over 127 games, mean rank 1.95).
+
+- The same code scored 20.47 and 18.99 within two hours. So the differences we read between submissions today
+  (v10 19.48, hybrid 19.45, live code 20.47) are all inside the run-to-run noise. No submission of today is shown
+  to be better than another by its rating.
+- Only paired tests against the same opponents on the same maps (`tools/pairfield.py`) can compare two bots, and
+  they need 40 or more battles each.
+- The final rating is one more draw of that noise. A full run took about 50 minutes this evening, so the last
+  window has room for two or three runs. Resubmitting restarts the run: a run that ends well should be left alone,
+  a run that ends badly can be replaced, as long as the last one has time to finish before 12:00. With a spread of
+  about 0.75 per run, the best of three draws is on average about 0.6 above a single one.
+
 ## The first 45 minutes: measure, on the real field
 
 ```bash
