@@ -201,28 +201,135 @@ Results: 45.5 % wins, mean rank 1.75, 3.44 catches, 3.02 losses, 0.89 catches by
 | Why fleeing units run 31 degrees off the straight line | a pull toward the nearest known prey (`P_FLEE_PREY_W`), fitted |
 | The power pools | see section 8 |
 
-## 7. State of the proof (15:05 IST, NOT finished)
+## 7. Leader mimic handed over for replay tests (15:32 IST)
 
-Fingerprint = `tools/mimic_fingerprint.py` (50 lines; tolerance: shares within 10 points, counts per game and
-distances within 25 %). Local games: `sim/SimLog.java` (copy of the referee that writes CodinGame-shaped logs; pools
-= sum over the units of a random 0, 1 or 2, fitted on 564 Gold games; `-Dspread=1` gives one map per game).
+`versions/vmimic.java` (ATI x iHot): compiles alone with JDK 21, class `Player`, 47,975 characters.
 
-Lines inside the tolerance after the second joint run (120 games, 60 per mimic, opponents: the other two mimics,
-v10, v5, v1), before the third round of fixes that is in the files now:
+**Rules of the leader that are in the file**
+- Turn 1: dash and smoke for every unit with a predator start under 2600 (known through the symmetry); the smoke
+  goes at the predator, at most 1800 out; the dash goes away only when the predator is under 1500, else at prey.
+- Turn 1 without a predator near: dash at a prey up to 2800; again on turn 3 (travel dash while at most one dash made).
+- A prey in sight under 1600 is attacked whatever the predator distance; dash at it under 1700.
+- Flee from a predator under 2200; dash away under 1700; smoke at the predator on that dash.
+- Nets: none on turn 1, none on a turn the unit dashes; at prey when the move ends within 1600 (prey without dash)
+  or 1100 (prey with dash); aimed at position + last move, 400 beyond, not 2000 out; from turn 2 at predators
+  within 1300 (with dash) or 1600 (without).
+- Decoy: 2400 out, 86 degrees off the unit's own move, only once the smoke is used up.
+- Held units do nothing special; ghosts walk onto the nearest living prey; orders are the end point of the step.
 
-| Mimic | Inside | Main lines still outside |
-|---|---|---|
-| vmimic (ATI x iHot) | 28 of 50 | turn-1 smoke under 1500 (57 % against 80 %), catches (2.67 against 3.61; 0.40 against 0.89 by turn 10), nets at predators (21 % against 36 %) |
-| vmimic2 (Les Gens Bons) | 32 of 50 | turn-1 dash too frequent (87 % against 66 %), nets too late (median turn 9 against 3) |
-| vmimic3 (FullStuck) | 37 of 50 | nets after turn 5 too many, ghosts |
+**Still v10's** (not recoverable from logs, or not measured well enough): input parsing, enemy tracking, movement
+model and tree steering; the hard rule that a move never ends where a predator can touch the unit; the catch test
+(`catchReward`); the search map for units with nothing in sight; 3 turns of predator memory and 25 of prey memory;
+the dash when no walk is safe. Fitted, not recovered: the three-turn pause between two nets at prey, the pull
+toward prey while fleeing, the side of the decoy.
+**Not in**: "net with a hunter 771 away" from the morning study: the current agent's nearest free team mate is
+4,235 from the target (median, n = 156).
 
-Lines the local referee distorts for every mimic: "net at prey: target could dash" (79 % locally against 36-63 %:
-v10, v5 and v1 keep their dash), "nets that hit" (40-48 % against 52-64 %), catches by turn 10 and units lost by
-turn 10 (local opponents flee better and attack later than the Gold field).
+**Checks** (`tools/mimic_check.py` on the logs): 120 games against v10 and v5, 10,833 turns answered, 0 crashes,
+0 games cut short, 0 DASH during cooldown, 0 powers beyond the pool, 0 orders for a unit of another team, 0
+malformed orders. Turn time with one game at a time on the shared machine: mean 1.2 to 2.0 ms, worst later turn 8
+to 30 ms, first turn 240 to 504 ms (JVM start included; limit 1000).
 
-Still to do: read the third joint run (`E:/cg-tmp/tcf/mimic/fp/cmp_b3_*.txt`), the final side-by-side tables, 240
-games per mimic against v10, v5 and v1, the five candidate switches for v10 (leader against v10: dash and smoke at the
-predator on turn 1 for every unit with a predator start under 2500; smoke thrown at the predator, at most 1800 out,
-with the flee dash; nets kept for later, 36 % at close predators, aimed at the target with a lead instead of 2000
-out; dashes spent freely (24 per game against 13.8); a prey under 1600 beats a predator under 1200).
-Local results did not transfer to real Gold teams for one candidate today: judge the mimics on replays.
+**Local table** (120 games, one map per game, every seat order of vmimic / v10 / v5):
+
+| Version | Games | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 | by turn 20 |
+|---|---|---|---|---|---|---|---|---|
+| vmimic | 120 | 2.000 | 32.5 % | 32.5 % | 2.64 | 3.18 | 0.49 | 0.96 |
+| v10 | 120 | 1.858 | 42.5 % | 28.3 % | 2.97 | 2.58 | 0.64 | 1.36 |
+| v5 | 120 | 2.133 | 25.0 % | 38.3 % | 2.69 | 2.55 | 0.49 | 0.98 |
+
+Catches per game, hunter on prey: vmimic on v10 2.78, vmimic on v5 2.50, v10 on vmimic 3.33, v10 on v5 2.60,
+v5 on vmimic 3.02, v5 on v10 2.37. **Warning: local results did not transfer to real Gold teams for one candidate
+today.** Locally the mimic is level with v10 on rank and loses more units; the real squad wins 54.5 % in Gold.
+
+**Fingerprint, real squad against mimic** (tolerance: shares within 10 points, counts per game and distances
+within 25 %; 40 of 50 lines inside):
+
+| Line | ATI x iHot (110 games) | vmimic (120 games) | |
+|---|---|---|---|
+| win share (context, not matched) | 54.5 (110) | 32.5 (120) |  |
+| mean rank (context, not matched) | 1.6 (110) | 2.0 (120) |  |
+| t1 dash, predator start under 1500 | 92% (77) | 93% (89) | inside |
+| t1 smoke, predator start under 1500 | 80% (77) | 89% (89) | inside |
+| t1 dash, predator start 1500-2000 | 97% (64) | 92% (53) | inside |
+| t1 smoke, predator start 1500-2000 | 89% (64) | 92% (53) | inside |
+| t1 dash, predator start 2000-2500 | 91% (66) | 94% (73) | inside |
+| t1 smoke, predator start 2000-2500 | 86% (66) | 90% (73) | inside |
+| t1 dash, predator start 2500-3500 | 68% (105) | 66% (86) | inside |
+| t1 smoke, predator start 2500-3500 | 12% (105) | 19% (86) | inside |
+| t1 dash, predator start over 3500 | 46% (181) | 42% (197) | inside |
+| t1 smoke, predator start over 3500 | 0% (181) | 0% (197) | inside |
+| t1 dash, all units | 70% (496) | 62% (544) | inside |
+| t1 predator start under 2000: order within 60 deg of straight away | 54% (141) | 45% (142) | inside |
+| t1 predator start over 3500: order within 60 deg of nearest prey | 80% (181) | 86% (197) | inside |
+| t1 net, prey start under 2000 | 0% (146) | 0% (147) | inside |
+| nets per game, t1-5 | 0.9 (110) | 0.51 (120) | **outside** |
+| nets per game, t6-20 | 1.42 (110) | 1.14 (120) | inside |
+| nets per game, t21-100 | 1.81 (110) | 1.95 (120) | inside |
+| smokes per game, t1-5 | 2.33 (110) | 2.13 (120) | inside |
+| smokes per game, t6-20 | 1.27 (110) | 1.25 (120) | inside |
+| smokes per game, t21-100 | 0.82 (110) | 0.82 (120) | inside |
+| decoys per game, t1-5 | 0.05 (110) | 0.07 (120) | inside |
+| decoys per game, t6-20 | 0.55 (110) | 0.78 (120) | **outside** |
+| decoys per game, t21-100 | 2.95 (110) | 2.37 (120) | inside |
+| dashes per game, t1-5 | 5.49 (110) | 5.47 (120) | inside |
+| dashes per game, t6-20 | 5.65 (110) | 5.83 (120) | inside |
+| dashes per game, t21-100 | 12.93 (110) | 10.53 (120) | inside |
+| ghost dashes per game, t1-5 | 0.0 (110) | 0.0 (120) | inside |
+| ghost dashes per game, t6-20 | 0.0 (110) | 0.0 (120) | inside |
+| ghost dashes per game, t21-100 | 0.0 (110) | 0.0 (120) | inside |
+| median net turn | 17 (454) | 24 (432) | **outside** |
+| nets at predators | 36% (454) | 19% (432) | **outside** |
+| nets that hit an enemy unit | 64% (454) | 61% (432) | inside |
+| net at prey: target could dash | 36% (231) | 64% (265) | **outside** |
+| net at predator: target could dash | 39% (165) | 51% (84) | **outside** |
+| net at prey: thrower to target (median) | 984 (231) | 797 (265) | inside |
+| net at prey: nearest team mate to target (median) | 3848 (222) | 3022 (227) | inside |
+| net at predator: thrower to target (median) | 841 (165) | 1070 (84) | **outside** |
+| catches on held prey | 28% (397) | 34% (317) | inside |
+| catches with a dash | 35% (397) | 29% (317) | inside |
+| lost units that were held | 29% (307) | 36% (381) | inside |
+| catches per game | 3.61 (110) | 2.64 (120) | **outside** |
+| catches by turn 10 per game | 0.89 (110) | 0.49 (120) | **outside** |
+| catches by turn 20 per game | 1.5 (110) | 0.96 (120) | **outside** |
+| units lost per game | 2.79 (110) | 3.17 (120) | inside |
+| units lost by turn 10 per game | 0.41 (110) | 0.52 (120) | inside |
+| ghost order within 1000 of a living prey | 36% (15505) | 41% (19462) | inside |
+| ghost order within 1000 of a living predator | 11% (15505) | 6% (19462) | inside |
+| ghost order within 1000 of a living team mate | 21% (15505) | 19% (19462) | inside |
+| ghost order near nobody | 49% (15505) | 45% (19462) | inside |
+| ghost: no order | 13% (17784) | 19% (23983) | inside |
+
+lines compared: 50, inside the tolerance: 40, outside: 10
+
+Lines outside, and why:
+- Catches per game and by turn 10 / 20: the local opponents (v10, v5) flee better and are caught later than the
+  Gold field; v10 itself makes 0.64 catches by turn 10 in these games.
+- Net at prey / predator "target could dash": v10 and v5 keep their dash (v10 dashes 13 times a game), so most
+  targets can dash. An opponent effect.
+- Nets in turns 1-5, median net turn, share at predators: the real gate behind its nets is not recovered; the
+  mimic nets later and less at predators.
+- Decoys in turns 6-20: follows from "decoy once the smoke is gone" (an assumption).
+
+## 8. The local referee and what it distorts
+
+`sim/SimLog.java` is `Sim.java` plus a game log in CodinGame's JSON shape. Pools: the sum over the units of a random
+0, 1 or 2 per kind (fits the largest number of nets / smokes / decoys used by a team in 564 Gold games: 0 to 2N,
+mean N); `Sim.java` uses 2 to 5. `-Dspread=1` gives a new map per game, `-Donly=name` keeps the games with one
+version. Distorted lines: everything that depends on the opponents (early catches and losses, dash state of net
+targets), on the maps (trees are placed by our generator: sight on turn 1), and on its collision steps.
+
+## 9. vmimic2 and vmimic3: state
+
+Same engine, rule books of Les Gens Bons and FullStuck. After the second joint run (60 games each, before the last
+three rounds of engine fixes): 32 and 37 of 50 lines inside. Not re-measured since; no 240-game table yet.
+
+## 10. Still to do
+
+- 240 games per mimic against v10, v5, v1 and the newest candidate, both seat cycles.
+- Final fingerprints of vmimic2 and vmimic3.
+- "For the user's decision" (a submission replaces v10, restarts the ranking games; only the last one counts).
+- Candidate switches for v10 from the leader: dash and smoke at the predator on turn 1 for every unit with a
+  predator start under 2600; smoke thrown at the predator (at most 1800 out) with the flee dash instead of on
+  ourselves; no net on a dash turn and none on turn 1, aimed at position + last move and 400 beyond instead of
+  2000 out; dashes spent freely (24 a game against 13.8); a prey under 1600 beats a predator under 1200.

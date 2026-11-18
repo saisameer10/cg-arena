@@ -63,6 +63,7 @@ class Player {
     static final int P_NET_EVERY = 4;             // turns the team waits between two nets at prey. FITTED, not recovered: median net turn 12, 1.19 / 1.08 / 1.34 nets per game in turns 1-5 / 6-20 / 21-100
     static final double P_NET_D_T1 = 1100;        // same on turn 1: 67 / 60 / 40 / 9 % at 600-1000 / 1300 / 1600 / 2000 (n = 129)
     static final boolean F_NET_ONE_PER_PREY = true;// only one unit nets a given prey on a turn. ASSUMPTION (1.19 nets in turns 1-5)
+    static final boolean F_NET_NOT_ON_DASH = false;// nets also on dash turns: 34-36 % of the net turns (n = 592)
     static final boolean F_NET_HELD_PREY = false; // net at a prey that is already held. No: 1-4 % (n = 848)
     static final double P_NET_LEAD = 0.4;         // aim at prey position + this x its last move. Median 0.39, least squares 0.35 over 604 nets
     static final boolean F_NET_FULL_RANGE = true; // the aim point is 2000 from the thrower along the line: 86-88 % of 656 nets at prey
@@ -71,6 +72,8 @@ class Player {
     static final double P_NETP_HELD_READY = 1200; // a held unit nets a predator that can dash nearer than this: 19 % at 800-1200, 6 % under 800 (n = 112)
     static final double P_NETP_NODASH = 0;        // a free unit does not net predators: 0-1 % (n = 2,274)
     static final double P_NETP_READY = 0;         // a free unit does not net predators: 0-1 % (n = 1,855). 6.8 % of all nets go at predators
+    static final int P_NETP_FROM_TURN = 1;        // no limit (1 net at a predator on turn 1 in 264 games)
+    static final boolean F_SMOKE_BEFORE_NETP = false;// not needed: free units do not net predators
     static final int P_NETP_EVERY = 0;            // no pause
     // ---- decoys
     static final double P_DECOY_D = 2000;         // a FLEEING unit sends a decoy when the predator in sight is nearer than this: 21-36 % of the unit-turns under 2000 while decoys are left, 0-2 % beyond; turn 1: 54 / 84 / 54 % at 800-1200 / 1600 / 2000 (n = 2,600)
@@ -106,7 +109,7 @@ class Player {
     static final class E {
         int id, owner; double x, y, vx, vy; boolean ghost; int cd, fat = 1, immob;
         int seen = -99; boolean vis, dead, lost, dup, sym;
-        int lastDecoy = -99; double ex, ey; boolean usedPower, netTargeted, dashes; String cmd, tag; int mode; E thr, tgt;
+        int lastDecoy = -99; double ex, ey; boolean usedPower, netTargeted, dashes, caughtNow; String cmd, tag; int mode; E thr, tgt;
         E copy() { E e = new E(); e.id = id; e.owner = owner; e.x = x; e.y = y; e.vx = vx; e.vy = vy; e.ghost = ghost; e.cd = cd; e.fat = fat; e.immob = immob; e.seen = seen; e.vis = vis; return e; }
     }
     static final class Th { double x, y, reach, w; int immob; E e; }
@@ -380,7 +383,7 @@ class Player {
             if (u.immob > 0) { u.tag = "HELD"; u.mode = FLEE; u.tgt = q; continue; }
             int mode = q != null && dQ <= P_ATTACK ? ATTACK : u.thr != null ? FLEE : (q != null || far != null) ? HUNT : IDLE;
             if (q == null) q = far;
-            double bestS = -1e18, bx = u.x, by = u.y; String bestCmd = null; boolean bestDash = false, found = false;
+            double bestS = -1e18, bx = u.x, by = u.y, bestRw = 0; String bestCmd = null; boolean bestDash = false, found = false;
             double fbS = -1e18, fbx = u.x, fby = u.y; String fbCmd = null; boolean fbDash = false;     // least bad when nothing is safe
             for (int attempt = 0; attempt < 2 && !found; attempt++) {
             if (attempt == 1) { if (mode != ATTACK || u.thr == null) break; mode = FLEE; }          // the attack is not safe and a predator is near: flee instead
@@ -428,14 +431,10 @@ class Player {
                             ax = Math.round(ax); ay = Math.round(ay);
                         }
                         double[] e = k == -2 ? new double[]{u.x, u.y} : simMove(u.x, u.y, ax, ay, speed, false);
-                        double s;
+                        double s, rw = 0;
                         if (mode == ATTACK || mode == HUNT || (mode == FLEE && !fleeMove)) {
                             s = -hyp(e[0] - gx, e[1] - gy);
-                            if (mode == ATTACK) {                               // a move that touches the prey on the way is taken first
-                                double[] v = predV(q); double md = 1e18;
-                                for (int i = 1; i <= 10; i++) { double f = i / 10.0; double d = hyp(u.x + (e[0] - u.x) * f - q.x - v[0] * f, u.y + (e[1] - u.y) * f - q.y - v[1] * f); if (d < md) md = d; }
-                                if (md < CATCH - 15) s += 50000;
-                            }
+                            if (mode == ATTACK || mode == HUNT) { rw = catchReward(u, e[0], e[1]); s += rw; }   // v10's catch test: a move that takes a prey comes first
                         } else if (mode == FLEE) {
                             double d1 = 1e18, d2 = 1e18;
                             for (E p : fleeFrom) { double d = hyp(e[0] - p.x, e[1] - p.y); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
@@ -450,23 +449,24 @@ class Player {
                             if (c > fbS) { fbS = c; fbx = e[0]; fby = e[1]; fbCmd = cmd; fbDash = dash; }
                             continue;
                         }
-                        if (s > bestS) { bestS = s; bx = e[0]; by = e[1]; bestCmd = cmd; bestDash = dash; found = true; }
+                        if (s > bestS) { bestS = s; bx = e[0]; by = e[1]; bestCmd = cmd; bestDash = dash; found = true; bestRw = rw; }
                     }
                 }
             }
             }
             if (!found) { bx = fbx; by = fby; bestCmd = fbCmd; bestDash = fbDash; }
             u.cmd = bestCmd; u.ex = bx; u.ey = by; u.dashes = bestDash;
+            if (found && bestRw >= 300000) for (E qq : seenPrey) if (segDist(qq.x, qq.y, u.x, u.y, bx, by) < CATCH + 300) qq.caughtNow = true;   // no net at a prey we take this turn (v10)
             u.tag = mode == ATTACK ? "ATT" : mode == FLEE ? "FLEE" : mode == HUNT ? "HUNT" : "IDLE";
         }
 
         // ---- powers: one per unit and turn. Decoys leave before the move (from u.x, u.y), nets and smoke after it (from u.ex, u.ey).
         for (E u : live) {
             // 1. net at prey next to the end of our move
-            if (nets > 0 && turn - lastPreyNet >= P_NET_EVERY) {
+            if (nets > 0 && turn - lastPreyNet >= P_NET_EVERY && !(F_NET_NOT_ON_DASH && u.dashes)) {
                 E bq = null; double bd = 1e18, bxq = 0, byq = 0;
                 for (E qq : seenPrey) {
-                    if ((qq.netTargeted && F_NET_ONE_PER_PREY) || (qq.immob > 0 && !F_NET_HELD_PREY)) continue;
+                    if (qq.caughtNow || (qq.netTargeted && F_NET_ONE_PER_PREY) || (qq.immob > 0 && !F_NET_HELD_PREY)) continue;
                     double[] v = predV(qq); double qx = qq.x + v[0] * P_NET_LEAD, qy = qq.y + v[1] * P_NET_LEAD;
                     double d = hyp(qq.x - u.ex, qq.y - u.ey);
                     if (d > (turn == 1 ? P_NET_D_T1 : qq.cd > 0 ? P_NET_D_NODASH : P_NET_D_READY) || d < P_NET_MIN_D || hyp(qx - u.ex, qy - u.ey) < 30) continue;
@@ -476,7 +476,7 @@ class Player {
                 if (bq != null) { out.add(net(u, bxq, byq)); bq.netTargeted = true; lastPreyNet = turn; continue; }
             }
             // 2. net at a predator next to us
-            if (nets > 0 && turn - lastPredNet >= P_NETP_EVERY) {
+            if (nets > 0 && turn >= P_NETP_FROM_TURN && turn - lastPredNet >= P_NETP_EVERY && !(F_SMOKE_BEFORE_NETP && u.dashes && smokes > 0)) {
                 E be = null; double bd = 1e18;
                 for (E e : seenPred) {
                     if (e.immob > 0 || e.netTargeted) continue;
@@ -554,6 +554,30 @@ class Player {
     static int lastPreyNet = -99, lastPredNet = -99;
     /** A fixed number in [0, 1) per unit and game (from its position on turn 1): which units fall under a "share" rule. */
     static double share(E u) { double h = Math.sin(u.x * 12.9898 + u.y * 78.233 + u.id * 37.719) * 43758.5453; return h - Math.floor(h); }
+    /**
+     * Value of a move for catching, copied from v10's eval: 300000 for a catch the prey cannot avoid (held prey on the
+     * path, or prey that cannot outrun the move), 25000-30000 for a likely one (paths cross; it must dash to survive).
+     */
+    static double catchReward(E u, double px, double py) {
+        double sx = u.x, sy = u.y, mySp = hyp(px - sx, py - sy), reward = 0;
+        for (E q : seenPrey) {
+            double[] v = predV(q);
+            double md = 1e18;
+            for (int i = 1; i <= 10; i++) { double f = i / 10.0; double d = hyp(sx + (px - sx) * f - q.x - v[0] * f, sy + (py - sy) * f - q.y - v[1] * f); if (d < md) md = d; }
+            if (q.immob > 0) { if (md < CATCH - 12) reward = Math.max(reward, 300000); continue; }
+            if (md < CATCH - 25) reward = Math.max(reward, 30000);
+            double d0 = hyp(q.x - sx, q.y - sy);
+            if (mySp > 1 && d0 > 1) {
+                double cos = ((px - sx) * (q.x + v[0] * 0.5 - sx) + (py - sy) * (q.y + v[1] * 0.5 - sy)) / (mySp * hyp(q.x + v[0] * 0.5 - sx, q.y + v[1] * 0.5 - sy));
+                if (cos > 0.96) {
+                    double rq = q.cd == 0 ? DASH : MOVE;
+                    if (d0 + rq - mySp < CATCH - 25) reward = Math.max(reward, 300000);          // it cannot outrun this
+                    else if (d0 + MOVE - mySp < CATCH - 25) reward = Math.max(reward, 25000);     // it must dash to survive
+                }
+            }
+        }
+        return reward;
+    }
     static boolean inOwnSmoke(double x, double y) {
         for (double[] c : clouds) if (c[3] > 0 && c[2] < turn + SMOKE_LIFE && hyp(x - c[0], y - c[1]) < SMOKE_R - 100) return true;
         return false;
