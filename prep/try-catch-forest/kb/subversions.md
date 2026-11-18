@@ -207,3 +207,27 @@ maps, 180 games per version (one standard error about 0.06):
   showed 60 to 170 ms turns; typical turns were 2 to 3 ms for both.
 - Not a candidate as it stands. If continued: keep the five-turn chase and add the two-ply value only as a
   veto on moves that are lost against the best reply; test the strike search alone on real battles.
+
+## Paired test on the real field without replays (17:45 to 17:57 IST, last minutes of the window)
+
+Replays were refused for every battle of the live submission 41748059 ("you did not play in this game", also for
+the newest battle): its battles are not flagged as played by this account's token. `tools/pairfield.py` does the
+same job with ordinary test games: for each of the live bot's newest battles it takes the battle's map seed and its
+two real opponents and plays each bot given, in seat 0, against them. About 20 seconds per game. Battles whose
+opponents have resubmitted since are skipped (5 of 18). Table: `tools/pfstats.py <dir>`.
+
+13 battles, three bots on each:
+
+| Bot | Mean rank | First / second / last | Catches | Units lost |
+|---|---|---|---|---|
+| Live arena code (`vlive_41748059.java`) | 1.92 | 4 / 6 / 3 | 2.54 | 2.23 |
+| vgo_b | 1.69 | 6 / 5 / 2 | 3.15 | 2.23 |
+| Portfolio (`vport_live_m4.java`: live code, leader mimic at 4 units) | 2.15 | 2 / 7 / 4 | 2.31 | 2.38 |
+
+- vgo_b against the live code: better place in 4 battles, worse in 2, same in 7; 0.6 more catches per game.
+- Portfolio against the live code: on the 5 four-unit battles the mimic part placed 2, 1, 2, 2, 3 against 3, 1, 1,
+  2, 2 for the live code: no gain. On the 8 other battles it runs the same code as the live bot and still differed
+  in 2 of them, so the opponents are not fully repeatable and a single pair of games carries noise of its own.
+- 13 battles cannot separate these bots (one standard error is about 0.2). The method works; the decision needs 40
+  or more battles per bot, which is 15 minutes per bot at this speed.
+- Seat 0 only: the test game API always puts our code in seat 0.
