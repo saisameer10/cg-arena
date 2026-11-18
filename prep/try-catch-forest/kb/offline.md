@@ -81,3 +81,16 @@ close to the ceiling; the boss does not separate versions well.
 - Only the parent session submits; a candidate needs its replay evidence first (`kb/gold.md`, section 8 bar: 0.15 better
   mean rank on 30 or more real battles with no error).
 - The statement text stays out of git (`challenges/raw/`).
+
+## Local result, 15:00 IST: v10 against the bundle and the smoke candidate
+
+Tourney, 480 games, local referee, seeds 77 onward (`offline/arena.py tourney v10 c_all sd18 --games 480`):
+
+| Version | Mean rank | Win | Last | Catches | Lost |
+|---|---|---|---|---|---|
+| v10 (live in the arena) | 1.88 | 39 % | 27 % | 2.58 | 2.54 |
+| sd18 (smoke only within 1800) | 2.00 | 34 % | 34 % | 2.45 | 2.44 |
+| c_all (bundle) | 2.10 | 28 % | 38 % | 2.35 | 2.39 |
+
+Reading: v10 is still the best of the three locally; neither candidate is better. The bundle and the smoke-distance
+candidate are not to be submitted on this evidence. Against the boss stand-in v10 ranks 1.08 (real games: 1.13).
