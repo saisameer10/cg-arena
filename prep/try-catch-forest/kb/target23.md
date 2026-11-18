@@ -94,3 +94,42 @@ untested in the arena, so it is a candidate for tomorrow, not a result.
   on this list together, and it can be tested in one arena run tomorrow morning.
 - Nothing here is proven. The order of work that the evidence supports: item 1 in the arena first; item 3.3 and
   item 4 overnight on the local referee; vchase to the arena only after a timing run.
+
+## What 23 is, measured (2026-11-18, 18:45 IST, from the leaderboard and battle lists; the window was closed)
+
+Reading battles, the leaderboard and game logs works while the window is paused. Scripts: `E:/cg-tmp/tcf/peer/peers.py`
+(teams ranked 35 to 64), `peers23.py` (95 to 130); opponent ranks are the current leaderboard ranks.
+
+1. **23 is rank 95 to 130 of 440, not the top 50.** Rating by rank now: 5th 28.4, 20th 26.6, 50th 25.1, 100th 23.3,
+   150th 22.3, 250th 20.2. We finished the last run at 18.99 (302nd).
+2. **We do not lose our rating to the top teams; we hardly meet them.** Live code, both runs, 206 games: 10 games
+   had a top-100 opponent. 60 % of our lost places went to winners ranked 100 to 250 and 36 % to winners ranked
+   beyond 250.
+3. **The gap to 23, on the opponents we actually meet:**
+
+   | Opponents in the game | Teams ranked 95 to 130 (rating about 23) | Teams ranked 35 to 64 (about 25) | Us (live code, two runs) |
+   |---|---|---|---|
+   | both ranked 100 to 250 | 1.81; first 41 %, last 23 % (246 games) | 1.73; 50 %, 22 % (44) | 2.09; 28 %, 37 % (96) |
+   | one ranked beyond 250 | 1.69; first 51 %, last 19 % (96) | 1.41; 70 %, 11 % (27) | 1.95; 35 %, 30 % (100) |
+   | one in the top 100 | 1.99; 34 %, 33 % (206) | 1.86 (118) | 1.86 (7 games) |
+   | both in the top 100 | 2.23; 20 %, 43 % (116) | 2.02 (572) | 2.00 (3 games) |
+
+   A team at 23 is not better than us against the top (it finishes last 43 % of the time there). It is 0.26 to 0.28
+   better in mean rank against the lower half of the field: it wins 41 to 51 % of those games and is last in about
+   20 %, where we win 28 to 35 % and are last in 30 to 37 %.
+4. **So the target has a measurable form: a mean rank of 1.8 or better against opponents ranked 100 to 400.**
+   `tools/pairfield.py` plays exactly those opponents (the live bot's recent ones, mean rank about 240). A candidate
+   that holds 1.75 to 1.8 there over 40 or more battles has the profile of a 23-rated team; the live code's 1.95 to
+   2.09 has the profile of 19 to 20.5. vgo_b's 1.69 over 13 battles would be enough if it held; 13 battles do not
+   show that.
+5. **Where the live code's places go** (224 games, 222 places lost; one main reason per game, `tools/whylost.py`):
+
+   | Winner | Share of places | Main reasons |
+   |---|---|---|
+   | ranked 100 to 250 | 60 % | predator team caught more of ours than we caught 31 %; no catch of ours by turn 15 25 %; hunt stalled 15 %; tie-break 12 % |
+   | ranked beyond 250 | 36 % | no catch by turn 15 36 %; predator team caught more 23 %; hunt stalled 17 %; two hunters lost by turn 20 12 % |
+   | top 100 | 2 % | |
+
+   Against the weakest third of the field the largest single item is still "no catch by turn 15". With v10 the
+   predator team hardly ever won (11 % of places); with the live code's early aggression it is the largest item
+   against mid-field teams (31 %): the aggression bought earlier catches and paid in units.
