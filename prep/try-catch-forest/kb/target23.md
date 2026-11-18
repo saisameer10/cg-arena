@@ -192,3 +192,30 @@ also frees hunters. It joins the paired test of the last window.
 Checked at 18:42 IST: test games are refused outside the play windows ("your site may only run test games and
 submit during its play windows"), so the paired test cannot run overnight. Battle lists, the leaderboard and game
 logs stay readable.
+
+## What a difference in mean rank is worth in rating points (2026-11-18, 18:50 IST)
+
+From the tables above, against the opponents we actually meet:
+
+| Group | Rating | Mean rank, both opponents ranked 100 to 250 | Mean rank, one beyond 250 |
+|---|---|---|---|
+| Us, live code (runs of 20.47 and 18.99) | about 19.7 | 2.09 | 1.95 |
+| Teams ranked 95 to 130 | about 23 | 1.81 | 1.69 |
+| Teams ranked 35 to 64 | about 25 | 1.73 | 1.41 |
+
+Between us and the teams at 23: 3.3 points for 0.26 to 0.28 of mean rank, so **0.1 of mean rank is worth about 1.2
+rating points** in this part of the field (three groups only; from 23 to 25 the two columns give 0.4 and 2.5 points
+per 0.1, so the figure is rough). One run of the arena has a spread of about 0.75 points, which is 0.06 of mean rank.
+
+Sized with that rate; none of these is confirmed, and the bands are one standard error:
+
+| Lever | Measured difference | In points if it held |
+|---|---|---|
+| vgo_b against the live code, 13 paired battles | 0.23 mean rank (1.69 against 1.92), SE 0.2 | about +2.8, band +0.4 to +5 |
+| Leader mimic for the 4-unit games (27 % of games): 1.64 over 22 arena games against the live code's 1.97 | 0.09 mean rank over all games | about +1.1; but the portfolio built that way scored 2.15 against 1.92 on 13 paired battles |
+| Turn-1 net (`vlive_net1`) | not measured; tie-breaks are 12 % of lost places | about +0.3 to +0.5 at best |
+| Best of three runs instead of one | 0.6 points on average | +0.6 |
+
+So 23 needs 0.27 of mean rank. Only vgo_b's unconfirmed lead is of that size; everything else is a third of it or
+less. The paired test of the last window settles vgo_b first: after 30 shared battles its standard error is about
+0.13 of mean rank (1.6 points).
