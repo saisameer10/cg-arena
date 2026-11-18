@@ -63,6 +63,12 @@ python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
   if every reply of the prey still ends on our path, with a reward for a forced catch in two (`F_MM_STRIKE`).
   Compiles, 60 local games without a crash (2.00 against 2.02 for the live code), turn time on the same recorded
   games: median 2 to 4 ms, worst 26 ms, against 2 ms and 26 ms for the live code. No real-field game yet.
+- Sixth bot: `vlive_net1.java` = the live code with one net on turn 1 (`target23.md`, last section: teams at 23
+  throw 0.80 nets a game on turn 1 and catch 0.29 more by turn 10; we throw none). 60 local games without a crash.
+- Six bots do not fit 40 battles each. Two rounds instead: round 1 all six on the same 20 battles (120 games,
+  40 minutes, until about 09:45); round 2 the live code and the two best of round 1 on 25 further battles (75 games,
+  25 minutes). `pairfield.py` skips games already played, so round 2 is the same command with fewer names and a
+  larger battle count.
 - Then, in this order: `vpress.java`, `vs-commit.java`.
 - A full ranking run took about 50 minutes on the evening of the 18th (0 to 90 % between 16:44 and 17:32), so testing
   can go on until about 10:30 if the first round is not decisive.

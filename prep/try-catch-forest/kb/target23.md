@@ -133,3 +133,58 @@ Reading battles, the leaderboard and game logs works while the window is paused.
    Against the weakest third of the field the largest single item is still "no catch by turn 15". With v10 the
    predator team hardly ever won (11 % of places); with the live code's early aggression it is the largest item
    against mid-field teams (31 %): the aggression bought earlier catches and paid in units.
+
+## How teams at 23 play the lower half of the field, next to us (2026-11-18, 19:30 IST)
+
+271 games of teams ranked 95 to 130 and 214 games of the live code (two runs), all against opponents ranked beyond
+100. `tools/peerprofile.py`, `tools/earlynets.py` (they read the downloads in `E:/cg-tmp/tcf/peer/`). The sample is
+9 teams, so team habits weigh heavily: a difference in habits is not a proven cause.
+
+| Per game | Teams at about 23 | Us (live code) |
+|---|---|---|
+| Mean rank; first; last | 1.78; 45 %; 23 % | 2.00; 34 %; 33 % |
+| Catches | 3.12 | 2.66 |
+| Catches by turn 10 / 15 / 30 | 0.87 / 1.20 / 1.71 | 0.58 / 0.80 / 1.50 |
+| First catch, median turn | 8 | 11 |
+| Games with no catch by turn 15 | 28 % | 42 % |
+| Units lost (by turn 10 / by 30 / after 60) | 2.68 (0.72 / 1.52 / 0.51) | 2.38 (0.44 / 1.32 / 0.42) |
+| Nets (by turn 3 / by turn 15) | 4.27 (1.77 / 3.32) | 4.52 (0.69 / 2.42) |
+| Nets that hit prey; hits that became a catch | 34 %; 62 % | 31 %; 70 % |
+| Nets that hit a predator | 20 % | 28 % |
+| Dashes per unit (turns 1 to 15) | 8.36 (2.45) | 6.39 (1.97) |
+| Smokes (in turns 1 to 5) | 3.31 (0.77) | 4.32 (1.69) |
+| Decoys | 3.84 | 4.36 |
+
+By units per team (mean rank, games): 3: 1.71 (69) against our 1.92 (49); 4: 1.63 (71) against 1.97 (59);
+5: 1.99 (71) against 1.98 (53); 6: 1.78 (60) against 2.11 (53).
+
+Readings:
+1. **They are not safer than we are; they lose more units (2.68 against 2.38) and still rank higher.** The whole
+   difference is on the catching side, and most of it early: +0.29 catches by turn 10, +0.40 by turn 15, +0.46 in all.
+2. **Nets: the same number, thrown earlier.** Catches that follow a net within five turns, per game:
+
+   | Net thrown in turns | Teams at 23: nets, hit prey, catches | Us: nets, hit prey, catches |
+   |---|---|---|
+   | 1 | 0.80, 28 %, 0.13 | none (our rule forbids a turn-1 net at prey that can dash) |
+   | 2 to 3 | 0.97, 37 %, 0.22 | 0.69, 24 %, 0.13 |
+   | 4 to 10 | 1.13, 35 %, 0.27 | 1.01, 27 %, 0.20 |
+   | 11 to 100 | 1.37, 37 %, 0.35 | 2.82, 34 %, 0.67 |
+   | all | 4.27, 0.97 | 4.52, 1.00 |
+
+   A net is worth 16 to 26 % of a catch whenever it is thrown, a turn-1 net the least (16 %). Throwing early does
+   not add catches from nets (0.97 against 1.00); it moves 0.3 of them from after turn 10 to before it. That is what
+   the tie-break (12 % of our lost places) and "no catch by turn 15" are made of.
+3. **The catches they have and we have not are made without a net**: 2.15 a game against 1.66. They dash a third more
+   (8.4 against 6.4 per unit; the share of catches made with a dash is the same, 40 %), so they chase more, not
+   differently.
+4. **Less smoke, above all at the start** (0.77 against 1.69 in turns 1 to 5). A unit that smokes cannot net in that
+   turn. On real replays "smoke later" lost with v10 (learnings 5c), so this is noted, not acted on.
+5. Trap in this analysis: a net stops at the first thing it meets, so nets grouped by flight distance look far better
+   at short range (54 to 62 % hits) than they are; the misses all sit in the 1,800 to 2,000 group. Grouped by turn
+   only, the figures above are unbiased.
+
+Candidate built from reading 2: `versions/vlive_net1.java` = the live code with one net allowed on turn 1 at prey
+within 1,900 after our move (`F_NET1`, `P_NET1`, `P_NET1_MAX`). 60 local games without a crash; locally its catches
+by turn 10 are 0.93 against 0.58 for the live code (the local referee shows the mechanism, not the rank). Expected
+size, honestly: earlier catches, not more; a few hundredths of mean rank through tie-breaks unless the early catch
+also frees hunters. It joins the paired test of the last window.
