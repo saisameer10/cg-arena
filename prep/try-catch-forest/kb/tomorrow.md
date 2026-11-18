@@ -37,7 +37,13 @@ python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
 - Three bots x 40 battles = 120 games = 40 minutes. One test game runs at a time: nothing else may use the API then.
 - If the battle list is short at 09:00 (few games played yet, or opponents resubmitted), let the live bot play ten
   minutes first, then fetch again.
-- Fourth and fifth bots only if time allows, in this order: `vpress.java`, `vs-commit.java`.
+- Fourth bot if time allows: `vlive_3p.java` = `vlive_late.java` plus the three-player levers of `target23.md`, each a
+  switch: no unit-for-point trade while the predator team has as many points as we have (`F_NOTRADE`); after turn 65
+  with more points than the predator team, soft threat terms x 1.6 (`F_HOLDLEAD`); prefer the prey unit within 2,000
+  of a predator in sight (`F_HUNTHUNTERS`). Compiles, 60 local games without a crash, no real-field game yet.
+- Then, in this order: `vpress.java`, `vs-commit.java`.
+- A full ranking run took about 50 minutes on the evening of the 18th (0 to 90 % between 16:44 and 17:32), so testing
+  can go on until about 10:30 if the first round is not decisive.
 
 ## Decision at 09:45 to 10:00
 
