@@ -1,0 +1,57 @@
+# Plan for the last window (2026-11-19, 09:00 to 12:00 IST)
+
+Written at the close of 2026-11-18. Target: 23. Standing at the close: the live code (submission 41749025, the same
+program as `versions/vlive_41748059.java`) had reached 20.47 at 90 % of its games in its previous run; it was
+resubmitted at 17:55 and stood at 19.99 after 32 %.
+
+## What the last hour showed
+
+1. **The local referee cannot rank our bots.** The live code is last of eight locally (2.11) and the best-rated bot
+   we have had in the arena. Use the referee for crash checks only.
+2. **A real-field test that works without replays**: `tools/pairfield.py` plays each candidate against the two real
+   opponents of a recent arena battle on that battle's map. 20 seconds per game. (Replays are refused for the live
+   submission's battles: they are not flagged as played by this account's token.)
+3. **13 paired battles** (`kb/subversions.md`): vgo_b 1.69, live code 1.92, portfolio with the mimic at four units
+   2.15. Too few to decide. What they do show is where each bot gets its catches:
+
+   | Bot | Catches by turn 10 | by turn 20 | Total | Net hits on prey | First catch, median turn |
+   |---|---|---|---|---|---|
+   | Live code | 0.85 | 1.38 | 2.54 | 1.5 | 7 |
+   | vgo_b | 0.31 | 1.00 | 3.15 | 2.0 | 13 |
+
+   The live code is better early, vgo_b later. `versions/vlive_late.java` is the live code plus the three parts of
+   vgo_b that act after a net has landed (commit to netted prey, hunt first when a point is near, ghost plan). It
+   compiles and is crash-checked locally; it has no real-field game yet.
+
+## The first 45 minutes: measure, on the real field
+
+```bash
+cd /e/cg-tmp/tcf/gold
+python fetch.py <live submission id>          # new battles: seeds and opponents that are valid now
+V="/e/New folder/prep/try-catch-forest/versions"
+PF_UNTIL=0945 python "/e/New folder/prep/try-catch-forest/tools/pairfield.py" pf2 40 \
+  live="$V/vlive_41748059.java" late="$V/vlive_late.java" vgo_b="$V/vgo_b.java" > pf2.log 2>&1
+python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
+```
+
+- Three bots x 40 battles = 120 games = 40 minutes. One test game runs at a time: nothing else may use the API then.
+- If the battle list is short at 09:00 (few games played yet, or opponents resubmitted), let the live bot play ten
+  minutes first, then fetch again.
+- Fourth and fifth bots only if time allows, in this order: `vpress.java`, `vs-commit.java`.
+
+## Decision at 09:45 to 10:00
+
+- Submit a candidate only if, over 30 or more shared battles, its mean rank is at least 0.15 better than the live
+  code's AND it is not behind on catches. Otherwise keep the live code: it needs its two remaining hours to finish
+  its ranking games anyway.
+- One submission only, by 10:00, so that it plays for two hours. Every submission restarts the ranking games; at
+  17:55 on the 18th the live code lost its 90 % run that way.
+- The user decides on the submission; this session does not submit.
+
+## What would have to be true for 23
+
+- The live code is at about 20.5. The step to 23 is larger than anything measured today: every rule tested on real
+  battles was level or worse, and vgo_b's lead is 13 battles old.
+- The honest best case for tomorrow is a candidate that confirms a lead of 0.2 to 0.3 in mean rank over 40
+  battles; that is worth roughly one rating point, not two and a half.
+- Beyond that the remaining ideas are in `target23.md` (three-player levers, overnight tuning) and are untested.
