@@ -525,3 +525,69 @@ out away from them (`P_SMOKE_MEMORY`), (2) after three dashes a unit dashes on v
 Copy D loses as many units as copy C (2.71 against 2.64), catches fewer and wins less: **not better; copy C stays
 the leader copy to judge.** The two loss patterns are descriptions, not causes: removing them did not save units.
 
+## 15. How the top three get their first catch with 3 and 4 units, and the opening recipe (16:40 IST)
+
+Script: `tools/mimic_firstcatch.py`. Games with 3 or 4 units per team and known start positions: Les Gens Bons
+135 (agents 6894245 and 6900271), FullStuck 120, ATI x iHot 81 (agents 6900145 and 6897069). "Early" = the squad's
+first catch came by turn 15. v10 for comparison: a catch by turn 15 in 24 of its 37 arena games (all sizes).
+
+| | Les Gens Bons | FullStuck | ATI x iHot |
+|---|---|---|---|
+| Early first catch, 4 units | 75 % (79) | 73 % (59) | 70 % (46) |
+| Early first catch, 3 units | 61 % (56) | 54 % (61) | 51 % (35) |
+| Turn of the first catch, 4 units (quartiles) | 3 / 7 / 16 | 5 / 9 / 16 | 5 / 12 / 16 |
+| Turn of the first catch, 3 units | 5 / 12 / 30 | 5 / 11 / 27 | 4 / 14 / 28 |
+| Won the game: early / not early | 62 % (93) / 38 % (42) | 51 % (76) / 36 % (44) | 72 % (50) / 45 % (31) |
+
+**What separates the early games** (share of games with an early first catch, with the feature against without):
+
+| Feature of the opening | Les Gens Bons | FullStuck | ATI x iHot |
+|---|---|---|---|
+| A net HIT prey in turns 1-3 | 81 % (69) against 56 % (66) | 96 % (25) against 55 % (95) | 100 % (11, weak) against 56 % (70) |
+| A net thrown in turns 1-3 | 74 % (104) against 52 % (31) | 81 % (59) against 46 % (61) | 65 % (26, weak) against 60 % (55) |
+| The best-placed unit dashes at its prey on turn 1 | 74 % (42) against 67 % (93) | 81 % (54) against 48 % (66) | 64 % (56) against 56 % (25, weak) |
+| A unit within 1200 of a prey at turn 4 | 71 % (56) against 67 % (79) | 80 % (41) against 54 % (79) | 69 % (32) against 57 % (49) |
+| Best pair at the start under 1500 / 1500-2200 / 2200-3000 / beyond | 69 / 77 / 70 / 43 % | 76 / 57 / 56 / 55 % | 73 / 55 / 67 / 33 % |
+| Two units within 2000 of one prey at turn 4 | 69 % (16, weak) against 69 % | 92 % (12, weak) against 60 % | 50 % (18, weak) against 65 % |
+| Lost a unit by turn 10 | 71 % (63) against 67 % | 72 % (64) against 54 % | 78 % (18, weak) against 57 % |
+
+"Best pair" = the unit of the squad and the prey that start nearest to each other; "best-placed unit" = that unit.
+A net that hits is close to a catch by itself, so the first row is partly a truism; the usable rows are the second
+and the third (what the squad chose to do), and they hold for Les Gens Bons and FullStuck, not for ATI.
+
+**The early first catch itself** (93 / 76 / 50 catches):
+
+| | Les Gens Bons | FullStuck | ATI x iHot |
+|---|---|---|---|
+| The victim is the prey that started nearest to the catcher | 75 % | 74 % | 78 % |
+| The catcher is our unit that started nearest to the victim | 75 % | 70 % | 62 % |
+| Start distance catcher to victim (quartiles) | 1557 / 2201 / 3743 | 1566 / 2552 / 3469 | 2295 / 2688 / 4852 |
+| Victim held by a net at the catch | 66 % | 53 % | 42 % |
+| ... the catcher threw that net itself | 92 % (60) | 89 % (36) | 94 % (16, weak) |
+| ... turn of the net (quartiles) | 1 / 2 / 6 | 2 / 4 / 7 | 2 / 3 / 9 |
+| ... thrower to victim when the net lands | 445 / 884 / 1164 | 589 / 858 / 1337 | 403 / 651 / 890 |
+| ... turns from the net to the catch (median) | 1 | 2 | 1 |
+| ... the victim could dash when netted | 72 % | 42 % | 38 % |
+| ... the thrower dashed on the net turn | 48 % | 31 % | 19 % |
+| Dashes of the catcher up to the catch (median) | 1 | 2 | 2 |
+| Two or more of our units within 1500 of the victim at the catch | 15 % | 13 % | 14 % |
+
+Late first catches look different: the catcher started 6,300 to 7,800 from the victim (median), the victim was
+its nearest prey in only 17 to 26 %, and the net came around turn 22.
+
+**The opening recipe for 3 and 4 units** (what a program can follow from the start positions):
+1. One unit, one prey: each unit takes the prey that starts nearest to it. No second hunter is sent (two units
+   near the victim in 13 to 15 % of the early catches).
+2. The unit dashes straight at that prey on turn 1 when it starts within about 2,700 (median start distance of
+   the early catches 2,200 to 2,700; beyond 3,000 the early share falls to 33 to 55 %).
+3. The same unit throws the net itself as soon as its own move ends within about 1,150 of the prey (upper quartile
+   of Les Gens Bons; median 650 to 880): on turn 1 if it is that close, on a dash turn too, and whether or not the
+   prey can dash (72 % of Les Gens Bons' victims could). The net behind an early catch is thrown on turn 2 to 4.
+4. It goes in at once: the catch follows one turn after the net (median), with a dash when walking does not reach.
+5. With 3 units the same recipe gives 51 to 61 % early catches against 70 to 75 % with 4: fewer pairs start close.
+
+`versions/vmimic_e.java` = copy C plus this opening as a switch (`F_SMALL_OPENING`, `P_SMALL_N = 4`,
+`P_OPEN_TURNS = 6`, `P_OPEN_NET_D = 1150`): copy C already does steps 1, 2 and 4 (it dashes at a prey up to 2,800
+on turn 1 and attacks under 1,600), but as the leader's mimic it throws no net on turn 1, none on a dash turn and
+waits three turns between nets; in the opening of a small game copy E lifts those three limits.
+

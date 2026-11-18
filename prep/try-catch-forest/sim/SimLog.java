@@ -26,6 +26,8 @@ public class SimLog {
      *  which reproduces the largest number of nets / smokes / decoys used by a team in 564 Gold games (kb/mimic.md).
      *  -Dpool=2,4 gives Sim.java's 2 + random(4). */
     static int POOL_MIN = -1, POOL_SPAN = 4;
+    /** Units per team when > 0 (-Dunits=3..6); 0 = random 3 to 6 as in Sim.java. */
+    static int UNITS = Integer.getInteger("units", 0);
     static String pt(double x, double y) { return "(" + Math.round(x) + ", " + Math.round(y) + ")"; }
     static String esc(String s) { StringBuilder b = new StringBuilder(); for (char c : s.toCharArray()) { if (c == '"' || c == '\\') b.append('\\').append(c); else if (c == '\n') b.append("\\n"); else if (c < 32) b.append(' '); else b.append(c); } return b.toString(); }
     static final double R = 8000, UR = 220, MOVE = 600, DASH = 1200, CATCH = 440, NET_RANGE = 2000, NET_R = 250, SMOKE_R = 1900, SMOKE_THROW = 2000, VISION = 2000;
@@ -56,7 +58,7 @@ public class SimLog {
             }
             T = tl.size(); tx = new double[T]; ty = new double[T]; tr = new double[T];
             for (int i = 0; i < T; i++) { tx[i] = Math.round(tl.get(i)[0]); ty[i] = Math.round(tl.get(i)[1]); tr[i] = Math.round(tl.get(i)[2]); }
-            N = 3 + rnd.nextInt(4); units = new U[3 * N];
+            N = 3 + rnd.nextInt(4); if (UNITS > 0) N = UNITS; units = new U[3 * N];   // -Dunits=N fixes the units per team (the map of a seed stays the same)
             for (int j = 0; j < N; j++) {
                 double x, y;
                 do { double a = rnd.nextDouble() * 2 * Math.PI, d = Math.sqrt(rnd.nextDouble()) * 7400; x = Math.cos(a) * d; y = Math.sin(a) * d; } while (!free(x, y, j));
