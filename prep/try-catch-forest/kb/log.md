@@ -157,5 +157,8 @@ First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2
 | v13 (second hunter aims 800 behind the prey) | 24 | 1.88, 3.25, 2.50 | 2.04, 2.75, 3.08 | worse, dropped (was +0.2 to +0.4 on the local referee) |
 | v11 with nets limited to 1600 | 3 | 1.00 | 2.00 | stopped early, undecided |
 | v11 with smoke from 1800 instead of 2300 | 36 | 1.83, 3.22, 2.47 | 2.06, 2.72, 2.53 | worse, dropped |
+| v11 with nets limited to 1600, second run | 10 | 1.50, 3.60, 2.70 | 2.00, 2.80, 2.70 | stopped: 0 better, 3 worse |
+| vs4: always dash onto netted prey, cheap (`F_RUSH`) | 29 | 1.83, 3.31, 2.55 | 1.97, 3.07, 2.62 | not better (better in 4, worse in 8), dropped |
+| vs3 (other session): net at prey only when a hunter of ours ends within 1300 | 37 | | | running |
 
 v10's place in Gold: 104th of 357 (score 18.0) when its 37 games ended, 85th of 383 (18.9) an hour later.

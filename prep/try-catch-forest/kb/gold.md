@@ -224,3 +224,15 @@ Result (36 battles played, 13:55 IST): **smoke from 1800 is worse than from 2300
 Better rank in 10 battles, worse in 12, same in 14. Units lost are the same; the catches drop: a unit that smokes late
 is busy fleeing longer. The other session's 960-game confirmation also lost the local gain (1.99 against 1.98).
 The number stays at 2300.
+
+## 11. State at 14:45 IST: nothing has beaten v10 on real Gold battles
+
+Six candidates replayed on v10's own Gold battles since it went live: v12 (level), v13 cut-off (worse), smoke from
+1800 (worse), net range 1600 (worse after 10, stopped), vs4 always-dash-onto-netted-prey (1.97 against 1.83 on 29
+battles, not better), vs3 finisher (running). The other session's local pools reject its turn-1 rule and its cloud
+memory (each about 0.15 worse), and its own verdict on the local referee is that results move with the members of
+the pool by more than the effects under test.
+
+What that says about v10: it is a local optimum for one-rule changes. Rules that restrict (later smoke, shorter
+nets) cost catches; rules that push (cut-off, dash onto held prey) cost units. The gap to the top of Gold (about
+19 points against 25) is not one missing rule.
