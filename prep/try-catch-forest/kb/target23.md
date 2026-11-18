@@ -247,9 +247,13 @@ Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 10
    With 3 units there is no difference and a turn-1 net is wasted. With 6 units they have 1.23 catches after a net
    by turn 15, we have 0.55; more than half of that difference comes from nets thrown in turns 1 to 3
    (0.61 catches against 0.19).
-4. **In a slow game they lose 1.74 units, we lose 2.18**, and we finish last 44 % of the time (they 26 %). A press
-   mode that hunts harder in these games would lose more units still; the figures point the other way: without an
-   early catch, protect the units and take what comes (they still catch 2.41).
+4. **Units lost in slow games: no difference once the unit count is held fixed** (corrected at 19:20; the totals
+   1.74 against 2.18 are a mix effect: our slow games are more often 5- and 6-unit games, where more units fall).
+   Slow games by units, they / we: lost 1.31 / 1.25 (3 units), 1.82 / 2.00 (4), 2.58 / 2.62 (5); mean rank
+   1.87 / 2.14, 1.68 / 2.23, 2.25 / 2.33; catches 1.82 / 1.82, 3.05 / 1.77, 2.67 / 2.48 (12 to 39 games per cell).
+   So the data neither supports nor contradicts a press mode. What stands out is the 4-unit slow game: they still
+   reach 3.05 catches, we 1.77. The sizing of reading 2 holds within unit counts: 1.995 now, 1.92 with their share
+   of slow games at each count, 1.83 with their rank in those games as well (`E:/cg-tmp/tcf/peer/sizing4.py`).
 5. Mean rank by final catches is the same staircase for both groups (1 catch 2.6, 2 catches 2.1 to 2.2, 3 catches
    1.7, 5 or more 1.15): one more catch goes with 0.32 of mean rank.
 6. Net hits that are not caught within five turns: 0.42 a game for us, 0.56 for them. We convert better than they
