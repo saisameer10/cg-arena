@@ -195,3 +195,22 @@ Two things learnt from these submissions:
   vmimic2 in 3 and below in 0. Too few to conclude; direction: v10 level with the ATI mimic with half its losses,
   the other two mimics behind.
 - vgo_b never got a valid replay set (1 battle); vgo was clearly worse on 8.
+
+## Hybrid in the arena and the first real-battle gain of the day (16:34 IST)
+
+Hybrid (submission 41747326, `vhybrid4.java`: mimic copy A in 4-unit games, v10 otherwise): 56 games at 46 %,
+18 first / 21 second / 17 last, mean rank 1.98, score 18.8, 240th of 429.
+
+The hybrid's 4-unit battles, the same 11 battles replayed with v10 and with mimic copy C:
+
+| Version | First / second / last | Mean rank | Catches | Lost |
+|---|---|---|---|---|
+| Hybrid = mimic copy A (arena) | 5 / 6 / 0 | 1.55 | 3.64 | 2.18 |
+| v10 (replay) | 3 / 6 / 2 | 1.91 | 2.82 | 2.00 |
+| Mimic copy C (replay) | 7 / 0 / 4 | 1.73 | 2.82 | 2.27 |
+
+Copy A ranked above v10 in 5 battles and below in 1; copy C above v10 in 6 and below in 3; A and C 4 each.
+In 4-unit games the leader mimic is ahead of v10: the first candidate today that beats v10 on real battles.
+
+Tool fault found on the way: `rerun.sh` waited 30 seconds once; slower games then came back without a log and
+the next request collided with the game still running. Fixed (it now polls until the game is done).
