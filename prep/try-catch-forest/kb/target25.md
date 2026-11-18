@@ -193,3 +193,46 @@ Net at the nearest prey unit, all groups together, share that hit:
 3. Next rules to build, in this order, each behind a switch: (a) turn 1: a unit with prey within 2000 dashes at it
    and nets instead of smoking unless a predator is within 1000; (b) a held unit nets back whenever a predator is in
    reach, an unsure net before smoke; (c) target choice prefers prey on cooldown and prey held by anyone's net.
+
+## 10. Built on the night of 2026-11-18: the first turn and the held unit (`tools/gen/mkt1hnet.py`)
+
+| File | What it adds to the live code | State |
+|---|---|---|
+| `versions/vlive_t1.java` | `F_T1`, turn 1 only: (a) a hunter with its target in sight within 2100 and no predator within 1000 dashes at it (as an approach dash); (b) prey that can still dash may be netted from 2000 or less, at most 1 net with 3 or 4 units, 2 with 5 or 6; (c) no smoke and no decoy unless a predator is within 1000 | crash-checked, see below |
+| `versions/vlive_hnet.java` | `F_HNET`: a held unit nets back before it smokes, also with two predators coming and with an unsure aim up to 2100; the cloud stays for the case with nobody to aim at | crash-checked, see below |
+| `versions/vlive_all3.java` | `vlive_press` + `F_T1` + `F_HNET` | crash-checked, see below |
+
+- Local pool, 360 games, five bots, no crash (the local referee does not rank bots; it only shows nothing breaks):
+  mean rank live 2.00, t1 1.95, hnet 2.04, all3 1.95, press 1.83; catches 2.26 / 2.39 / 2.23 / 2.55 / 2.56;
+  units lost 2.44 / 2.28 / 2.43 / 2.30 / 2.54.
+- `F_T1` fires: on the recorded inputs of 3 real games the first turn changes from 9 dashes, 5 decoys, 1 smoke, 0 nets
+  to 11 dashes, 0 decoys, 1 smoke, 1 net.
+- `F_HNET` changes almost nothing: counted over 100 local games, the held unit nets back 48 times against 46 and
+  smokes 93 times against 92. The live code already nets back whenever it has a predator to aim at; it smokes when
+  it has none (thrower out of sight or behind a tree). The gap to teams at 25 here is not the order of the two
+  powers. Not worth a slot in the paired test; what is left to try is "a held unit with nobody to aim at keeps its
+  smoke" (not built).
+- `vlive_t1` differs from `vlive_net1` (other session): net1 only adds the net (none with 3 units); t1 also dashes at
+  the prey and drops the turn-1 smoke. Test one of the two, not both, if games are short: t1 is the fuller rule.
+- `F_HNET` acts on about 1.6 held units a game: 20 battles cannot show its effect alone. It is judged inside
+  `vlive_all3`, or by counting "held, netted back" and "held, caught" in `pfstats`-style output over many games.
+
+## 11. How we do not win (`tools/peer/whynot.py`; opponents ranked beyond 100)
+
+| Share of games | us (live) | at 23 | at 25 |
+|---|---|---|---|
+| Not first | 66 % | 55 % | 48 % |
+| The team above had more catches | 49 % | 38 % | 31 % |
+| ... by 1 / by 2 / by 3 or more | 29 / 13 / 7 % | 23 / 11 / 4 % | 23 / 6 / 2 % |
+| Level on catches, tie lost | 17 % | 18 % | 17 % |
+| Level with the team below, tie won | 21 % | 23 % | 25 % |
+| First catch of the game is ours | 33 % | 46 % | 52 % |
+| First place when it is ours / when it is not | 54 / 23 % | 58 / 34 % | 68 / 35 % |
+| Our first catch: median turn | 11 | 8 | 7 |
+| A catch by turn 5 / by turn 15 | 21 / 58 % | 35 / 72 % | 37 / 77 % |
+
+- Ties are not our problem: we lose as many as teams at 25 (17 %) and win almost as many (21 against 25 %).
+- The whole difference is "the team above had more catches" (49 against 31 %), most of it by two or more
+  (20 against 8 %): a matter of catches, not of tie-breaks.
+- The first catch of the game is ours in a third of the games, theirs in half. That is the second half of the same
+  problem (slow conversion), and what `F_T1` and `F_PRESS` aim at.
