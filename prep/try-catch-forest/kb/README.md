@@ -28,6 +28,23 @@ Branch `try-catch-forest` holds everything for this challenge.
 | `challenges/try-catch-forest-prep.md` | that study: rules as measured, patterns of winners and losers, top 25 |
 | `challenges/raw/try-catch-forest/` | original statements (`statement-<league>.md`, `.pdf`) and the stub; git-ignored, never commit |
 
+More notes (added through 2026-11-18):
+
+| Path | What |
+|---|---|
+| `kb/findings.md` | **everything on one page**: versions and what real battles say, what worked and what did not, nets / smoke / decoys, tie-breaks, units per team, the top teams, good and bad for us |
+| `kb/target23.md` | what a rating of 23 is, how teams there play against the opponents we meet, where the gap sits, the levers sized in points |
+| `kb/tomorrow.md` | the plan for the last window (2026-11-19, 09:00 to 12:00 IST): paired test, pass mark, who submits |
+| `kb/subversions.md` | every switch and bundle tested on top of v10, local pools, replays, the 13 paired real-field battles |
+| `kb/whylost.md` | one main reason per game not won (v10 in Gold), by units per team |
+| `kb/gold-autopsy.md` | how we lose (80 Gold games) and what the top five do (2,176 games) |
+| `kb/mimic.md` | the imitations of ATI x iHot, Les Gens Bons and FullStuck: measured habits, copies, results |
+| `kb/battle-924177559.md` | one battle turn by turn (battle 21): smoke direction, flee against hunt, a unit stuck between trees |
+| `tools/pairfield.py`, `tools/pfstats.py` | paired test on real opponents: each candidate against the two opponents of a recent arena battle, on its map |
+| `tools/peer/` | games of teams rated about 23 and 25 next to ours: profile, early nets, slow games, sizing |
+| `tools/gen/` | the patch scripts that build each candidate from its base (`mks*.py` on v10 / v11, `mklive*.py` on the live code) |
+| `tools/b21/` | scripts of the battle 21 autopsy |
+
 ## Working loop
 
 All commands from `prep/try-catch-forest/tools`. Scratch output goes to `E:\cg-tmp\tcf\live`, not the repo.

@@ -97,7 +97,7 @@ untested in the arena, so it is a candidate for tomorrow, not a result.
 
 ## What 23 is, measured (2026-11-18, 18:25 IST, from the leaderboard and battle lists; the window was closed)
 
-Reading battles, the leaderboard and game logs works while the window is paused. Scripts: `E:/cg-tmp/tcf/peer/peers.py`
+Reading battles, the leaderboard and game logs works while the window is paused. Scripts: `tools/peer/peers.py`
 (teams ranked 35 to 64), `peers23.py` (95 to 130); opponent ranks are the current leaderboard ranks.
 
 1. **23 is rank 95 to 130 of 440, not the top 50.** Rating by rank now: 5th 28.4, 20th 26.6, 50th 25.1, 100th 23.3,
@@ -137,7 +137,7 @@ Reading battles, the leaderboard and game logs works while the window is paused.
 ## How teams at 23 play the lower half of the field, next to us (2026-11-18, 18:40 IST)
 
 271 games of teams ranked 95 to 130 and 214 games of the live code (two runs), all against opponents ranked beyond
-100. `tools/peerprofile.py`, `tools/earlynets.py` (they read the downloads in `E:/cg-tmp/tcf/peer/`). The sample is
+100. `tools/peer/peerprofile.py`, `tools/peer/earlynets3.py` (they read the downloads in `E:/cg-tmp/tcf/peer/`). The sample is
 9 teams, so team habits weigh heavily: a difference in habits is not a proven cause.
 
 | Per game | Teams at about 23 | Us (live code) |
@@ -222,7 +222,7 @@ less. The paired test of the last window settles vgo_b first: after 30 shared ba
 
 ## Where the gap to 23 sits: games without a catch by turn 15 (2026-11-18, 19:05 IST)
 
-Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 100). `tools/peersizing.py`.
+Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 100). `tools/peer/sizing.py`.
 
 | | Teams at 23 | Us |
 |---|---|---|
@@ -253,7 +253,7 @@ Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 10
    1.87 / 2.14, 1.68 / 2.23, 2.25 / 2.33; catches 1.82 / 1.82, 3.05 / 1.77, 2.67 / 2.48 (12 to 39 games per cell).
    So the data neither supports nor contradicts a press mode. What stands out is the 4-unit slow game: they still
    reach 3.05 catches, we 1.77. The sizing of reading 2 holds within unit counts: 1.995 now, 1.92 with their share
-   of slow games at each count, 1.83 with their rank in those games as well (`E:/cg-tmp/tcf/peer/sizing4.py`).
+   of slow games at each count, 1.83 with their rank in those games as well (`tools/peer/sizing4.py`).
 5. Mean rank by final catches is the same staircase for both groups (1 catch 2.6, 2 catches 2.1 to 2.2, 3 catches
    1.7, 5 or more 1.15): one more catch goes with 0.32 of mean rank.
 6. Net hits that are not caught within five turns: 0.42 a game for us, 0.56 for them. We convert better than they
