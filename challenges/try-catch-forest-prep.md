@@ -2,6 +2,38 @@
 
 Written on 2026-11-17, **before the statement was available**. The statement stays the authority: check "Still unknown" as soon as the play window opens.
 
+## 0. The statement (read 2026-11-18) and the bot built on it
+
+The statement is in `challenges/raw/try-catch-forest/` (git-ignored). What it settles, against sections 2 and 10 below:
+
+| Topic | Statement | Earlier measurement |
+|---|---|---|
+| Dash | after the k-th dash a unit waits k turns; the input gives `turnsRemaining` and `fatigue` for every visible unit, enemies included | "every second turn" (true for the first dash only) |
+| Catch | two discs of radius 220 overlap (centres closer than 440), tested along the whole move, in time order | about 400, end of turn |
+| Net | disc of radius 250 flying up to 2000, stopped by a tree within 250 of its line, holds 5 turns | 4 turns |
+| Smoke | radius 1900, 9 turns, thrown up to 2000; blocks sight only, units inside are blind and invisible | "immune to nets" (true in practice: nobody can aim) |
+| Sight | 2000, 2600 after a turn without moving; blocked by trees and smoke | 2000-2400 |
+| Ghosts | invisible, cannot catch or use powers, walk through trees, still move, dash and see for the team | unknown |
+| Decoy | walks 600 per turn for 10 turns, shown to others under the unit's own id, takes a net in its place | partly known |
+| End | a team with no living unit is removed; the game stops when two teams are out or after 100 turns | known |
+| Ties | compared catch by catch: who made the 1st earlier, then the 2nd... | "earlier first catch" |
+| Time | 1000 ms first turn, 50 ms afterwards | unknown |
+
+Found in the first test game, not in the statement:
+- the three teams start as 120 degree rotations of each other (unit j of player p is my unit j turned by (p - me) x 120 degrees), so every enemy position is known on turn 1;
+- ids: units 0..3N-1 (player p owns p*N..p*N+N-1), then trees, then decoys and smoke;
+- the final score shown is 3 x catches + 0/1/2 for the tie-break order;
+- an undocumented entity type `SECRET_FOREST_SPRITE` (owner -1) appears in the input; the bot ignores unknown types.
+
+`prep/try-catch-forest/Player.java` is the bot (one file, Java). Each living unit scores about 50 candidate moves with one function:
+1. never finish a move where a predator could touch it this turn (its reach is 1200 if its dash is ready, else 600);
+2. keep a two-turn escape margin, stay out of clear net lines and out of the wall ring;
+3. inside those limits, close in on its prey (two hunters per prey at most, netted prey first);
+4. a catch the prey cannot avoid (netted, or no dash and inside dash reach) outranks everything, even a possible loss.
+Powers: nets at prey that cannot dodge (dash on cooldown, closer than 1400, or moving along the line), thrown from the position after the move at full range; a net at the hunter that is about to reach us; smoke ahead of the unit when a predator has a clear line within 2300; a decoy walked straight at the predator as a net shield. Ghosts sit on prey so the hunters keep seeing them.
+
+First results (test games, Bronze): 7 wins in 7 against the boss, 30 catches for 7 units lost, no error or timeout.
+
 ## 1. What this is based on
 
 | | |

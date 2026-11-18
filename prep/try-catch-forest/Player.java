@@ -1,289 +1,434 @@
+import java.io.*;
 import java.util.*;
 
 /**
- * Try Catch Forest (Unleash the Geek 2026) - preparation kit.
+ * Try Catch Forest (Unleash the Geek 2026).
  *
- * Built before the statement was available, from two replay videos and from the referee's text logs of
- * 1100 Gold-league games. Values marked MEASURED come from those logs; values marked CONFIRM are still
- * estimates and must be checked against the statement.
- * Solid: circular arena centred on (0,0), circular trees that block movement, sight and nets,
- * three teams in a rock-paper-scissors cycle, one output line of commands joined by ';':
- *   MOVE id x y [msg] | DASH id x y [msg] | NET id x y | SMOKE id x y | DECOY id x y
- * A unit may move (or dash) and use one item in the same turn.
- *
- * The parts that depend on the input format (readInit / readTurn) are stubs: fill them from the
- * statement's protocol or the API's stub generator. The geometry and decision helpers below are tested
- * by SelfTest.java and do not depend on the protocol.
+ * Three players in a cycle: player i catches player (i+1)%3 and is caught by player (i+2)%3.
+ * Design (see challenges/try-catch-forest-prep.md, sections "statement" and "battle plan"):
+ *  - every unit scores a set of candidate moves (24 walk directions, 24 dash directions, direct lines, stay)
+ *    with one function: never end where a predator can touch us this turn, keep a two-turn escape margin,
+ *    stay out of net lines, and inside those limits close in on the assigned prey;
+ *  - a catch that the prey cannot avoid (netted, or no dash left and inside dash reach) outranks everything;
+ *  - nets go to prey that cannot dodge (dash on cooldown, close, or moving along the line), thrown from the
+ *    position after the move and aimed at full range; a netted unit of ours nets the hunter back;
+ *  - smoke is ordered before the net can come (it resolves after the move), decoys walk at the predator and
+ *    take the net that was meant for us;
+ *  - ghosts are invisible scouts: they sit on prey so the hunters always see their targets;
+ *  - on turn 1 every enemy position is known: the three teams start as 120 degree rotations of each other.
  */
 class Player {
-    // ---- parameters (prefer reading them from the input if the statement provides them) ----
-    static double ARENA_R = 8000;        // MEASURED: no unit centre was ever further than 7780 from (0,0)
-    static double VISION = 2200;         // CONFIRM: sight radius (bots stop reacting between 2000 and 2400)
-    static double UNIT_R = 220;          // MEASURED: 8000 - 7780
-    static double MOVE_SPEED = 600;      // MEASURED: distance per turn with MOVE
-    static double DASH_SPEED = 1200;     // MEASURED: distance per turn with DASH
-    static int DASH_EVERY = 2;           // MEASURED: after a dash on turn t the next dash is possible on turn t+2
-    static double CATCH_RANGE = 400;     // MEASURED: a dash catches a unit walking away from 900, not from 1050
-    static double STRIKE = DASH_SPEED - MOVE_SPEED + CATCH_RANGE - 50;   // 950: dash reach against a unit that walks away
-    static double NET_RANGE = 2000;      // MEASURED: a net flies at most 2000, stops at the first tree
-    static double NET_MIN = 800;         // nets from closer are rarely needed: walk in instead
-    static double NET_GOOD = 1400;       // MEASURED: inside this distance a net hits 72 % even if the target can dash
-    static int NET_HOLD = 4;             // MEASURED: a netted unit cannot move for 4 turns (it can still use items)
-    static double SMOKE_R = 1200;        // CONFIRM: cloud radius (no net ever landed within 1200 of a fresh cloud)
-    static double SMOKE_TRIGGER = 2200;  // smoke when a predator is this close: one turn before its net can come
-    static double WALL_RING = 6500;      // MEASURED: threatened units beyond this radius die twice as often
-    static double DANGER = 3000;         // start fleeing when a predator is this close (tuning value)
-    static int TURNS = 100;
+    static final double R = 8000, UR = 220, MOVE = 600, DASH = 1200, CATCH = 440;
+    static final double NET_RANGE = 2000, NET_TREE = 250, SMOKE_R = 1900, SMOKE_THROW = 2000, VISION = 2000;
+    static final int SMOKE_LIFE = 9;
 
-    // ---- small vector type ----
-    static final class V {
-        final double x, y;
-        V(double x, double y) { this.x = x; this.y = y; }
-        V add(V o) { return new V(x + o.x, y + o.y); }
-        V sub(V o) { return new V(x - o.x, y - o.y); }
-        V mul(double k) { return new V(x * k, y * k); }
-        double len() { return Math.hypot(x, y); }
-        double dist(V o) { return Math.hypot(x - o.x, y - o.y); }
-        V norm() { double l = len(); return l < 1e-9 ? new V(0, 0) : new V(x / l, y / l); }
-        static V polar(double angle, double r) { return new V(Math.cos(angle) * r, Math.sin(angle) * r); }
-        @Override public String toString() { return Math.round(x) + " " + Math.round(y); }
-    }
-    static final class Circle {
-        final V c; final double r;
-        Circle(V c, double r) { this.c = c; this.r = r; }
-    }
-    static final class Unit {
-        int id, owner; V pos; boolean alive = true; int lastSeen = -1, lastDash = -99, nettedUntil = -1;
-        Unit(int id, int owner, V pos) { this.id = id; this.owner = owner; this.pos = pos; }
-        boolean netted(int turn) { return turn <= nettedUntil; }
-        boolean dashReady(int turn) { return turn - lastDash >= DASH_EVERY && !netted(turn); }
-        /** Call from readTurn with the new position: a jump of more than a walk means the unit dashed last turn. */
-        void seen(V now, int turn) { if (lastSeen == turn - 1 && pos.dist(now) > MOVE_SPEED + 100) lastDash = turn - 1; pos = now; lastSeen = turn; }
-    }
+    static int myId, prey, pred, N = -1, turn = 0, myScore = 0, nets, smokes, decoys;
+    static int T; static double[] tx, ty, tr;
 
-    // ---- rock-paper-scissors cycle. In both videos: player 0 = scissors, 1 = paper, 2 = rock,
-    //      so player i catches player (i+1)%3 and is caught by player (i+2)%3 (MEASURED: 2643 catches, no exception). ----
-    static int preyOf(int player) { return (player + 1) % 3; }
-    static int predatorOf(int player) { return (player + 2) % 3; }
-
-    // ---- geometry ----
-    /** Distance from point p to segment a-b. */
-    static double distToSegment(V p, V a, V b) {
-        V ab = b.sub(a);
-        double l2 = ab.x * ab.x + ab.y * ab.y;
-        if (l2 < 1e-9) return p.dist(a);
-        double t = Math.max(0, Math.min(1, ((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / l2));
-        return p.dist(a.add(ab.mul(t)));
+    static final class E {
+        int id, owner; double x, y, vx, vy; boolean ghost; int cd, fat = 1, immob;
+        int seen = -99; boolean vis, dead, lost, dup;
+        int lastDecoy = -99; double ex, ey; boolean usedPower, netTargeted, caughtNow; String cmd, tag;
+        E copy() { E e = new E(); e.id = id; e.owner = owner; e.x = x; e.y = y; e.vx = vx; e.vy = vy; e.ghost = ghost; e.cd = cd; e.fat = fat; e.immob = immob; e.seen = seen; e.vis = vis; return e; }
     }
-    /** First obstacle (grown by margin) crossed by the segment a-b, or null. */
-    static Circle firstBlocking(V a, V b, List<Circle> obstacles, double margin) {
-        Circle best = null; double bestD = Double.MAX_VALUE;
-        for (Circle o : obstacles) {
-            if (distToSegment(o.c, a, b) < o.r + margin) {
-                double d = a.dist(o.c);
-                if (d < bestD) { bestD = d; best = o; }
+    static final class Th { double x, y, reach, reach2, w; int immob; E e; }
+
+    static Map<Integer, E> own = new HashMap<>();          // my units, kept between turns
+    static Map<Integer, E> tracks = new HashMap<>();       // enemy units by id, last known state
+    static List<E> mine = new ArrayList<>(), seenPrey = new ArrayList<>(), seenPred = new ArrayList<>();
+    static List<double[]> clouds = new ArrayList<>();      // x, y, last turn of life
+    static List<Th> threats = new ArrayList<>();
+
+    // ---------------------------------------------------------------- geometry
+    static double hyp(double a, double b) { return Math.sqrt(a * a + b * b); }
+    static double segDist(double px, double py, double ax, double ay, double bx, double by) {
+        double dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+        if (l2 < 1e-9) return hyp(px - ax, py - ay);
+        double t = ((px - ax) * dx + (py - ay) * dy) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        return hyp(px - ax - dx * t, py - ay - dy * t);
+    }
+    static boolean treeBlocks(double ax, double ay, double bx, double by, double margin) {
+        for (int i = 0; i < T; i++) if (segDist(tx[i], ty[i], ax, ay, bx, by) < tr[i] + margin) return true;
+        return false;
+    }
+    static boolean inSmoke(double x, double y, double margin) {
+        for (double[] c : clouds) if (hyp(x - c[0], y - c[1]) < SMOKE_R - margin) return true;
+        return false;
+    }
+    static boolean smokeBlocks(double ax, double ay, double bx, double by) {
+        for (double[] c : clouds) if (segDist(c[0], c[1], ax, ay, bx, by) < SMOKE_R) return true;
+        return false;
+    }
+    /** End point of a MOVE/DASH towards (gx, gy): straight line, pushed out of trees (slide) and kept in the arena. */
+    static double[] simMove(double x, double y, double gx, double gy, double speed, boolean ghost) {
+        double d = hyp(gx - x, gy - y);
+        if (d < 1e-6) return new double[]{x, y};
+        double len = Math.min(d, speed), ux = (gx - x) / d, uy = (gy - y) / d;
+        int steps = 8;
+        for (int s = 0; s < steps; s++) {
+            x += ux * len / steps; y += uy * len / steps;
+            if (!ghost) for (int i = 0; i < T; i++) {
+                double dd = hyp(x - tx[i], y - ty[i]), min = tr[i] + UR + 1;
+                if (dd < min) { if (dd < 1e-6) { x += min; } else { x = tx[i] + (x - tx[i]) * min / dd; y = ty[i] + (y - ty[i]) * min / dd; } }
             }
+            double l = hyp(x, y);
+            if (l > R - UR) { x *= (R - UR) / l; y *= (R - UR) / l; }
         }
-        return best;
+        return new double[]{x, y};
     }
-    /** Line of sight: within range and no obstacle or smoke cloud between a and b. */
-    static boolean canSee(V a, V b, List<Circle> obstacles, List<Circle> smokes) {
-        if (a.dist(b) > VISION) return false;
-        if (firstBlocking(a, b, obstacles, 0) != null) return false;
-        return smokes == null || firstBlocking(a, b, smokes, 0) == null;
-    }
-    static V clampToArena(V p, double margin) {
-        double l = p.len(), max = ARENA_R - margin;
-        return l <= max ? p : p.mul(max / l);
-    }
-    /**
-     * Where to aim this turn to reach `to` without walking into an obstacle: the target itself when the
-     * way is free, otherwise the tangent point of the first blocking obstacle on the side closer to the target.
-     */
-    static V steer(V from, V to, List<Circle> obstacles) {
-        double margin = UNIT_R + 30;
-        Circle o = firstBlocking(from, to, obstacles, margin);
-        if (o == null) return to;
-        double R = o.r + margin, d = from.dist(o.c);
-        if (d <= R) return from.add(from.sub(o.c).norm().mul(R - d + MOVE_SPEED));     // inside the margin: step out
-        double base = Math.atan2(o.c.y - from.y, o.c.x - from.x);
-        double spread = Math.asin(Math.min(1, R / d)) + 0.08;
-        double want = Math.atan2(to.y - from.y, to.x - from.x);
+    /** Local way point towards (gx, gy): the goal itself when the way is free, else the tangent of the first tree. */
+    static double[] steer(double sx, double sy, double gx, double gy) {
+        double margin = UR + 40; int best = -1; double bd = 1e18;
+        for (int i = 0; i < T; i++) if (segDist(tx[i], ty[i], sx, sy, gx, gy) < tr[i] + margin) { double d = hyp(sx - tx[i], sy - ty[i]); if (d < bd) { bd = d; best = i; } }
+        if (best < 0) return new double[]{gx, gy};
+        double RR = tr[best] + margin, d = bd;
+        if (hyp(gx - tx[best], gy - ty[best]) < RR) return new double[]{gx, gy};                 // goal hugs the tree: go straight, slide
+        if (d <= RR) { double k = (RR - d + MOVE) / Math.max(1, d); return new double[]{sx + (sx - tx[best]) * k, sy + (sy - ty[best]) * k}; }
+        double base = Math.atan2(ty[best] - sy, tx[best] - sx), spread = Math.asin(Math.min(1, RR / d)) + 0.06;
+        double want = Math.atan2(gy - sy, gx - sx);
         double a1 = base + spread, a2 = base - spread;
-        double pick = angleDiff(a1, want) <= angleDiff(a2, want) ? a1 : a2;
-        double reach = Math.sqrt(Math.max(0, d * d - R * R)) + MOVE_SPEED;
-        return clampToArena(from.add(V.polar(pick, reach)), UNIT_R);
+        double pick = angDiff(a1, want) <= angDiff(a2, want) ? a1 : a2;
+        double reach = Math.sqrt(Math.max(0, d * d - RR * RR)) + MOVE;
+        return new double[]{sx + Math.cos(pick) * reach, sy + Math.sin(pick) * reach};
     }
-    static double angleDiff(double a, double b) {
-        double d = Math.abs(a - b) % (2 * Math.PI);
-        return d > Math.PI ? 2 * Math.PI - d : d;
-    }
+    static double angDiff(double a, double b) { double d = Math.abs(a - b) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; }
 
-    // ---- decisions ----
-    /**
-     * Best point to run to: samples directions and scores the distance gained from the predators, staying
-     * off the arena wall and off obstacles, with a bonus when an obstacle hides us from the nearest predator.
-     */
-    static V flee(V me, List<V> predators, List<Circle> obstacles, double step) {
-        V best = me; double bestScore = -Double.MAX_VALUE;
-        for (int i = 0; i < 24; i++) {
-            V p = clampToArena(me.add(V.polar(i * Math.PI / 12, step)), UNIT_R);
-            if (firstBlocking(me, p, obstacles, UNIT_R) != null) continue;
-            double nearest = Double.MAX_VALUE; V who = null;
-            for (V e : predators) { double d = p.dist(e); if (d < nearest) { nearest = d; who = e; } }
-            double score = nearest;
-            if (who != null && firstBlocking(p, who, obstacles, 0) != null) score += 800;       // out of its sight
-            score -= Math.max(0, p.len() - (WALL_RING - 300)) * 2;                               // stay out of the wall ring
-            if (score > bestScore) { bestScore = score; best = p; }
-        }
-        return best;
+    /** Movement expected from an enemy this turn (its last movement, capped by what it can do now). */
+    static double[] predV(E q) {
+        if (q.immob > 0) return new double[]{0, 0};
+        double l = hyp(q.vx, q.vy), max = q.cd == 0 ? DASH : MOVE;
+        if (l < 1) return new double[]{0, 0};
+        double k = l > max ? max / l : 1;
+        if (l > MOVE + 50 && q.cd > 0) k = MOVE / l;
+        return new double[]{q.vx * k, q.vy * k};
     }
-    /** Aim ahead of a moving prey: where it will be when we reach it, given its last observed velocity. */
-    static V intercept(V me, V prey, V preyVelocity, double mySpeed) {
-        V aim = prey;
-        for (int i = 0; i < 3; i++) aim = prey.add(preyVelocity.mul(me.dist(aim) / Math.max(1, mySpeed)));
-        return clampToArena(aim, UNIT_R);
-    }
-    /** Nearest element of a list to a point, or null. */
-    static V nearest(V me, List<V> pts) {
-        V best = null; double bd = Double.MAX_VALUE;
-        for (V p : pts) { double d = me.dist(p); if (d < bd) { bd = d; best = p; } }
-        return best;
-    }
-
-    // ---- state ----
-    static int myId, unitsPerPlayer, turn;
-    static int smokeLeft, decoyLeft, netLeft;
-    static List<Circle> obstacles = new ArrayList<>();
-    static List<Circle> smokes = new ArrayList<>();
-    static Map<Integer, Unit> units = new HashMap<>();          // every unit ever seen, with lastSeen for fog of war
-
-    /** True when a net thrown from a to b can arrive: in range, not point-blank, no tree on the way. */
-    static boolean netLine(V a, V b) {
-        double d = a.dist(b);
-        return d >= NET_MIN && d <= NET_RANGE && firstBlocking(a, b, obstacles, 0) == null;
-    }
-
-    /** Aim point of a net: the full range along the line through the target (a net stops at its aim point). */
-    static V netAim(V from, V target) { return from.add(target.sub(from).norm().mul(NET_RANGE)); }
-
-    /** Position after one MOVE or DASH order from `from` towards `to`. */
-    static V after(V from, V to, double speed) {
-        double d = from.dist(to);
-        return d <= speed ? to : from.add(to.sub(from).mul(speed / d));
-    }
-
-    /** True when p is inside a smoke cloud (known clouds plus the ones ordered this turn). No net landed within
-     *  1200 of a fresh cloud in 1100 games, so a covered unit needs no second smoke and is no net target. */
-    static boolean covered(V p, List<Circle> extra) {
-        for (Circle c : smokes) if (c.c.dist(p) < c.r) return true;
-        for (Circle c : extra) if (c.c.dist(p) < c.r) return true;
+    static boolean canSeePoint(double x, double y) {
+        for (E u : mine) { if (hyp(u.x - x, u.y - y) < 1800 && !treeBlocks(u.x, u.y, x, y, 0) && !smokeBlocks(u.x, u.y, x, y)) return true; }
         return false;
     }
 
-    static Unit nearestUnit(V me, List<Unit> list) {
-        Unit best = null; double bd = Double.MAX_VALUE;
-        for (Unit u : list) { double d = me.dist(u.pos); if (d < bd) { bd = d; best = u; } }
-        return best;
-    }
-
-    /**
-     * One turn of decisions: returns the output line. Uses only the state above.
-     * The referee resolves a turn as: decoys appear, everybody moves, catches, then nets and smoke of the
-     * survivors (from their new positions). Rules, all measured on 1100 Gold games (challenges/try-catch-forest-prep.md):
-     *  - FLEE: a walking hunter never catches a unit that walks away; a dashing one does from STRIKE (950) or less.
-     *    So dash away exactly when the hunter can dash and is inside that distance, otherwise walk and keep the dash.
-     *  - SMOKE is ordered one turn early (it lands after the catches) on the spot we move to: no unit inside smoke
-     *    was ever netted. A unit held by a net smokes itself, or nets the hunter back.
-     *  - CATCH: dash at free prey within STRIKE, or at netted prey within dash reach.
-     *  - NET: thrown from the position after the move, at prey that cannot dodge (dash on cooldown) or is close,
-     *    never into smoke and never on the first turn (everybody can still dash: 28 % hits); then the pack walks in. Up to two hunters per prey: pairs convert twice as often.
-     */
-    static String decide() {
-        List<String> moves = new ArrayList<>(), items = new ArrayList<>();
-        List<Unit> prey = new ArrayList<>(), predators = new ArrayList<>(), mine = new ArrayList<>();
-        List<V> predatorPos = new ArrayList<>();
-        for (Unit u : units.values()) {
-            if (!u.alive) continue;
-            if (u.owner == myId) { mine.add(u); continue; }
-            if (turn - u.lastSeen > 3) continue;                    // forget positions older than 3 turns
-            if (u.owner == preyOf(myId)) prey.add(u);
-            if (u.owner == predatorOf(myId)) { predators.add(u); if (!u.netted(turn)) predatorPos.add(u.pos); }
-        }
-        // the most threatened units choose first, so they get the smoke when it is scarce
-        final Map<Unit, Double> danger = new IdentityHashMap<>();
-        for (Unit u : mine) { Unit t = nearestUnit(u.pos, predators); danger.put(u, t == null ? Double.MAX_VALUE : u.pos.dist(t.pos)); }
-        mine.sort((a, b) -> danger.get(a).equals(danger.get(b)) ? a.id - b.id : Double.compare(danger.get(a), danger.get(b)));
-        Map<Unit, Integer> hunters = new IdentityHashMap<>();
-        List<Circle> newSmoke = new ArrayList<>();
-        for (Unit u : mine) {
-            Unit threat = nearestUnit(u.pos, predators);
-            double td = threat == null ? Double.MAX_VALUE : u.pos.dist(threat.pos);
-            if (u.netted(turn)) {                                   // held: cannot move, can still use an item
-                if (td < DANGER) {
-                    if (smokeLeft > 0 && !covered(u.pos, newSmoke)) { items.add("SMOKE " + u.id + " " + u.pos); smokeLeft--; newSmoke.add(new Circle(u.pos, SMOKE_R)); }
-                    else if (netLeft > 0 && netLine(u.pos, threat.pos)) { items.add("NET " + u.id + " " + netAim(u.pos, threat.pos)); netLeft--; }
-                }
-                moves.add("MOVE " + u.id + " " + u.pos + " HELD");
+    // ---------------------------------------------------------------- input
+    static void readTurn(BufferedReader in, String first) throws IOException {
+        turn++;
+        int score = Integer.parseInt(first.trim());
+        StringTokenizer st = new StringTokenizer(in.readLine());
+        nets = Integer.parseInt(st.nextToken()); smokes = Integer.parseInt(st.nextToken()); decoys = Integer.parseInt(st.nextToken());
+        int n = Integer.parseInt(in.readLine().trim());
+        mine.clear(); seenPrey.clear(); seenPred.clear();
+        for (E e : tracks.values()) e.vis = false;
+        Iterator<double[]> it = clouds.iterator(); while (it.hasNext()) if (it.next()[2] < turn) it.remove();
+        Set<Integer> seenIds = new HashSet<>();
+        for (int i = 0; i < n; i++) {
+            st = new StringTokenizer(in.readLine());
+            int id = Integer.parseInt(st.nextToken()); String type = st.nextToken(); int owner = Integer.parseInt(st.nextToken());
+            double x = Double.parseDouble(st.nextToken()), y = Double.parseDouble(st.nextToken());
+            double dx = Double.parseDouble(st.nextToken()), dy = Double.parseDouble(st.nextToken());
+            int ghost = Integer.parseInt(st.nextToken()), rem = Integer.parseInt(st.nextToken()), fat = Integer.parseInt(st.nextToken()), imm = Integer.parseInt(st.nextToken());
+            if (type.equals("SMOKE")) {
+                boolean known = false;
+                for (double[] c : clouds) if (hyp(c[0] - x, c[1] - y) < 5) { c[2] = turn + rem - 1; known = true; }
+                if (!known) clouds.add(new double[]{x, y, turn + rem - 1});
                 continue;
             }
-            // prey: a netted one within reach first, else the nearest that has fewer than two hunters
-            Unit target = null; double best = Double.MAX_VALUE;
-            for (Unit p : prey) {
-                double d = u.pos.dist(p.pos);
-                double score = p.netted(turn) && d < 2400 ? d - 5000 : hunters.getOrDefault(p, 0) >= 2 ? d + 5000 : d;
-                if (score < best) { best = score; target = p; }
-            }
-            boolean canDash = u.dashReady(turn), dash = false;
-            String mode; V goal;
-            if (threat != null && !threat.netted(turn) && td < DANGER) {
-                boolean threatDash = threat.dashReady(turn);
-                mode = "FLEE";
-                dash = canDash && threatDash && td < STRIKE + 150;      // dash parity: answer its dash, never waste ours
-                goal = flee(u.pos, predatorPos, obstacles, dash ? DASH_SPEED : MOVE_SPEED);
-                V end = after(u.pos, goal, dash ? DASH_SPEED : MOVE_SPEED);
-                if (td < SMOKE_TRIGGER && smokeLeft > 0 && !covered(end, newSmoke)) { items.add("SMOKE " + u.id + " " + end); smokeLeft--; newSmoke.add(new Circle(end, SMOKE_R)); }
-                else if (td < 1700 && !threatDash && netLeft > 0 && netLine(end, threat.pos)) { items.add("NET " + u.id + " " + netAim(end, threat.pos)); netLeft--; }
-            } else if (target != null) {
-                hunters.merge(target, 1, Integer::sum);
-                double d = u.pos.dist(target.pos);
-                boolean held = target.netted(turn);
-                boolean clear = firstBlocking(u.pos, target.pos, obstacles, UNIT_R) == null;
-                if (canDash && clear && (d <= STRIKE || (held && d <= DASH_SPEED + CATCH_RANGE))) {
-                    mode = "CATCH"; dash = true; goal = target.pos;
-                } else {
-                    mode = "HUNT"; goal = steer(u.pos, target.pos, obstacles);
-                    V end = after(u.pos, goal, MOVE_SPEED);
-                    boolean dodges = target.dashReady(turn) && end.dist(target.pos) > NET_GOOD;
-                    if (turn > 0 && netLeft > 0 && !held && !dodges && netLine(end, target.pos) && !covered(target.pos, newSmoke)) { items.add("NET " + u.id + " " + netAim(end, target.pos)); netLeft--; }
-                }
+            if (!type.equals("UNIT")) continue;                 // own decoys and anything unknown
+            if (owner == myId) {
+                E u = own.get(id); if (u == null) { u = new E(); u.id = id; u.owner = owner; own.put(id, u); }
+                u.x = x; u.y = y; u.vx = dx; u.vy = dy; u.ghost = ghost == 1; u.cd = Math.max(0, rem); u.fat = Math.max(1, fat); u.immob = Math.max(0, imm);
+                u.seen = turn; u.usedPower = false; u.cmd = null; u.tag = ""; u.ex = x; u.ey = y;
+                mine.add(u);
             } else {
-                mode = "SEEK";                                      // patrol a ring, each unit at its own angle
-                double a = (u.id % Math.max(1, unitsPerPlayer)) * 2 * Math.PI / Math.max(1, unitsPerPlayer) + turn * 0.15;
-                goal = steer(u.pos, V.polar(a, ARENA_R * 0.55), obstacles);
+                E s = new E(); s.id = id; s.owner = owner; s.x = x; s.y = y; s.vx = dx; s.vy = dy; s.cd = Math.max(0, rem); s.fat = Math.max(1, fat); s.immob = Math.max(0, imm); s.seen = turn; s.vis = true;
+                if (!seenIds.add(id)) { s.dup = true; for (E o : seenPrey) if (o.id == id) o.dup = true; for (E o : seenPred) if (o.id == id) o.dup = true; }
+                (owner == prey ? seenPrey : seenPred).add(s);
+                E t = tracks.get(id);
+                if (t == null || !t.dead || true) { E c = s.copy(); tracks.put(id, c); }
             }
-            if (dash) u.lastDash = turn;
-            moves.add((dash ? "DASH " : "MOVE ") + u.id + " " + clampToArena(goal, UNIT_R) + " " + mode);
         }
-        moves.addAll(items);
-        return moves.isEmpty() ? "MOVE 0 0 0" : String.join(";", moves);
+        mine.sort((a, b) -> a.id - b.id);
+        if (N < 0) {                                            // first turn: the other teams are rotations of mine
+            N = mine.size();
+            for (int p = 0; p < 3; p++) {
+                if (p == myId) continue;
+                double a = ((p - myId + 3) % 3) * 2 * Math.PI / 3, c = Math.cos(a), s = Math.sin(a);
+                for (int j = 0; j < N; j++) {
+                    E u = mine.get(j); int id = p * N + (u.id - myId * N);
+                    if (tracks.containsKey(id)) continue;
+                    E t = new E(); t.id = id; t.owner = p; t.x = u.x * c - u.y * s; t.y = u.x * s + u.y * c; t.seen = turn; t.cd = 0;
+                    tracks.put(id, t);
+                }
+            }
+        }
+        // a catch of ours: the prey we lost sight of next to one of our units is gone
+        for (int k = myScore; k < score; k++) {
+            E best = null; double bd = 1e18;
+            for (E t : tracks.values()) {
+                if (t.owner != prey || t.dead || t.vis || t.seen < turn - 4) continue;
+                for (E u : mine) { double d = hyp(u.x - t.x, u.y - t.y); if (d < bd) { bd = d; best = t; } }
+            }
+            if (best != null) best.dead = true;
+        }
+        myScore = score;
+        // remembered positions that we can see are empty: the unit has moved on
+        for (E t : tracks.values()) {
+            if (t.vis || t.dead || t.lost || t.seen == turn) continue;
+            if (canSeePoint(t.x, t.y)) t.lost = true;
+        }
     }
 
-    // ---- protocol: STUBS, to be written from the statement ----
-    static void readInit(Scanner in) {
-        // TODO from the statement: my player id, units per player, arena radius, obstacles (x y radius), item counts, ranges
-    }
-    static void readTurn(Scanner in) {
-        // TODO from the statement: item counts left, my units, visible enemy units (set lastSeen = turn), smoke clouds, nets, ghosts
+    // ---------------------------------------------------------------- scoring of one candidate move
+    static double eval(E u, double px, double py, boolean dash, double wx, double wy, double wG, E target, boolean[] certain) {
+        double sx = u.x, sy = u.y, sc = 0;
+        double mySp = hyp(px - sx, py - sy);
+        // catches
+        double reward = 0;
+        if (!u.ghost) for (E q : seenPrey) {
+            double[] v = predV(q);
+            double md = 1e18;
+            for (int i = 1; i <= 10; i++) { double f = i / 10.0; double d = hyp(sx + (px - sx) * f - q.x - v[0] * f, sy + (py - sy) * f - q.y - v[1] * f); if (d < md) md = d; }
+            if (q.immob > 0) { if (md < CATCH - 12) reward = Math.max(reward, 300000); continue; }
+            if (md < CATCH - 25) reward = Math.max(reward, 30000);
+            double d0 = hyp(q.x - sx, q.y - sy);
+            if (mySp > 1 && d0 > 1) {
+                double cos = ((px - sx) * (q.x + v[0] * 0.5 - sx) + (py - sy) * (q.y + v[1] * 0.5 - sy)) / (mySp * hyp(q.x + v[0] * 0.5 - sx, q.y + v[1] * 0.5 - sy));
+                if (cos > 0.96) {
+                    double rq = q.cd == 0 ? DASH : MOVE;
+                    if (d0 + rq - mySp < CATCH - 25) reward = Math.max(reward, 300000);          // it cannot outrun this
+                    else if (d0 + MOVE - mySp < CATCH - 25) reward = Math.max(reward, 25000);     // it must dash to survive
+                }
+            }
+        }
+        if (certain != null) certain[0] = reward >= 300000;
+        sc += reward;
+        double deathScale = reward >= 300000 ? 0.2 : 1;
+        boolean smokeHere = inSmoke(px, py, 150);
+        double nearestTh = 1e18;
+        for (Th t : threats) {
+            double m = 1e18;
+            for (int i = 1; i <= 10; i++) { double f = i / 10.0; double d = hyp(sx + (px - sx) * f - t.x, sy + (py - sy) * f - t.y) - t.reach * f; if (d < m) m = d; }
+            double lim = CATCH + (t.reach > 0 ? 45 : 15);
+            if (m < lim) sc -= t.w * deathScale * (1e6 + (lim - m) * 500);
+            double D = hyp(px - t.x, py - t.y);
+            if (D < nearestTh) nearestTh = D;
+            if (t.immob <= 1) {
+                double myNext = (!dash && u.cd <= 1) ? DASH : MOVE;
+                double m2 = D - t.reach2 + myNext - CATCH - 60;
+                if (m2 < 0) sc -= t.w * 25 * Math.min(-m2, 1200);
+            }
+            boolean hidden = smokeHere || treeBlocks(px, py, t.x, t.y, 0);
+            if (t.immob <= 1) sc -= t.w * (hidden ? 0.3 : 1.0) * Math.max(0, 2500 - D);
+            if (!hidden && D < 2470 + (t.immob > 0 ? 0 : 600) && !treeBlocks(px, py, t.x, t.y, NET_TREE)) sc -= t.w * 400;
+        }
+        if (nearestTh < 4000) sc -= 1.5 * Math.max(0, hyp(px, py) - 6300);
+        sc -= wG * hyp(px - wx, py - wy);
+        if (dash) {
+            sc -= 700 + 250 * u.fat;
+            if (target != null && target.immob > 0 && (hyp(target.x - sx, target.y - sy) - CATCH) / MOVE > target.immob - 1) sc += 1500;
+        }
+        return sc;
     }
 
-    public static void main(String[] args) {
-        Scanner in = new Scanner(System.in);
-        readInit(in);
-        while (in.hasNext()) {
-            readTurn(in);
-            System.out.println(decide());
-            turn++;
+    // ---------------------------------------------------------------- one turn
+    static String decide() {
+        List<E> live = new ArrayList<>(), ghosts = new ArrayList<>();
+        for (E u : mine) (u.ghost ? ghosts : live).add(u);
+        boolean preyGone = myScore >= N;
+
+        // threats: predators in sight, and the ones seen in the last three turns (with a wider reach)
+        threats.clear();
+        for (E e : seenPred) threats.add(threat(e, 0));
+        for (E t : tracks.values()) {
+            if (t.owner != pred || t.vis || t.dead || t.lost) continue;
+            int age = turn - t.seen; if (age > 3) continue;
+            threats.add(threat(t, age));
+        }
+        // prey candidates: the ones in sight, then remembered ones
+        List<E> cand = new ArrayList<>();
+        if (!preyGone) {
+            cand.addAll(seenPrey);
+            for (E t : tracks.values()) {
+                if (t.owner != prey || t.vis || t.dead || t.lost) continue;
+                int age = turn - t.seen; if (age > 25) continue;
+                cand.add(t);
+            }
+        }
+        // hunters: the cheapest pairs first, at most two per prey
+        Map<E, E> targetOf = new IdentityHashMap<>(); Map<E, Integer> load = new IdentityHashMap<>();
+        List<E> free = new ArrayList<>(); for (E u : live) if (u.immob == 0) free.add(u);
+        for (int cap = 2; cap <= 6 && !free.isEmpty() && !cand.isEmpty(); cap += 4) {
+            while (!free.isEmpty()) {
+                E bu = null, bq = null; double bc = 1e18;
+                for (E u : free) for (E q : cand) {
+                    if (load.getOrDefault(q, 0) >= cap) continue;
+                    double c = hyp(u.x - q.x, u.y - q.y) + (turn - q.seen) * 200 - (q.immob > 0 ? 2500 : 0) + load.getOrDefault(q, 0) * 800;
+                    if (c < bc) { bc = c; bu = u; bq = q; }
+                }
+                if (bu == null) break;
+                targetOf.put(bu, bq); load.merge(bq, 1, Integer::sum); free.remove(bu);
+            }
+        }
+
+        // moves of the living units
+        boolean[] cert = new boolean[1];
+        for (E u : live) {
+            if (u.immob > 0) { u.tag = "HELD"; continue; }
+            E target = targetOf.get(u);
+            double gx, gy, wG;
+            if (target != null) {
+                double[] v = target.vis ? predV(target) : new double[]{0, 0};
+                gx = target.x; gy = target.y;
+                for (int i = 0; i < 3; i++) { double tt = Math.min(4, hyp(gx - u.x, gy - u.y) / MOVE); gx = target.x + v[0] * tt; gy = target.y + v[1] * tt; }
+                double l = hyp(gx, gy); if (l > R - UR) { gx *= (R - UR) / l; gy *= (R - UR) / l; }
+                wG = (target.immob > 0 || hyp(target.x - u.x, target.y - u.y) < 1500) ? 2.0 : 1.0;
+            } else {
+                int idx = u.id - myId * N;
+                double a = idx * 2 * Math.PI / Math.max(1, N) + turn * 0.12;
+                gx = Math.cos(a) * 4500; gy = Math.sin(a) * 4500; wG = preyGone ? 0.05 : 0.5;
+            }
+            double[] w = steer(u.x, u.y, gx, gy);
+            double best = -1e300; String bestCmd = null; double bex = u.x, bey = u.y; boolean bestCert = false, bestDash = false;
+            for (int sp = 0; sp < 2; sp++) {
+                if (sp == 1 && u.cd > 0) break;
+                double speed = sp == 0 ? MOVE : DASH;
+                for (int k = -2; k < 24; k++) {
+                    double dx, dy;
+                    if (k == -2) { dx = w[0] - u.x; dy = w[1] - u.y; } else if (k == -1) { dx = gx - u.x; dy = gy - u.y; } else { dx = Math.cos(k * Math.PI / 12); dy = Math.sin(k * Math.PI / 12); }
+                    double l = hyp(dx, dy); if (l < 1) continue;
+                    double ax = u.x + dx / l * speed, ay = u.y + dy / l * speed;
+                    double al = hyp(ax, ay); if (al > R - 1) { ax *= (R - 1) / al; ay *= (R - 1) / al; }
+                    ax = Math.round(ax); ay = Math.round(ay);
+                    double[] e = simMove(u.x, u.y, ax, ay, speed, false);
+                    double s = eval(u, e[0], e[1], sp == 1, w[0], w[1], wG, target, cert);
+                    if (s > best) { best = s; bestCmd = (sp == 1 ? "DASH " : "MOVE ") + u.id + " " + (long) ax + " " + (long) ay; bex = e[0]; bey = e[1]; bestCert = cert[0]; bestDash = sp == 1; }
+                }
+            }
+            double s = eval(u, u.x, u.y, false, w[0], w[1], wG, target, cert);
+            if (s > best) { best = s; bestCmd = null; bex = u.x; bey = u.y; bestCert = cert[0]; bestDash = false; }
+            u.cmd = bestCmd; u.ex = bex; u.ey = bey;
+            double nt = 1e18; for (Th t : threats) nt = Math.min(nt, hyp(u.x - t.x, u.y - t.y));
+            u.tag = bestCert ? "CATCH" : nt < 2500 ? "FLEE" : target != null ? "HUNT" : "SEEK";
+            if (bestCert) for (E q : seenPrey) if (segDist(q.x, q.y, u.x, u.y, bex, bey) < CATCH + 300) q.caughtNow = true;
+        }
+
+        List<String> out = new ArrayList<>();
+        // ---- powers. Decoys leave before the move, nets and smoke after it (from u.ex, u.ey).
+        // 1. nets at prey that cannot dodge
+        for (E u : live) {
+            if (nets <= 0) break;
+            E bq = null; double bd = 1e18; double bx = 0, by = 0;
+            for (E q : seenPrey) {
+                if (q.netTargeted || q.caughtNow || q.immob >= 2) continue;
+                double[] v = predV(q); double qx = q.x + v[0], qy = q.y + v[1];
+                double d = hyp(qx - u.ex, qy - u.ey);
+                if (d < 450 || d > 2250) continue;
+                if (q.dup && d > 1200) continue;
+                if (turn == 1 && q.cd == 0) continue;
+                if (treeBlocks(u.ex, u.ey, qx, qy, NET_TREE + 20) || friendOnLine(u, qx, qy, live)) continue;
+                double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
+                boolean ok = q.immob == 1 || q.cd > 0 || d <= 1400 || (lateral <= 250 && hyp(v[0], v[1]) > 100);
+                if (!ok) continue;
+                if (d < bd) { bd = d; bq = q; bx = qx; by = qy; }
+            }
+            if (bq != null) { out.add(net(u, bx, by)); bq.netTargeted = true; }
+        }
+        // 2. nets at the hunter that is about to reach us
+        for (E u : live) {
+            if (nets <= 0) break; if (u.usedPower) continue;
+            E be = null; double bd = 1e18; double bx = 0, by = 0;
+            for (E e : seenPred) {
+                if (e.immob > 0 || e.netTargeted) continue;
+                double[] v = predV(e); double qx = e.x + v[0], qy = e.y + v[1];
+                double d = hyp(qx - u.ex, qy - u.ey);
+                if (d < 300 || d > 2200) continue;
+                if (treeBlocks(u.ex, u.ey, qx, qy, NET_TREE + 20) || friendOnLine(u, qx, qy, live)) continue;
+                boolean need = (u.immob > 0 && d <= CATCH + MOVE * u.immob + MOVE) || d <= 1500;
+                double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
+                boolean hit = e.cd > 0 || d <= 1300 || lateral <= 250;
+                if (need && hit && d < bd) { bd = d; be = e; bx = qx; by = qy; }
+            }
+            if (be != null) { out.add(net(u, bx, by)); be.netTargeted = true; }
+        }
+        // 3. smoke before the net comes, 4. a decoy that walks at the hunter
+        for (E u : live) {
+            if (u.usedPower) continue;
+            double D = 1e18, Dpre = 1e18; E near = null;
+            for (Th t : threats) {
+                if (t.immob > 0 || (t.e.seen != turn)) continue;
+                double d = hyp(t.x - u.ex, t.y - u.ey);
+                if (d < D) { D = d; near = t.e; Dpre = hyp(t.x - u.x, t.y - u.y); }
+            }
+            if (near == null) continue;
+            boolean line = !treeBlocks(u.ex, u.ey, near.x, near.y, NET_TREE);
+            boolean wantSmoke = (u.immob > 0 && D < 3500) || (D < 2300 && line);
+            if (wantSmoke && smokes > 0 && !inSmoke(u.ex, u.ey, 400)) {
+                double mx = u.ex - u.x, my = u.ey - u.y, ml = hyp(mx, my);
+                double cx = u.ex, cy = u.ey;
+                if (ml > 50) { cx += mx / ml * 900; cy += my / ml * 900; }
+                double cl = hyp(cx, cy); if (cl > R - 200) { cx *= (R - 200) / cl; cy *= (R - 200) / cl; }
+                out.add("SMOKE " + u.id + " " + Math.round(cx) + " " + Math.round(cy));
+                smokes--; u.usedPower = true; clouds.add(new double[]{cx, cy, turn + SMOKE_LIFE});
+            } else if (decoys > 0 && u.immob == 0 && turn - u.lastDecoy > 8 && Dpre < 2900 && !treeBlocks(u.x, u.y, near.x, near.y, 0) && !inSmoke(u.ex, u.ey, 400)) {
+                out.add("DECOY " + u.id + " " + Math.round(near.x) + " " + Math.round(near.y));
+                decoys--; u.usedPower = true; u.lastDecoy = turn;
+            }
+        }
+
+        // ---- ghosts: sit on prey (then on predators) so the team keeps seeing them
+        List<E> watch = new ArrayList<>(cand);
+        watch.sort((a, b) -> Integer.compare(turn - a.seen, turn - b.seen));
+        List<E> predWatch = new ArrayList<>(seenPred);
+        for (E t : tracks.values()) if (t.owner == pred && !t.vis && !t.dead && !t.lost && turn - t.seen <= 10) predWatch.add(t);
+        Set<Integer> taken = new HashSet<>();
+        for (E g : ghosts) {
+            E best = null; double bd = 1e18;
+            for (E q : watch) { if (taken.contains(q.id)) continue; double d = hyp(q.x - g.x, q.y - g.y) + (turn - q.seen) * 300; if (d < bd) { bd = d; best = q; } }
+            if (best == null) for (E q : predWatch) { if (taken.contains(q.id)) continue; double d = hyp(q.x - g.x, q.y - g.y); if (d < bd) { bd = d; best = q; } }
+            double gx, gy;
+            if (best != null) { taken.add(best.id); double[] v = best.vis ? predV(best) : new double[]{0, 0}; gx = best.x + v[0]; gy = best.y + v[1]; }
+            else { double a = (g.id - myId * N) * 2 * Math.PI / Math.max(1, N) - turn * 0.2; gx = Math.cos(a) * 4000; gy = Math.sin(a) * 4000; }
+            double d = hyp(gx - g.x, gy - g.y);
+            if (d < 60) continue;
+            g.cmd = (d > 1500 && g.cd == 0 ? "DASH " : "MOVE ") + g.id + " " + Math.round(gx) + " " + Math.round(gy); g.tag = "GHOST";
+        }
+
+        List<String> all = new ArrayList<>();
+        for (E u : mine) if (u.cmd != null) all.add(u.cmd + (u.tag.isEmpty() ? "" : " " + u.tag));
+        all.addAll(out);
+        return all.isEmpty() ? "WAIT" : String.join(";", all);
+    }
+
+    static Th threat(E e, int age) {
+        Th t = new Th(); t.e = e; t.x = e.x; t.y = e.y; t.immob = age == 0 ? e.immob : 0;
+        if (t.immob > 0) { t.reach = 0; t.reach2 = t.immob >= 2 ? 0 : (e.cd <= 1 ? DASH : MOVE); }
+        else { t.reach = (e.cd == 0 ? DASH : MOVE) + age * MOVE; t.reach2 = (e.cd <= 1 ? DASH + MOVE : 2 * MOVE) + age * MOVE; }
+        t.w = 1.0 / (1 + age);
+        return t;
+    }
+    static boolean friendOnLine(E u, double qx, double qy, List<E> live) {
+        for (E f : live) if (f != u && segDist(f.ex, f.ey, u.ex, u.ey, qx, qy) < 500) return true;
+        return false;
+    }
+    static String net(E u, double qx, double qy) {
+        double d = hyp(qx - u.ex, qy - u.ey);
+        double ax = u.ex + (qx - u.ex) / d * NET_RANGE, ay = u.ey + (qy - u.ey) / d * NET_RANGE;
+        nets--; u.usedPower = true;
+        return "NET " + u.id + " " + Math.round(ax) + " " + Math.round(ay);
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        myId = Integer.parseInt(in.readLine().trim()); prey = (myId + 1) % 3; pred = (myId + 2) % 3;
+        in.readLine();                                          // map radius: always 8000
+        T = Integer.parseInt(in.readLine().trim());
+        tx = new double[T]; ty = new double[T]; tr = new double[T];
+        for (int i = 0; i < T; i++) { StringTokenizer st = new StringTokenizer(in.readLine()); st.nextToken(); tx[i] = Double.parseDouble(st.nextToken()); ty[i] = Double.parseDouble(st.nextToken()); tr[i] = Double.parseDouble(st.nextToken()); }
+        String line;
+        while ((line = in.readLine()) != null) {
+            if (line.trim().isEmpty()) continue;
+            readTurn(in, line);
+            String cmd;
+            try { cmd = decide(); } catch (RuntimeException ex) { System.err.println("ERR " + ex); cmd = "WAIT"; }
+            System.out.println(cmd);
+            System.out.flush();
         }
     }
 }
