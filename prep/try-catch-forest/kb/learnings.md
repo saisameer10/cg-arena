@@ -125,6 +125,30 @@ Method:
    (our turns: about 1 to 5 ms there, 5 to 25 ms here).
 6. **A game between three of our own bots takes about a minute**; budget 15 games per quarter of an hour.
 
+## 5b. Learnings from Gold and from the local referee
+
+1. **Counting labels on losses does not find causes.** "42 % of lost units were inside our own smoke" led to moving
+   the smoke onto the hunter; the ablation showed that smoke on ourselves is the most valuable tool we have and that
+   the new placement was harmful. Threatened units smoke, so they die in smoke more often. Switch a rule off and
+   measure; do not infer it from where the bodies are.
+2. **A switch on every rule from the first day.** With `F_...` constants and a local referee, 15 rules were judged
+   in 35 minutes. Three of our own additions were harmful and had been in the bot for hours.
+3. **Build the local referee on day one, not day two.** One game per second against 1.5 minutes through the API.
+   Everything before it was decided on 8 to 20 games.
+4. **Self play can accept what the field rejects.** The cut-off rule gained 0.2 to 0.4 of mean rank locally and lost
+   0.2 on 23 real Gold battles: it exploits how our own bots flee. The local referee may reject an idea; only real
+   opponents may accept it.
+5. **A replay comparison flatters, too.** v10 looked 0.29 better than v5 on v5's 21 battles and came out level on
+   its own 37 arena games (mean rank), although its rating is 2 to 3 points higher. Rank in a 3-player game moves
+   slowly; watch the rating and the place as well.
+6. **Mean rank depends on who you meet.** Matchmaking is by rating: in 69 Gold games we met a top-20 team 6 times.
+   Figures that look like the leaders' figures mean little when they come from the middle of the league.
+7. **A Gold submission is 37 games in about 40 minutes.** Only the last submission counts, so a submission is also
+   the fastest honest test there is, as long as the best version is the one left standing at the end.
+8. **Long nets miss.** Beyond 1500 a net at prey hits 20 to 33 % in Gold even when the prey cannot dash.
+9. **Tuning numbers is the last 1 %.** Twenty variations of fifteen numbers over 2,400 games: nothing outside the noise.
+   Structure (what the bot does at all) decided every step of the day, in both directions.
+
 ## 6. Checklist for the next contest
 
 1. Before the statement: collect game logs of the test league, measure rules, list patterns of winners and losers.

@@ -15,3 +15,5 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 
 `../Player.java` is the version to play: the best one that has passed a fair test. A candidate replaces it only after a fair test
 (paired seeds or replays of arena battles, both catches and losses) shows it is better; `kb/log.md` has the numbers.
+| `v12.java` | tested, not better than v10 | v11 + rescue nets without a sure aim, decoys only against predators in sight, optional dash-only unseen-ground penalty |
+| `v13.java` | tested: better on the local referee, worse on real Gold battles | v12 + the second hunter of a prey aims behind it (`F_PINCER`) |

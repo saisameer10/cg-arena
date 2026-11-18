@@ -5,7 +5,8 @@ import json, sys, re, math, collections
 
 tot = collections.Counter(); n = 0; games = 0; examples = collections.defaultdict(list)
 for fn in sys.argv[1:]:
-    d = json.load(open(fn, encoding='utf-8'))
+    try: d = json.load(open(fn, encoding='utf-8'))
+    except ValueError: continue          # a game still being written
     if 'log' not in d:
         continue
     games += 1

@@ -159,8 +159,8 @@ dash) re-run on fresh seeds: 1.99 against 2.03, inside the noise.
 |---|---|---|---|---|
 | v12 | rescue net without a sure aim; decoys only against predators in sight; wider approach dash | 1.98 against 2.00 (noise) | 26 battles: mean rank 1.81 against v10's 1.81; better in 6, worse in 6 | no gain, dropped |
 | dash-only unseen-ground penalty (`F_HIDDASH`) | | 2.01 against 2.00 | not run | no gain |
-| v13: second hunter aims behind the prey (`F_PINCER`) | | running | | |
-| nets limited to 1600 (`P_NET_MAX`) | see the table below | not meaningful (our own bots dodge differently) | running | |
+| v13: second hunter aims behind the prey (`F_PINCER`) | | **better**: 1.74 to 2.01 against 2.14 without it; in a pool with v1, v5 and v10: v1 2.19, v5 2.13, v10 2.00, v13 1.79 to 1.88 | **worse**: 23 battles, mean rank 2.04 against v10's 1.83; catches 2.70 against 3.35, lost 3.13 against 2.57; better in 6, worse in 7 | dropped: the local gain does not carry over to real opponents |
+| nets limited to 1600 (`P_NET_MAX`) | see the table below | not meaningful (our own bots dodge differently) | stopped after 3 battles (worse in 2) to free the replay slot; not decided | open |
 
 v10's nets in the 21 replayed Gold battles, by intended target (`tools/netclass.py`; 109 nets with a visible target):
 
@@ -179,3 +179,24 @@ v10's nets in the 21 replayed Gold battles, by intended target (`tools/netclass.
   does not make a long net sure in Gold: a walking unit 1800 away has a whole turn to step off the line.
 - On the same 21 battles v5 got 1.76 catches per game from nets (45 % hits on prey, 77 % converted), v10 1.38
   (36 %, 72 %): v10 throws earlier and from farther. That is the part of v5 worth getting back.
+
+## 9. Where this leaves us (2026-11-18, 13:00 IST)
+
+- **Live: v10.** 85th of 383 in Gold, score 18.9 (the rating kept moving after its 37 games as others played).
+  Path of the day: Bronze (v1, v5) -> Silver (v5, 2nd of 71) -> Gold: v5 148th, v10 104th, now 85th.
+- Nothing tried after v10 beat it on real Gold battles: v12 level, v13 worse, number tuning inside the noise.
+- **The local referee and the Gold field disagree on v13.** Locally the cut-off rule is the largest gain measured all
+  day; against real Gold teams it loses. Our own bots run straight away from the nearest hunter, so a second hunter
+  placed behind them works; real prey does not flee that way, and the second hunter ends up deeper among predators
+  (units lost 3.13 against 2.57). Rule from now on: the local referee can reject an idea or rank variants of one idea,
+  but only real opponents can accept it.
+- What real opponents can be tested with: replays of our own battles (exact, one at a time, 1.5 to 2.7 minutes
+  each, standard error about 0.15 to 0.2 on 25 battles) or a submission (37 games in about 40 minutes, played in
+  parallel by CodinGame, and it gives the rating itself). Only the last submission counts for the final ranking.
+
+Ideas still open, in the order I would try them:
+1. Net discipline: no nets at prey beyond about 1600 (hit 20 to 33 % there against 55 to 72 % inside).
+2. Hunters hit from out of sight (35 % of v10's losses): a ghost that walks ahead of the nearest hunter instead of
+   sitting on prey; or the unseen-ground penalty back for hunters that have no team mate within 1500.
+3. Sparring partners for the local referee that flee like real teams (sideways, towards trees, with early dashes), so
+   that local results transfer.
