@@ -1,0 +1,36 @@
+{
+  "name": "Try Catch Forest",
+  "url": "https://www.codingame.com/contests/unleash-the-geek-2026-opp35",
+  "bosses": [
+    {
+      "id": "wood",
+      "name": "Boss Wood (walks at prey in sight)",
+      "file": "bosses/boss.js",
+      "args": [
+        "wood"
+      ]
+    },
+    {
+      "id": "bronze",
+      "name": "Boss Bronze (flees and dashes)",
+      "file": "bosses/boss.js",
+      "args": [
+        "bronze"
+      ]
+    },
+    {
+      "id": "silver",
+      "name": "Boss Silver (nets and smoke)",
+      "file": "bosses/boss.js",
+      "args": [
+        "silver"
+      ]
+    }
+  ],
+  "starters": {
+    "python": "starters/bot.py",
+    "javascript": "starters/bot.js",
+    "java": "starters/Player.java",
+    "cpp": "starters/bot.cpp"
+  }
+}

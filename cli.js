@@ -276,10 +276,10 @@ async function main() {
   if (command !== 'match') usage(games);
 
   if (pos.length < 3) usage(games);
-  const refs = [parseBot(pos[1]), parseBot(pos[2])];
+  const refs = pos.slice(1).map(parseBot);   // two bots, or one per seat for games with more seats
   const players = refs.map(r => arena.resolvePlayer(gameDef, r));
   const n = Number(opts.games) || 1;
-  const wins = [0, 0]; let draws = 0;
+  const wins = refs.map(() => 0); let draws = 0;
   const replays = [];
   let lastReview = [];
   const reviews = [];
@@ -299,7 +299,7 @@ async function main() {
     reviews.push({ review: lastReview, side: 0, label: `game ${g + 1}` });
     if (opts.review === 'all') printReview(lastReview);
   }
-  console.log(`\n${label(refs[0])} vs ${label(refs[1])}: ${wins[0]} - ${wins[1]} (draws ${draws})  => P0 win rate ${(100 * wins[0] / n).toFixed(1)}%`);
+  console.log(`\n${refs.map(label).join(" vs ")}: ${wins.join(" - ")} (draws ${draws})  => P0 win rate ${(100 * wins[0] / n).toFixed(1)}%`);
   if (lastReview.length && opts.review !== 'all' && opts.review !== 'none') {
     console.log(`\nreview of the last game (--review all for every game, --review none to hide):`);
     printReview(lastReview.map(r => ({ ...r, message: (r.player === null || r.player === undefined ? '' : `P${r.player}: `) + r.message })), '  ');

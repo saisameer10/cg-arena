@@ -109,6 +109,15 @@ function removeDir(dir) {
  */
 async function runMatch({ gameDef, players, seed = 1, league = null, test = null, timeoutMultiplier = 1, workRoot, emit, signal = null }) {
   const meta = gameDef.Referee.meta;
+  // Games with more seats than players given (a 3-player game started with two): the given players take the seats in
+  // turn (A, B, A). The result then names the winner by its index in the list given, so callers that compare
+  // `winner` with a side keep working; `winnerSeat` and `seats` say who sat where.
+  let seats = null;
+  if (gameDef.kind !== 'solo' && players.length >= 2 && players.length < meta.playerCount) {
+    const given = players.length;
+    seats = Array.from({ length: meta.playerCount }, (_, i) => i % given);
+    players = seats.map((g, i) => i < given ? players[g] : { ...players[g], name: players[g].name ? `${players[g].name} (seat ${i})` : undefined });
+  }
   if (players.length !== meta.playerCount) throw new Error(`${gameDef.name} needs ${meta.playerCount} players`);
   if (gameDef.leagues && gameDef.leagues.length) {
     if (!league) league = (gameDef.leagues.find(l => l.default) || gameDef.leagues[0]).id;
@@ -209,6 +218,7 @@ async function runMatch({ gameDef, players, seed = 1, league = null, test = null
     }
     const result = referee.getResult();
     result.players = names;
+    if (seats) { result.seats = seats; result.winnerSeat = result.winner; if (result.winner !== null && result.winner !== undefined) result.winner = seats[result.winner]; }
     result.dq = referee.dq;
     if (aborted) { result.aborted = true; result.winner = null; }
     result.review = aborted ? [] : buildReview(referee, meta, timeoutMultiplier, slow, extraLines, names, dqInfo);

@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  const PLAYER_COLORS = ['#ff8a3d', '#4fa3ff'];
+  const PLAYER_COLORS = ['#ff8a3d', '#4fa3ff', '#6fe08a'];
   const state = { games: [], languages: [], game: null, lang: null, frames: [], static: null, meta: null, names: [], idx: 0, playing: null, running: false, abort: null, result: null, tab: 'console0', follow: true, logs: [], turnCount: [0, 0], board: [] };
   let editor = null, editorReady = null;
 
@@ -154,6 +154,9 @@
     const solo = state.game.kind === 'solo';
     $('p0Label').style.display = solo ? 'none' : '';
     $('p1Label').style.display = solo ? 'none' : '';
+    // games with three seats (meta.playerCount): a third slot; it starts as the same opponent as Player 1
+    $('p2Label').style.display = !solo && state.game.meta.playerCount >= 3 ? '' : 'none';
+    $('p2').value = $('p1').value;
     $('testLabel').style.display = solo ? '' : 'none';
     for (const [tab, show] of [['console1', !solo], ['arena', !solo], ['tests', solo]]) document.querySelector(`.tabs button[data-tab=${tab}]`).style.display = show ? '' : 'none';
     document.querySelector('.tabs button[data-tab=console0]').textContent = solo ? 'Console' : 'Console P0';
@@ -219,7 +222,7 @@
     let seed;
     try { seed = seedValue(); } catch (e) { $('result').textContent = e.message; $('result').className = 'lose'; return null; }
     const solo = state.game.kind === 'solo';
-    const players = solo ? [playerSpec(opts.candidate || 'me')] : ['p0', 'p1'].map(id => playerSpec($(id).value));
+    const players = solo ? [playerSpec(opts.candidate || 'me')] : slotIds().map(id => playerSpec($(id).value));
     const test = solo ? (opts.test || selectedTest(seed)) : null;
     state.running = true; state.frames = []; state.result = null; state.logs = []; state.idx = 0; state.follow = true; state.review = [];
     renderReview();
@@ -260,7 +263,7 @@
       const r = ev.result;
       state.review = ev.review || r.review || [];
       renderReview();
-      const me = ['p0', 'p1'].map(id => $(id).value === 'me');
+      const me = slotIds().map(id => $(id).value === 'me');
       let text, cls;
       const mistakes = state.review.filter(x => x.kind === 'mistake').length;
       const hint = state.review.length ? `   ·   Review: ${mistakes ? mistakes + ' mistake(s)' : state.review.length + ' note(s)'}, see the Review tab` : '';
@@ -276,7 +279,7 @@
       else if (r.winner === null || r.winner === undefined) { text = `Draw  (scores ${r.scores.join(' – ')})`; cls = 'draw'; }
       else {
         text = `P${r.winner} ${state.names[r.winner]} wins  (scores ${r.scores.join(' – ')})`;
-        cls = me[r.winner] && !me[1 - r.winner] ? 'win' : !me[r.winner] && me[1 - r.winner] ? 'lose' : 'draw';
+        cls = me.every(Boolean) || !me.some(Boolean) ? 'draw' : me[r.winner] ? 'win' : 'lose';
       }
       const dq = (r.dq || []).map((d, i) => d ? `P${i}: ${d}` : null).filter(Boolean);
       if (dq.length) text += '  —  ' + dq.join(' | ');
@@ -377,12 +380,13 @@
     if (v.startsWith('pool:')) return { type: 'pool', id: v.slice(5) };
     return { type: 'boss', id: v.slice(5) };
   }
+  const slotIds = () => state.game && state.game.kind !== 'solo' && state.game.meta.playerCount >= 3 ? ['p0', 'p1', 'p2'] : ['p0', 'p1'];
   function refreshOpponents() {
     const versions = (state.board || []).filter(r => r.kind === 'version');
     const opts = `<option value="me">My code</option>`
       + state.game.bosses.map(b => `<option value="boss:${b.id}">${esc(b.name)}</option>`).join('')
       + (versions.length ? `<optgroup label="My saved versions">` + versions.map(r => `<option value="${r.key}">${esc(r.name)} (${r.rating})</option>`).join('') + `</optgroup>` : '');
-    for (const id of ['p0', 'p1']) { const cur = $(id).value; $(id).innerHTML = opts; if ([...$(id).options].some(o => o.value === cur)) $(id).value = cur; }
+    for (const id of ['p0', 'p1', 'p2']) { const cur = $(id).value; $(id).innerHTML = opts; if ([...$(id).options].some(o => o.value === cur)) $(id).value = cur; }
     const sel = $('arenaOpp'); const curOpp = sel.value;
     sel.innerHTML = `<option value="all">All (bosses + my versions)</option><option value="bosses">Bosses only</option><option value="pool">My versions only</option>`
       + (state.board || []).map(r => `<option value="${r.key}">${esc(r.name)} only</option>`).join('');

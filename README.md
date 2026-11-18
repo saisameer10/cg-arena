@@ -73,6 +73,7 @@ First game in two minutes: pick **Ocean of Code**, language **Java**, Player 1 *
 | `temperatures` | io | Classic puzzle. | designed tests + generated tests |
 | `horse-racing-duals` | io | Classic puzzle; its review recognises typical wrong programs (unsorted neighbours, text sort, loop bounds, O(N²) timeouts). Added from the link alone by the pipeline. | 15 tests + random tests |
 | `unary` | io | Classic puzzle, added end to end with the generic pipeline: `new` → solution + input generator → `make-tests` → `validate`. | 2 statement examples + 12 generated tests |
+| `try-catch-forest` | multi, 3 seats | CodinGame's "Unleash the Geek 2026". The official referee is not public: port of our own Java referee (written from the statement, movement and timers fitted on real game logs; same seed gives the same game in both). Map generator and power pools are ours. Notes: `challenges/try-catch-forest.md`. | bosses wood / bronze / silver; with two players chosen the first also takes the third seat |
 
 Each challenge has notes in `challenges/<id>.md`: sources, every rule decision, and what differs from CodinGame. `node cli.js validate all` checks every challenge with the same generic battery; all are "ready".
 
