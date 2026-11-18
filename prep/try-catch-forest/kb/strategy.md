@@ -80,3 +80,23 @@ Statement rules the research could not see, and their use:
 - Hold ghosts still on a watch point (2600 sight) instead of following.
 - Hide behind a tree from the nearest predator when nothing is left to catch.
 - Local referee in cg-arena (add-challenge skill) for thousands of offline games and parameter tuning.
+
+## Added after the arena analysis (v6 to v8, see `arena.md` for the evidence)
+
+| Part | Rule | Why |
+|---|---|---|
+| Dash (v6) | walking moves are scored first; a dash is considered only for a catch, to reach netted prey in time, or when no walking move is safe this turn | 67 % of lost units had spent three or more dashes |
+| Approach dash (v7) | the first two dashes may be spent to close in on prey seen this turn or last turn when no predator is within 3000 | catches by turn 10 fell from 1.14 (v1) to 0.75 (v5); ties are decided by the earliest catches |
+| Smoke (v6) | thrown 2000 out along the line to the hunter, so the hunter is inside and we are just outside | 42 % of losses inside our own cloud |
+| In a cloud (v6) | no unseen-ground penalty, standing still costs 1500, ending inside costs 400 | units froze in smoke |
+| Team mates (v6) | -1.5 per unit of overlap inside 700 of another unit's end point | several units caught on one spot in one turn |
+| Ways out (v6) | `freedom`: of 12 walking directions, those that really move the unit 450 or more and do not approach a predator; below 5 costs 500 each; scored lazily, only for the leading candidates | wall deaths, pocket between tree and wall |
+| Unseen predators (v6) | out of sight for 1 to 3 turns: position moved along the last movement, dash cooldown counted down, weight 0.67 / 0.5 / 0.4 | predators that walked out of our own cloud or from behind a tree |
+| Unseen ground (v7) | walking penalty 400 when the unit has prey seen in the last 2 turns, else 800; dash 2500 | hunters held back |
+| Search (v8) | 16 x 16 cells of 1000 with the turn last seen; a unit without prey goes to the cell with the best (age x 120 - distance), away from cells claimed by other searchers and from known predators | prey in sight on 17 of 100 turns in a game without catches |
+| Time (v6) | movement simulated in one piece unless the wall is in reach; far trees skipped; after 25 ms of a turn the remaining units search 12 directions | v5 peaked at 23 ms of 50 on CodinGame |
+
+Weak points 2 (slow first catch) and 3 (hidden predators) of the list above are what these changes address;
+1 (enemy decoys), 5 (enemy net count), 6 (no offensive smoke or decoys) and 7 (side quest) are still open.
+New open point: seat 1 did worse than seat 2 in Bronze (mean rank 2.00 against 1.51 over 59 and 74 games); v1 showed
+the opposite, so it is probably the opponents of that hour, not the seat. Check again in Silver.

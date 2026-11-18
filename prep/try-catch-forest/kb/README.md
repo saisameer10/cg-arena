@@ -7,7 +7,11 @@ Branch `try-catch-forest` holds everything for this challenge.
 
 | Path | What |
 |---|---|
-| `prep/try-catch-forest/Player.java` | the bot (one file, Java, class `Player`) |
+| `prep/try-catch-forest/Player.java` | the bot that is live in the arena (one file, Java, class `Player`) |
+| `prep/try-catch-forest/versions/` | every version as a complete file, with its state (played, live, candidate) |
+| `prep/try-catch-forest/dummy/Player.java` | placeholder that only answers WAIT (to leave in the IDE or show on screen) |
+| `prep/try-catch-forest/kb/arena.md` | what happened against real players and what was changed because of it |
+| `prep/try-catch-forest/kb/learnings.md` | lessons about the game, the referee and the method; checklist for the next contest |
 | `prep/try-catch-forest/kb/rules.md` | the rules in our own words, per league, plus everything measured about the referee |
 | `prep/try-catch-forest/kb/strategy.md` | how the bot works, which research pattern each part answers, known weak points, ideas |
 | `prep/try-catch-forest/kb/log.md` | every version: what changed, why, and the test results |
@@ -27,6 +31,19 @@ python stats.py /e/cg-tmp/tcf/live/x*.json                               # wins,
 python deathsdbg.py /e/cg-tmp/tcf/live/x*.json                           # what the bot saw before each loss
 python audit.py /e/cg-tmp/tcf/live/x1.json 0                             # turn time, movement prediction error
 python replay.py /e/cg-tmp/tcf/live/x1.json 0 /e/cg-tmp/tcf/live/x1.in   # rebuild stdin; then: java Player < x1.in
+```
+
+Arena loop (run in a scratch folder, e.g. `E:\cg-tmp	cfrena`):
+
+```bash
+python arenafetch.py <submission_id>                     # battle list + every game log into ./games
+python arena.py . battles_<submission_id>.json           # ranks, catches, losses, nets, causes, match-ups
+python arena2.py . battles_<submission_id>.json          # how catches are made, why games are not won
+python field.py . battles_<submission_id>.json           # every team we met, with its habits
+bash rerun.sh <debug-bot> <game_id> > rep/<game_id>.json # replay a battle of the current league with our code
+python deathclass.py rep/*.json                          # label every loss by what the bot could see
+python mkversus.py out ABC a.java b.java c.java          # several versions in one file, opponents ["me","me"]
+python rrstats.py out v5 v7 v8 -- ABC BCA CAB ACB CBA BAC
 ```
 
 - A local replay reproduces the bot's decisions exactly (checked: 29 of 29 turns), so a bad turn can be debugged offline.
@@ -49,4 +66,6 @@ python replay.py /e/cg-tmp/tcf/live/x1.json 0 /e/cg-tmp/tcf/live/x1.in   # rebui
 
 | Date | League | State |
 |---|---|---|
-| 2026-11-18 | Bronze | bot v5 tested against the boss (see `log.md`); not submitted yet |
+| 2026-11-18 09:47 | Bronze | v1 submitted, 09:54 v5 submitted |
+| 2026-11-18 10:16 | Silver | v5 promoted; same statement and input as Bronze; 7th of 68 at 36 % |
+| 2026-11-18 | Silver | candidates v6 to v8 built from the arena analysis, not yet shown to be better (see `log.md`) |
