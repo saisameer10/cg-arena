@@ -400,6 +400,8 @@ it catches as much as they do but later (0.40 by turn 10 against 0.54 to 0.71) a
 session on the user's instruction to it). It **replaced v10 in the arena** (v10 stood at about 85th of 383, later
 134th of 407, rating 19.0) and restarted the ranking games. Only the last submission counts for the final ranking.
 
+**Update 16:20 IST (reported by the testing session):** the live bot is now the hybrid, submission 41747326 (`vhybrid4.java`: the 15:08 mimic copy in four-unit games, v10 in all others), so copy A alone is no longer live. `vmimic_c.java` is on the replay lane, on the hybrid's arena battles; about 10 battles by 16:45, 20 by 17:10. What follows describes the state at 15:52.
+
 **The live copy is not the best copy.** It has a fault found at 15:14: on turn 1 a unit next to a predator throws a
 net at the predator instead of its smoke in about 40 % of the cases (smoke 53 % with a predator start under 1500;
 the real leader 80 %, and no net at all on turn 1). The file in the repository (`versions/vmimic.java`, commit
