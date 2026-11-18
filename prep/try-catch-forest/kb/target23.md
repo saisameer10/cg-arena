@@ -95,7 +95,7 @@ untested in the arena, so it is a candidate for tomorrow, not a result.
 - Nothing here is proven. The order of work that the evidence supports: item 1 in the arena first; item 3.3 and
   item 4 overnight on the local referee; vchase to the arena only after a timing run.
 
-## What 23 is, measured (2026-11-18, 18:45 IST, from the leaderboard and battle lists; the window was closed)
+## What 23 is, measured (2026-11-18, 18:25 IST, from the leaderboard and battle lists; the window was closed)
 
 Reading battles, the leaderboard and game logs works while the window is paused. Scripts: `E:/cg-tmp/tcf/peer/peers.py`
 (teams ranked 35 to 64), `peers23.py` (95 to 130); opponent ranks are the current leaderboard ranks.
@@ -134,7 +134,7 @@ Reading battles, the leaderboard and game logs works while the window is paused.
    predator team hardly ever won (11 % of places); with the live code's early aggression it is the largest item
    against mid-field teams (31 %): the aggression bought earlier catches and paid in units.
 
-## How teams at 23 play the lower half of the field, next to us (2026-11-18, 19:30 IST)
+## How teams at 23 play the lower half of the field, next to us (2026-11-18, 18:40 IST)
 
 271 games of teams ranked 95 to 130 and 214 games of the live code (two runs), all against opponents ranked beyond
 100. `tools/peerprofile.py`, `tools/earlynets.py` (they read the downloads in `E:/cg-tmp/tcf/peer/`). The sample is
@@ -188,3 +188,7 @@ within 1,900 after our move (`F_NET1`, `P_NET1`, `P_NET1_MAX`). 60 local games w
 by turn 10 are 0.93 against 0.58 for the live code (the local referee shows the mechanism, not the rank). Expected
 size, honestly: earlier catches, not more; a few hundredths of mean rank through tie-breaks unless the early catch
 also frees hunters. It joins the paired test of the last window.
+
+Checked at 18:42 IST: test games are refused outside the play windows ("your site may only run test games and
+submit during its play windows"), so the paired test cannot run overnight. Battle lists, the leaderboard and game
+logs stay readable.
