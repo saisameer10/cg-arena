@@ -200,3 +200,16 @@ Ideas still open, in the order I would try them:
    sitting on prey; or the unseen-ground penalty back for hunters that have no team mate within 1500.
 3. Sparring partners for the local referee that flee like real teams (sideways, towards trees, with early dashes), so
    that local results transfer.
+
+## 10. Hand-over from the analysis session (13:15 IST)
+
+`gold-autopsy.md` (with `autopsy/our-gold-games.md` and `autopsy/top-gold-teams.md`) is a second, larger study by
+another session: our 80 Gold games and 2,176 games of the top five. Its ranked list of changes is the plan from here:
+(1) net at prey only when one of our hunters is within about 1000 of the target, (2) the leader's turn-1 rule (dash
+and smoke on ourselves when a predator starts within 2000), (3) keep predators in the model for the whole life of a
+cloud. A third session builds these as switches and passes them through the local referee; this session replays the
+bundle on real Gold battles.
+
+One disagreement, recorded so nobody takes it from the local referee: the smoke trigger distance. On one local pool
+1800 scored 2.14 against 1.90 for 2300; on another pool 1800 scored 1.88 against 2.05. The pool decides. Being settled
+on real opponents: all 37 of v10's Gold battles replayed with only that number changed (running).
