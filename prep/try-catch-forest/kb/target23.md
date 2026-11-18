@@ -323,3 +323,32 @@ Place at a turn against the final place (share of all games):
 
 We lose a lead no more often than they do; they lead more often. Our own leak is second place turning into last
 between turns 30 and 60.
+
+## Turn-1 orders per unit, after the first catch, the prey team's scorers (2026-11-19, 02:40 IST; `tools/peer/more.py`, `fall.py`)
+
+Units by their turn-1 order (share of units; made a catch by turn 8; lost by turn 8):
+
+| Turn-1 order | Us | At 23 | At 25 |
+|---|---|---|---|
+| net + dash | 0 % | 14 %; 34 %; 10 % | 16 %; 35 %; 15 % |
+| net + walk | 0 % | 4 %; 24 %; 13 % | 6 %; 29 %; 15 % |
+| dash, no power | 41 %; 12 %; 2 % | 26 %; 16 %; 15 % | 27 %; 16 %; 10 % |
+| walk, no power | 13 %; 8 %; 7 % | 39 %; 6 %; 8 % | 33 %; 7 %; 7 % |
+| smoke + walk | 15 %; 7 %; 15 % | 4 %; 17 %; 21 % | 2 %; 19 %; 34 % |
+| decoy + walk | 19 %; 7 %; 17 % | 2 %; 13 %; 30 % | 3 %; 3 %; 35 % |
+| decoy + dash | 4 %; 20 %; 6 % | 10 %; 13 %; 20 % | 8 %; 15 %; 12 % |
+
+- A unit that nets on turn 1 has a catch by turn 8 in 24 to 35 % of cases; no other opening order comes near.
+  One unit in five of theirs does it, none of ours.
+- **A third of our units stand and use smoke or a decoy on turn 1 (34 %); theirs 5 to 6 %.** Under threat they dash
+  (decoy + dash). Units that smoke or decoy and walk are the ones lost most, in every group (threat is the common
+  cause, so this is not proof that the smoke hurts).
+- After our first catch (by turn 10): a second catch within 10 turns in 36 % of our games, 46 % and 47 % of theirs;
+  dashes per unit in those 10 turns 0.80 against 1.35 and 1.17; units lost 0.47 against 0.90 and 0.65. With a second
+  catch the mean rank is 1.56 (us), without 1.89.
+- The prey team scores 3.00 a game against us, 2.68 and 2.61 against them. We catch 42 % of its scoring units at some
+  point, they 52 % and 63 %. A scorer adds 0.72 to 0.85 points a game after its first one.
+- First or second at turn 30 and last at the end (16 % of our games, 11 % and 8 % of theirs): after turn 30 we catch
+  0.43 while the prey team catches 2.49. Games in which we catch nothing after turn 30: 36 % of ours (prey units
+  left 2.6, our units alive 2.7), 24 % and 22 % of theirs (prey left 1.9 and 1.7). We stop with prey still on the
+  board; they stop when little is left.
