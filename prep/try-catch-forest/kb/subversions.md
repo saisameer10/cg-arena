@@ -147,3 +147,23 @@ real Gold battles: rank, and the share of net hits on prey that become a catch (
 
 The finisher rule is not in either file: alone it lost on 16 real Gold battles (2.06 against 1.75).
 Local check only: compiles, 60 games on one thread with no crash (1.95 against v10 2.08 and v5 1.97; cannot judge).
+
+## Pools with the three mimic bots as fixed opponents (16:00 IST)
+
+Each version under test plays alone against the mimics of ATI x iHot, Les Gens Bons and FullStuck (builds of commit
+85ae4a6), 240 games on the same maps, every seat order; 180 games per version, one standard error about 0.06.
+
+| Version under test | Its mean rank | Catches | Lost | by turn 10 | ATI mimic | Les Gens Bons mimic | FullStuck mimic |
+|---|---|---|---|---|---|---|---|
+| v10 | 2.13 | 3.14 | 2.73 | 0.44 | 2.16 | 1.88 | 1.81 |
+| smoke from 1,800 | 2.19 | 3.03 | 2.67 | 0.46 | 2.12 | 1.82 | 1.87 |
+| commit to netted prey | 2.10 | 3.14 | 2.75 | 0.46 | 2.15 | 1.89 | 1.84 |
+| finisher 1,300 | 2.11 | 3.10 | 2.52 | 0.37 | 2.11 | 1.93 | 1.84 |
+| tempo, all four | 2.04 | 3.04 | 2.61 | 0.56 | 2.16 | 1.88 | 1.91 |
+| v5 | 1.99 | 3.10 | 2.41 | 0.48 | 2.13 | 1.88 | 1.99 |
+
+- No candidate is clearly better or worse than v10 here (all inside two standard errors). The order agrees with
+  the real battles only weakly: smoke from 1,800 is last, but the finisher, which lost on real battles, is level.
+- In all six pools the Les Gens Bons and FullStuck mimics rank 0.2 to 0.3 better than whichever of our versions
+  sits with them, and the ATI mimic ranks level with ours. On the local referee those two mimics are the strongest
+  bots we have. Not tested on real battles.
