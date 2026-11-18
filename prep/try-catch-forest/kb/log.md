@@ -369,3 +369,48 @@ Tools: `tools/wallmove.py`, `tools/pingpong.py` (plain arena logs, positions reb
   (0.55 per game), 96 of them in the first 20 turns.
 - Not a problem: steps deflected by a tree or the wall (6 % of steps, no more losses after them than after any
   step), standing still (237 steps in 273 games).
+
+## Night of 2026-11-18: the ring at 3,600 (`tools/gen/mkreach.py`, `tools/reachcheck.py`)
+
+Another session found that with a predator 2,500 to 3,600 away our units back off from prey that better teams go
+after, and named the five-turn chase forecast (`rollout` in `eval`) as the cause. Checked here and found to be
+right but incomplete.
+
+**The mechanism.** `if (nearestTh < 3600) { ... sc += 1.5 * Math.min(rm, 2600); ... }` is a bonus of 0 to 3,900
+that exists only within 3,600 of a predator; a step that ends beyond 3,600 gets nothing. The same line is in v10,
+the live code and every candidate built on it. v10 re-run on 21 of its debug games (2,733 hunting or searching
+decisions with a predator known):
+- 43 % of the chosen steps end 3,400 to 3,600 from the nearest known predator;
+- when the straight step to the goal would end beyond 3,600, the unit stays inside in 99 of 106 cases;
+- units that start 3,600 to 4,200 away step into the zone in 185 of 435 cases.
+- The forecast walks the unit on in the same direction for five turns, so a step toward prey on the predator's
+  side is scored as walking into the predator (minus 30,000).
+- In the arena logs the ring is only a small bump (the predator moves after our step, and positions are estimates).
+
+**Two switches** (`tools/gen/mkreach.py <base> <out> [nocliff] [reach] [netline]`, works on every live-family file):
+`nocliff` scores the forecast as a penalty from its cap, so nothing is gained by standing near a predator;
+`reach` counts the forecast, the net-line term and the wall term only for predators within 2,500 while the unit
+hunts prey in sight within 2,600. `reach` without `nocliff` would move the ring to just inside 2,500 of a predator.
+
+Live code and variants on the inputs of the same 21 real games (`tools/reachcheck.py`):
+
+| Bot | Steps toward prey in sight, predator 2,500 to 3,600 away | Same, no predator within 3,600 | Steps ending 3,400 to 3,600 from a predator |
+|---|---|---|---|
+| live code | 57 of 126 (45 %) | 79 % | 42 % |
+| + nocliff (`vlive_nocliff.java`) | 52 of 126 (41 %) | 80 % | 10 % |
+| + nocliff + reach (`vlive_ring.java`) | 95 of 127 (75 %) | 83 % | 10 % |
+
+With `nocliff` alone the units park just outside 3,600 instead of just inside (42 % of steps end at 3,600 to 3,800).
+
+Local pools, 360 games each, the same maps, against the imitations of the leader and of Les Gens Bons
+(`tools/poolstats.py`; the local referee cannot rank gaps of this size, the pools are a crash check):
+
+| Bot | Mean rank | Catches | after turn 30 | Lost | Back-and-forth | Errors |
+|---|---|---|---|---|---|---|
+| live code | 2.05 | 2.84 | 1.36 | 2.42 | 8.4 % | 0 |
+| + nocliff | 1.98 | 3.00 | 1.44 | 2.38 | 8.2 % | 0 |
+| + nocliff + reach | 2.03 | 2.92 | 1.43 | 2.41 | 8.2 % | 0 |
+| + nocliff + reach + netline | 2.04 | 2.94 | 1.46 | 2.43 | 8.1 % | 0 |
+
+Reading: no crash, no more units lost, slightly more catches; the back-and-forth did not fall (the units still
+turn at a boundary, now at 3,600 from outside or at 2,500). Not tested on real opponents.

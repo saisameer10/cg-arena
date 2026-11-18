@@ -65,3 +65,11 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `vlive_dash.java` | crash-checked; candidate | live code + dashes spent on prey (`F_DASHPREY`; `../tools/gen/mklive5.py`) |
 | `vlive_first.java` | crash-checked; candidate | `vlive_net1` + `F_DASHPREY`: the "catch first" package |
 | `vlive_combo.java` | crash-checked (20 local games); candidate | `vlive_all3` + turn-1 dash and net also at prey known only from the rotation + up to 2 early nets without a sure aim in turns 2 to 5 (`tools/gen/mkcombo.py`) |
+
+### Files added in the night of 2026-11-18 (the ring at 3,600; `tools/gen/mkreach.py`, `../kb/log.md`)
+
+| File | State | What it is |
+|---|---|---|
+| `vlive_nocliff.java` | crash-checked (360 local games) | live code + the chase forecast as a penalty, not a bonus that exists only within 3,600 of a predator |
+| `vlive_ring.java` | crash-checked (360 local games); candidate for the paired test | `vlive_nocliff` + while hunting prey in sight within 2,600, forecast, net-line and wall terms count only predators within 2,500 |
+| `vlive_combo_ring.java` | compiles; not run | `vlive_combo` + the same two switches |
