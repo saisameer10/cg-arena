@@ -45,6 +45,21 @@ all 15 games v5 hunted v7, v7 hunted v8 and v8 hunted v5. A version's catches me
 A fair round robin needs both cycles (ABC, BCA, CAB and ACB, CBA, BAC). What it does say: nothing here shows that
 v7 or v8 is stronger than v5, so v5 stays in the arena until a fair test says otherwise.
 
+Replays of real Silver battles (same opponents, seats and map as the arena game; `tools/rerun.sh`), first 16 battles
+of submission 41742214 by game id, so not selected by result:
+
+| | First | Second | Last | Mean rank | Catches | by turn 10 | by 20 | Lost |
+|---|---|---|---|---|---|---|---|---|
+| v5 in the arena | 10 | 4 | 2 | 1.50 | 3.81 | 0.56 | 1.44 | 1.38 |
+| v8 replaying the same battles | 10 | 6 | 0 | 1.38 | 3.75 | 0.62 | 1.75 | 1.31 |
+
+Better rank in 3 battles, worse in 3, same in 10. Control: v5 replaying 8 of its own battles gave the identical result
+in 8 of 8, so replays are exact and the opponents are deterministic. v8 is level with v5 or slightly ahead against
+the Silver field; 16 games cannot say more.
+
+Local referee, 120 games (20 maps x 6 seat orders): mean rank v1 1.88, v5 1.98, v8 2.13. Against our own bots the
+newer versions are not better. Ablation of every change over 1,920 local games: see the table at the end of this file.
+
 ## What each step was based on
 
 - v1 -> v2. `audit.py` on a debug game: 8 % of the predicted end positions were more than 50 units off, always next
@@ -63,3 +78,52 @@ v7 or v8 is stronger than v5, so v5 stays in the arena until a fair test says ot
 - Turn time: 17 to 46 ms on the first turn (limit 1000), about 1 ms afterwards (limit 50), no turn over 40 ms.
 - No error, timeout or invalid command in 42 test games (plus one probe game with a script that only printed its input).
 - Local replay of three recorded games: same number of answers as turns, no exception.
+
+## Ablation on the local referee (2026-11-18, 1,920 games)
+
+v9 is v8 with a switch on every change. Each pool: v9 and four variants with one switch off, 8 maps x 60 seat
+orders = 480 games, 288 games per version. Mean rank: lower is better; one standard error is about 0.05.
+
+| Variant (one thing switched off) | Mean rank | v9 in the same pool | What it says |
+|---|---|---|---|
+| no smoke at all | 2.35 | 1.97 | smoke is the most valuable single tool (lost 2.82 units per game against 2.29) |
+| smoke ahead of ourselves instead of past the hunter | **1.75** | 1.97 | the old placement is better: the change of v6 was wrong |
+| no unseen-ground penalty | **1.81** | 2.00 | the penalty costs more catches than it saves units |
+| no avoidance of old predator positions | **1.91** | 2.03 | slightly harmful |
+| no search map (ring patrol) | 2.14 | 1.97 | the map helps |
+| no approach dash | 2.08 | 1.97 | early dashes towards prey help |
+| no stale-predator model | 2.07 | 2.00 | helps a little |
+| no ways-out count | 2.05 | 2.00 | helps a little |
+| no dash budget rule | 2.01 | 1.97 | neutral |
+| no five-turn chase | 1.96 | 2.03 | neutral on rank (but 2.73 units lost against 2.24) |
+| no wide nets | 2.05 | 2.03 | neutral |
+| no decoys | 2.02 | 2.03 | neutral here (our own bots do not net much at range) |
+| no separation | 1.98 | 2.00 | neutral |
+| no hiding when the prey is gone | 1.97 | 1.97 | neutral |
+| no soft distance to predators | 1.99 | 1.97 | neutral |
+| **v5** (in the last pool) | **1.69** | 1.97 | v5 beats v9 clearly |
+
+Reading:
+- The arena label "42 % of lost units were inside our own smoke" was a correlation. Units throw smoke when they are
+  in danger, so units in smoke die more often than others; that does not mean the smoke killed them. Taking the
+  smoke away, or moving it onto the hunter, makes things worse. The real fault was the freeze (a unit standing still
+  in the cloud), and that came from the unseen-ground penalty.
+- v9 lost to v5 because of two changes (smoke placement, and it kept the unseen-ground penalty), not because the
+  other ideas are bad: the map, the approach dash, the stale-predator model and the ways-out count each help.
+
+## v10 (2026-11-18): the version for Gold
+
+v10 = v9 with `F_SMOKE`, `F_HIDDEN` and `F_OLDPRED` off (the three changes the ablation found harmful).
+
+| Test | v5 | v10 |
+|---|---|---|
+| Local referee, 480 games (v5 against four variants: cA = v10 with old-predator avoidance, cB = v10, cC = v10 without separation, cD = v10 without the chase lookahead) | 2.16 | cA 1.95, cB 1.96, cC 1.94, cD 1.97 |
+| All 21 Gold arena battles replayed: first / second / last | 9 / 7 / 5 | 11 / 9 / 1 |
+| ... mean rank | 1.81 | 1.52 |
+| ... catches per game, by turn 10, by turn 20 | 3.48, 0.48, 1.29 | 3.62, 1.24, 2.00 |
+| ... units lost per game | 1.95 | 2.67 |
+| ... better / worse / same rank per battle | | 7 / 3 / 11 |
+| Turn time on CodinGame (1,926 turns) | | median 0.8 ms, worst 25 ms |
+
+`kb/gold.md` has the reasoning and the profile of the top Gold teams. v11 is v10 with tunable numbers; tuning pools
+on the local referee: see below when filled in.

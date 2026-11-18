@@ -40,6 +40,28 @@ class Player {
     static List<double[]> clouds = new ArrayList<>();      // x, y, last turn of life
     static List<Th> threats = new ArrayList<>();
     static List<E> oldPred = new ArrayList<>();          // predators last seen 4 to 8 turns ago
+    static List<E> liveNow = new ArrayList<>();          // my living units (ex, ey = where each one will stand)
+    static long turnStart;
+    // ---- switches for ablation tests (tools/ablate.sh turns one off at a time and plays it against the full bot)
+    static final boolean F_DASH = true;      // dash only for a catch, netted prey, or when no walk is safe
+    static final boolean F_APPROACH = true;  // early dashes to close in on prey
+    static final boolean F_SMOKE = false;     // smoke thrown past the hunter instead of ahead of ourselves
+    static final boolean F_NOSMOKE = false;  // true: never throw smoke
+    static final boolean F_SEP = true;       // keep team mates apart
+    static final boolean F_FREE = true;      // ways-out count (wall, pockets)
+    static final boolean F_STALE = true;     // predators out of sight keep moving
+    static final boolean F_MAP = true;       // search map instead of the ring patrol
+    static final boolean F_HIDDEN = false;    // penalty for moves onto ground nobody sees
+    static final boolean F_OLDPRED = false;   // avoid places where a predator stood 4 to 8 turns ago
+    static final boolean F_ROLL = true;      // five-turn chase lookahead
+    static final boolean F_NETWIDE = true;   // nets also at prey that could dodge
+    static final boolean F_DECOY = true;     // decoys walked at the predator
+    static final boolean F_HIDE = true;      // stand still when no prey is left
+    static final boolean F_PROX = true;      // keep 2500 away from predators (soft)
+    static boolean approachDash;                         // this unit may spend an early dash to close in on prey
+    static boolean lastUnsafe, lastNeedF; static double lastReward; // set by eval: a predator could touch this move / ways out still to be scored / catch value
+    static final double[] cS = new double[64], cX = new double[64], cY = new double[64]; static final String[] cC = new String[64];
+    static final boolean[] cF = new boolean[64], cT = new boolean[64];
 
     // ---------------------------------------------------------------- geometry
     static double hyp(double a, double b) { return Math.sqrt(a * a + b * b); }
@@ -70,7 +92,7 @@ class Player {
         double d = hyp(gx - x, gy - y);
         if (d < 1e-6) return new double[]{x, y};
         double len = Math.min(d, speed), vx = (gx - x) / d * len, vy = (gy - y) / d * len;
-        final int slices = 4;
+        final int slices = hyp(x, y) + len >= R - UR ? 4 : 1;         // the wall is the only reason to cut the move up
         for (int sl = 0; sl < slices; sl++) {
             double rem = 1.0 / slices, sx = x, sy = y;
             for (int it = 0; it < 4 && rem > 1e-7; it++) {
@@ -78,7 +100,8 @@ class Player {
                 if (A < 1e-9) break;
                 double bt = 2; int bi = -1;
                 if (!ghost) for (int i = 0; i < T; i++) {
-                    double fx = x - tx[i], fy = y - ty[i], rr = tr[i] + UR;
+                    double fx = x - tx[i], fy = y - ty[i], rr = tr[i] + UR, far = rr + len;
+                    if (fx * fx + fy * fy > far * far) continue;
                     double B = 2 * (fx * rvx + fy * rvy), C = fx * fx + fy * fy - rr * rr, t;
                     if (C <= 0) { if (B >= 0) continue; t = 0; }
                     else { double D = B * B - 4 * A * C; if (D < 0) continue; t = (-B - Math.sqrt(D)) / (2 * A); if (t < 0 || t > 1) continue; }
@@ -147,6 +170,44 @@ class Player {
             if (!seen) hidden++;
         }
         return hidden / 7.0;
+    }
+
+    // ---------------------------------------------------------------- search map
+    // The arena cut into 1000 x 1000 cells with the turn each one was last in sight of one of my units. Units without
+    // prey walk to the cell that has been out of sight longest (for its distance), each to a different area.
+    // The old fixed ring patrol had prey in sight on 17 of 100 turns in a game without a single catch.
+    static final int GC = 16; static final double CELL = 1000;
+    static final int[] cellSeen = new int[GC * GC]; static final boolean[] cellOk = new boolean[GC * GC]; static boolean gridReady;
+    static double cellX(int c) { return -8000 + (c % GC + 0.5) * CELL; }
+    static double cellY(int c) { return -8000 + (c / GC + 0.5) * CELL; }
+    static void updateGrid() {
+        if (!gridReady) {
+            for (int c = 0; c < GC * GC; c++) {
+                double x = cellX(c), y = cellY(c); boolean ok = hyp(x, y) < R - 500;
+                for (int k = 0; k < T && ok; k++) if (hyp(x - tx[k], y - ty[k]) < tr[k] + UR) ok = false;
+                cellOk[c] = ok; cellSeen[c] = -20;
+            }
+            gridReady = true;
+        }
+        for (int c = 0; c < GC * GC; c++) {
+            if (!cellOk[c]) continue;
+            double x = cellX(c), y = cellY(c);
+            for (E u : mine) if (hyp(u.x - x, u.y - y) < 1900 && !treeBlocks(u.x, u.y, x, y, 0) && !smokeBlocks(u.x, u.y, x, y)) { cellSeen[c] = turn; break; }
+        }
+    }
+    /** Cell to search for a unit at (ux, uy); cells near the ones in `claimed` or near a known predator count less. */
+    static int searchCell(double ux, double uy, List<Integer> claimed) {
+        int best = -1; double bs = -1e18;
+        for (int c = 0; c < GC * GC; c++) {
+            if (!cellOk[c]) continue;
+            int age = Math.min(turn - cellSeen[c], 40); if (age < 3) continue;
+            double x = cellX(c), y = cellY(c);
+            double sc = age * 120 - hyp(x - ux, y - uy);
+            for (int o : claimed) sc -= Math.max(0, 3000 - hyp(x - cellX(o), y - cellY(o)));
+            for (Th t : threats) if (hyp(x - t.x, y - t.y) < 2500) sc -= 3000;
+            if (sc > bs) { bs = sc; best = c; }
+        }
+        return best;
     }
 
     // ---------------------------------------------------------------- input
@@ -243,6 +304,23 @@ class Player {
         }
         return min;
     }
+    /**
+     * Ways out of (px, py): how many of 12 walking directions really move the unit (no tree, no wall, no pocket)
+     * without bringing it closer to a predator. The wall halves it, a pocket between a tree and the wall makes it 0.
+     */
+    static int freedom(double px, double py) {
+        int n = 0;
+        for (int k = 0; k < 12; k++) {
+            double a = k * Math.PI / 6;
+            double[] e = simMove(px, py, px + Math.cos(a) * MOVE, py + Math.sin(a) * MOVE, MOVE, false);
+            if (hyp(e[0] - px, e[1] - py) < 450) continue;
+            boolean ok = true;
+            for (Th t : threats) { if (t.w < 0.5 || t.immob > 1) continue; double d0 = hyp(px - t.x, py - t.y); if (d0 < 3000 && hyp(e[0] - t.x, e[1] - t.y) < d0 - 100) { ok = false; break; } }
+            if (ok) n++;
+        }
+        return n;
+    }
+
     static double eval(E u, double px, double py, double ux, double uy, boolean dash, double wx, double wy, double wG, E target, boolean[] certain) {
         double sx = u.x, sy = u.y, sc = 0;
         double mySp = hyp(px - sx, py - sy);
@@ -265,7 +343,8 @@ class Player {
             }
         }
         if (certain != null) certain[0] = reward >= 300000;
-        sc += reward;
+        sc += reward; lastReward = reward; lastUnsafe = false; lastNeedF = false;
+        boolean startSmoke = inSmoke(sx, sy, 0);
         double deathScale = reward >= 300000 ? 0.2 : 1;
         boolean smokeHere = inSmoke(px, py, 150);
         double nearestTh = 1e18;
@@ -273,7 +352,7 @@ class Player {
             double m = 1e18;
             for (int i = 1; i <= 10; i++) { double f = i / 10.0; double d = hyp(sx + (px - sx) * f - t.x, sy + (py - sy) * f - t.y) - t.reach * f; if (d < m) m = d; }
             double lim = CATCH + (t.reach > 0 ? 45 : 15);
-            if (m < lim) sc -= t.w * deathScale * (1e6 + (lim - m) * 500);
+            if (m < lim) { sc -= t.w * deathScale * (1e6 + (lim - m) * 500); if (t.w >= 0.5) lastUnsafe = true; }
             double D = hyp(px - t.x, py - t.y);
             if (D < nearestTh) nearestTh = D;
             if (t.immob <= 1) {
@@ -282,20 +361,26 @@ class Player {
                 if (m2 < 0) sc -= t.w * 25 * Math.min(-m2, 1200);
             }
             boolean hidden = smokeHere || treeBlocks(px, py, t.x, t.y, 0);
-            if (t.immob <= 1) sc -= t.w * (hidden ? 0.3 : 1.0) * Math.max(0, 2500 - D);
+            if (F_PROX && t.immob <= 1) sc -= t.w * (hidden ? 0.3 : 1.0) * Math.max(0, 2500 - D);
             if (!hidden && D < 2470 + (t.immob > 0 ? 0 : 600) && !treeBlocks(px, py, t.x, t.y, NET_TREE)) sc -= t.w * 400;
         }
         if (nearestTh < 4000) sc -= 1.5 * Math.max(0, hyp(px, py) - 6300);
         if (nearestTh < 3600) {
-            double rm = rollout(px, py, ux, uy);
+            lastNeedF = F_FREE && reward < 300000;
+            double rm = F_ROLL ? rollout(px, py, ux, uy) : 2600;
             sc += 1.5 * Math.min(rm, 2600);
             if (rm < CATCH + 60) sc -= deathScale * 30000;
         }
+        if (F_SEP && reward < 300000) for (E o : liveNow) if (o != u) sc -= 1.5 * Math.max(0, 700 - hyp(px - o.ex, py - o.ey));   // never stack
+        if (startSmoke && u.immob == 0) {                                // blind in a cloud: do not stand, walk out
+            if (hyp(px - sx, py - sy) < 100) sc -= 1500;
+            if (smokeHere) sc -= 400;
+        }
         sc -= wG * hyp(px - wx, py - wy);
-        if (reward < 300000 && (dash || hyp(px - sx, py - sy) > 100)) sc -= hiddenFrac(px, py) * (dash ? 2500 : 1200);   // no blind steps
-        for (E o : oldPred) sc -= Math.max(0, 1800 - hyp(px - o.x, py - o.y));                                          // a predator was here
+        if (F_HIDDEN && reward < 300000 && !startSmoke) sc -= hiddenFrac(px, py) * (dash ? 2500 : target != null && turn - target.seen <= 2 ? 400 : 800);                            // no blind steps
+        if (F_OLDPRED) for (E o : oldPred) sc -= 0.5 * Math.max(0, 1800 - hyp(px - o.x, py - o.y));                                          // a predator was here
         if (dash) {
-            sc -= 700 + 250 * u.fat;
+            sc -= approachDash ? 300 : 700 + 250 * u.fat;
             if (target != null && target.immob > 0 && (hyp(target.x - sx, target.y - sy) - CATCH) / MOVE > target.immob - 1) sc += 1500;
         }
         return sc;
@@ -306,6 +391,9 @@ class Player {
         List<E> live = new ArrayList<>(), ghosts = new ArrayList<>();
         for (E u : mine) (u.ghost ? ghosts : live).add(u);
         boolean preyGone = myScore >= N;
+        liveNow = live;
+        updateGrid();
+        List<Integer> claimed = new ArrayList<>();
 
         // threats: predators in sight, and the ones seen in the last three turns (with a wider reach)
         threats.clear(); oldPred.clear();
@@ -345,7 +433,7 @@ class Player {
         boolean[] cert = new boolean[1];
         for (E u : live) {
             if (u.immob > 0) { u.tag = "HELD"; continue; }
-            if (preyGone) { double nt0 = 1e18; for (Th t : threats) nt0 = Math.min(nt0, hyp(u.x - t.x, u.y - t.y)); if (nt0 > 3600) { u.tag = "HIDE"; continue; } }
+            if (preyGone && F_HIDE) { double nt0 = 1e18; for (Th t : threats) nt0 = Math.min(nt0, hyp(u.x - t.x, u.y - t.y)); for (E o : oldPred) nt0 = Math.min(nt0, hyp(u.x - o.x, u.y - o.y) + 1200); if (nt0 > 3600 && !inSmoke(u.x, u.y, 0)) { u.tag = "HIDE"; continue; } }
             E target = targetOf.get(u);
             double gx, gy, wG;
             if (target != null) {
@@ -355,16 +443,32 @@ class Player {
                 double l = hyp(gx, gy); if (l > R - UR) { gx *= (R - UR) / l; gy *= (R - UR) / l; }
                 wG = (target.immob > 0 || hyp(target.x - u.x, target.y - u.y) < 1500) ? 2.0 : 1.0;
             } else {
-                int idx = u.id - myId * N;
-                double a = idx * 2 * Math.PI / Math.max(1, N) + turn * 0.12;
-                gx = Math.cos(a) * 4500; gy = Math.sin(a) * 4500; wG = preyGone ? 0.05 : 0.5;
+                int cell = preyGone || !F_MAP ? -1 : searchCell(u.x, u.y, claimed);
+                if (cell >= 0) { claimed.add(cell); gx = cellX(cell); gy = cellY(cell); wG = 1.0; }
+                else {
+                    int idx = u.id - myId * N;
+                    double a = idx * 2 * Math.PI / Math.max(1, N) + turn * 0.12;
+                    gx = Math.cos(a) * 4500; gy = Math.sin(a) * 4500; wG = preyGone ? 0.05 : 0.5;
+                }
             }
             double[] w = steer(u.x, u.y, gx, gy);
-            double best = -1e300; String bestCmd = null; double bex = u.x, bey = u.y; boolean bestCert = false, bestDash = false;
+            int nc = 0;
+            boolean hurry = System.nanoTime() - turnStart > 25_000_000L;   // 50 ms per turn: the last units get a coarser search
+            boolean walkUnsafe = true;                      // true until a walk (or standing) is found that no predator can touch
+            cS[nc] = eval(u, u.x, u.y, 0, 0, false, w[0], w[1], wG, target, cert); cX[nc] = u.x; cY[nc] = u.y; cC[nc] = null; cF[nc] = lastNeedF; cT[nc] = cert[0]; nc++;
+            if (!lastUnsafe) walkUnsafe = false;
+            boolean rush = target != null && target.immob > 0 && (hyp(target.x - u.x, target.y - u.y) - CATCH) / MOVE > target.immob - 1;
+            boolean preyNear = false; for (E q : seenPrey) if (hyp(q.x - u.x, q.y - u.y) < 1700) preyNear = true;
+            // early catches decide ties: the first two dashes (1 and 2 turns of cooldown) may be spent to close in on prey
+            // we know about, as long as no predator is near
+            double ntF = 1e18; for (Th t : threats) if (t.w >= 0.5) ntF = Math.min(ntF, hyp(u.x - t.x, u.y - t.y));
+            approachDash = F_APPROACH && target != null && turn - target.seen <= 1 && u.fat <= 2 && ntF > 3000 && hyp(target.x - u.x, target.y - u.y) > 1500;
             for (int sp = 0; sp < 2; sp++) {
-                if (sp == 1 && u.cd > 0) break;
+                // dashes are a budget (the k-th costs k turns): only for a catch, to reach netted prey in time,
+                // or when no walk is safe this turn
+                if (sp == 1 && (u.cd > 0 || (F_DASH && !(walkUnsafe || rush || preyNear || approachDash)))) break;
                 double speed = sp == 0 ? MOVE : DASH;
-                for (int k = -2; k < 24; k++) {
+                for (int k = -2; k < 24; k += (hurry && k >= 0 ? 2 : 1)) {
                     double dx, dy;
                     if (k == -2) { dx = w[0] - u.x; dy = w[1] - u.y; } else if (k == -1) { dx = gx - u.x; dy = gy - u.y; } else { dx = Math.cos(k * Math.PI / 12); dy = Math.sin(k * Math.PI / 12); }
                     double l = hyp(dx, dy); if (l < 1) continue;
@@ -373,11 +477,19 @@ class Player {
                     ax = Math.round(ax); ay = Math.round(ay);
                     double[] e = simMove(u.x, u.y, ax, ay, speed, false);
                     double s = eval(u, e[0], e[1], dx / l, dy / l, sp == 1, w[0], w[1], wG, target, cert);
-                    if (s > best) { best = s; bestCmd = (sp == 1 ? "DASH " : "MOVE ") + u.id + " " + (long) ax + " " + (long) ay; bex = e[0]; bey = e[1]; bestCert = cert[0]; bestDash = sp == 1; }
+                    if (sp == 0 && !lastUnsafe) walkUnsafe = false;
+                    if (F_DASH && sp == 1 && !(walkUnsafe || rush || approachDash || lastReward >= 300000 || (lastReward >= 25000 && u.fat <= 2))) continue;
+                    cS[nc] = s; cX[nc] = e[0]; cY[nc] = e[1]; cC[nc] = (sp == 1 ? "DASH " : "MOVE ") + u.id + " " + (long) ax + " " + (long) ay; cF[nc] = lastNeedF; cT[nc] = cert[0]; nc++;
                 }
             }
-            double s = eval(u, u.x, u.y, 0, 0, false, w[0], w[1], wG, target, cert);
-            if (s > best) { best = s; bestCmd = null; bex = u.x; bey = u.y; bestCert = cert[0]; bestDash = false; }
+            // ways out (wall, pockets) cost 12 simulated moves each: scored only for the candidates that lead
+            int bi = 0;
+            for (int it = 0; it < (hurry ? 3 : 14); it++) {
+                bi = 0; for (int i = 1; i < nc; i++) if (cS[i] > cS[bi]) bi = i;
+                if (!cF[bi]) break;
+                cS[bi] -= 500 * Math.max(0, 5 - freedom(cX[bi], cY[bi])); cF[bi] = false;
+            }
+            String bestCmd = cC[bi]; double bex = cX[bi], bey = cY[bi]; boolean bestCert = cT[bi];
             u.cmd = bestCmd; u.ex = bex; u.ey = bey;
             double nt = 1e18; for (Th t : threats) nt = Math.min(nt, hyp(u.x - t.x, u.y - t.y));
             u.tag = bestCert ? "CATCH" : nt < 2500 ? "FLEE" : target != null ? "HUNT" : "SEEK";
@@ -403,7 +515,7 @@ class Player {
                 // a target that cannot dodge (no dash, close, or not moving across the line) is always worth a net;
                 // any other visible prey gets one while a net stays in reserve for defence (63 % of such nets hit in Gold)
                 boolean sure = q.immob == 1 || q.cd > 0 || d <= 1400 || lateral <= 250;
-                if (!sure && nets < 2) continue;
+                if (!sure && (nets < 2 || !F_NETWIDE)) continue;
                 double cost = d + (sure ? 0 : 1500);
                 if (cost < bd) { bd = cost; bq = q; bx = qx; by = qy; }
             }
@@ -439,14 +551,17 @@ class Player {
             if (near == null) continue;
             boolean line = !treeBlocks(u.ex, u.ey, near.x, near.y, NET_TREE);
             boolean wantSmoke = (u.immob > 0 && D < 3500) || (D < 2300 && line);
-            if (wantSmoke && smokes > 0 && !inSmoke(u.ex, u.ey, 400)) {
-                double mx = u.ex - u.x, my = u.ey - u.y, ml = hyp(mx, my);
-                double cx = u.ex, cy = u.ey;
-                if (ml > 50) { cx += mx / ml * 900; cy += my / ml * 900; }
-                double cl = hyp(cx, cy); if (cl > R - 200) { cx *= (R - 200) / cl; cy *= (R - 200) / cl; }
+            double[] nv = predV(near); double hx = near.x + nv[0], hy = near.y + nv[1];      // where the hunter will be
+            if (!F_NOSMOKE && wantSmoke && smokes > 0 && !inSmoke(u.ex, u.ey, F_SMOKE ? 0 : 400) && (!F_SMOKE || !inSmoke(hx, hy, 200))) {
+                // the cloud goes 2000 out, past the hunter: it is blind inside (radius 1900), we stay just outside
+                // and keep our sight. A cloud on ourselves blinded us: 42 % of our arena losses were inside our own smoke.
+                double dl = Math.max(1, hyp(hx - u.ex, hy - u.ey));
+                double cx = u.ex + (hx - u.ex) / dl * SMOKE_THROW, cy = u.ey + (hy - u.ey) / dl * SMOKE_THROW;
+                if (!F_SMOKE) { double mx = u.ex - u.x, my = u.ey - u.y, ml = hyp(mx, my); cx = u.ex; cy = u.ey; if (ml > 50) { cx += mx / ml * 900; cy += my / ml * 900; } }
+                double cl = hyp(cx, cy); if (cl > R - 50) { cx *= (R - 50) / cl; cy *= (R - 50) / cl; }
                 out.add("SMOKE " + u.id + " " + Math.round(cx) + " " + Math.round(cy));
                 smokes--; u.usedPower = true; clouds.add(new double[]{cx, cy, turn + SMOKE_LIFE});
-            } else if (decoys > 0 && u.immob == 0 && turn - u.lastDecoy > 8 && Dpre < 2900 && !treeBlocks(u.x, u.y, near.x, near.y, 0) && !inSmoke(u.ex, u.ey, 400)) {
+            } else if (F_DECOY && decoys > 0 && u.immob == 0 && turn - u.lastDecoy > 8 && Dpre < 2900 && !treeBlocks(u.x, u.y, near.x, near.y, 0) && !inSmoke(u.ex, u.ey, 0)) {
                 out.add("DECOY " + u.id + " " + Math.round(near.x) + " " + Math.round(near.y));
                 decoys--; u.usedPower = true; u.lastDecoy = turn;
             }
@@ -480,11 +595,19 @@ class Player {
         for (E e : seenPred) if (e.immob == 0 && hyp(e.x - u.x, e.y - u.y) <= CATCH + MOVE * u.immob + MOVE) return true;
         return false;
     }
+    /**
+     * A predator as a threat. One that is out of sight (age 1 to 3 turns: behind a tree, or inside a cloud, where it is
+     * invisible but still walks) is assumed to have kept its last movement; its dash comes back as the turns pass.
+     */
     static Th threat(E e, int age) {
-        Th t = new Th(); t.e = e; t.x = e.x; t.y = e.y; t.immob = age == 0 ? e.immob : 0;
-        if (t.immob > 0) { t.reach = 0; t.reach2 = t.immob >= 2 ? 0 : (e.cd <= 1 ? DASH : MOVE); }
-        else { t.reach = (e.cd == 0 ? DASH : MOVE) + age * MOVE; t.reach2 = (e.cd <= 1 ? DASH + MOVE : 2 * MOVE) + age * MOVE; }
-        t.w = 1.0 / (1 + age);
+        Th t = new Th(); t.e = e; t.immob = Math.max(0, e.immob - age);
+        double[] v = age > 0 && F_STALE ? predV(e) : new double[]{0, 0};
+        t.x = e.x + v[0] * age; t.y = e.y + v[1] * age;
+        double l = hyp(t.x, t.y); if (l > R - UR) { t.x *= (R - UR) / l; t.y *= (R - UR) / l; }
+        int cd = Math.max(0, e.cd - age);
+        if (t.immob > 0) { t.reach = 0; t.reach2 = t.immob >= 2 ? 0 : (cd <= 1 ? DASH : MOVE); }
+        else { t.reach = (cd == 0 ? DASH : MOVE) + age * 300; t.reach2 = (cd <= 1 ? DASH + MOVE : 2 * MOVE) + age * 300; }
+        t.w = 1.0 / (1 + 0.5 * age);
         return t;
     }
     static boolean friendOnLine(E u, double qx, double qy, List<E> live) {
@@ -508,6 +631,7 @@ class Player {
         String line;
         while ((line = in.readLine()) != null) {
             if (line.trim().isEmpty()) continue;
+            turnStart = System.nanoTime();
             readTurn(in, line);
             String cmd;
             try { cmd = decide(); } catch (RuntimeException ex) { System.err.println("ERR " + ex); cmd = "WAIT"; }

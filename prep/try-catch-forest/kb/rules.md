@@ -83,3 +83,27 @@ From 1,408 Gold games (see `challenges/try-catch-forest-prep.md`), still valid u
 - Whether `DASH` during cooldown or `NET` with an empty pool is an invalid command (the bot never sends either).
 - Whether enemies have the same number of powers as we do (the bot assumes they always have nets).
 - Rules of the leagues above Bronze. The Gold games studied before the statement used the same five commands.
+
+## Local referee (`sim/Sim.java`)
+
+A referee of our own, for testing versions against each other over thousands of games. It is built from the
+statement and the measurements above; it is not CodinGame's code. Where the statement leaves a choice, this is what
+it does:
+
+| Topic | Choice | Basis |
+|---|---|---|
+| Movement | the fitted slide rule, same code as in the bot | 638 real moves |
+| Collisions | the turn is cut into 24 steps; at each step, units of different teams closer than 440 collide | statement: "as soon as they overlap", in time order |
+| Order inside a step | units in id order (seat 0 first) | unknown; the bias is at most 1/24 of a turn |
+| Map | 12 to 33 trees placed with 3-fold symmetry, radius 500 to 1000 (one in four up to 2000); units of player p are the units of player 0 turned by p x 120 degrees; no unit closer than 500 to another | probe games (27 trees, 505 to 717; rotation of the starts) |
+| Units per team | 3 to 6, uniform | statement |
+| Powers | 2 to 5 of each kind, the same for the three players | pools seen: 4 5 3, 4 0 2, 2 3 1; equality between players is assumed |
+| Net | stops at the first tree, unit or decoy on its path; holds every unit within 470 of that point; hits any team except ghosts and the thrower; 4 turns shown on the next turn | statement + debug games |
+| Smoke | appears after the moves, 9 turns | statement |
+| Sight | 2000, 2600 after a turn without moving; a unit in a cloud sees nothing and is not seen; a line through a cloud or a tree is blocked | statement |
+| Decoy as seen by others | a UNIT with the id of the original, ghost 0, cooldown 0, fatigue 1, not held | mirror game |
+| Time limits | none | |
+
+Check against reality: in 120 local games between v1, v5 and v8 the teams made 2.5 to 2.9 catches per game, 0.4 to 0.5
+of them by turn 10; in the Bronze and Silver arena v1 and v5 made 3.1 to 3.8 and 0.6 to 1.1. Same order of
+magnitude, a little slower. The local opponents are our own bots, which flee better than most Silver teams.

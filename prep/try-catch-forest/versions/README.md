@@ -5,10 +5,13 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | File | State | What it is |
 |---|---|---|
 | `v1.java` | played 80 Bronze games in the arena | first bot written from the statement |
-| `v5.java` | **live in the arena** (Bronze -> Silver); same as `../Player.java` | v1 + referee slide rule, five-turn chase, wider nets, unseen-ground penalty, rescue nets |
+| `v5.java` | live in the arena from Bronze to Gold (submissions 41741950, 41742214, 41742767) | v1 + referee slide rule, five-turn chase, wider nets, unseen-ground penalty, rescue nets |
 | `v6.java` | candidate, not submitted | v5 + dash budget, smoke past the hunter, no stacking, ways-out count, unseen predators keep moving, time guard |
 | `v7.java` | candidate, not submitted | v6 + early approach dash, lighter unseen-ground penalty for hunters |
 | `v8.java` | candidate, not submitted | v7 + search map instead of the ring patrol |
+| `v9.java` | test bed | v8 with an on/off switch (`F_...`) on every change, for ablation on the local referee |
+| `v10.java` | **validated for Gold; same as `../Player.java`; submit this one** | v9 with three harmful changes off (unseen-ground penalty, smoke past the hunter, old-predator avoidance) |
+| `v11.java` | test bed | v10 with its numbers as constants (`P_...`) that `tools/variant.sh` can change, for tuning |
 
-`../Player.java` is always the version that is live in the arena. A candidate replaces it only after a fair test
+`../Player.java` is the version to play: the best one that has passed a fair test. A candidate replaces it only after a fair test
 (paired seeds or replays of arena battles, both catches and losses) shows it is better; `kb/log.md` has the numbers.
