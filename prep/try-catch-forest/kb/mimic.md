@@ -341,6 +341,31 @@ against 53 %), early catches, ghosts. Both are usable as sparring partners with 
 meets the tolerance, and neither has a 240-game table. The 72 games are one run: differences of 0.2 of mean rank
 between versions are inside the noise.
 
+### The three mimics and v10 in one pool (16:04 IST)
+
+240 games, every ordered triple of vmimic (15:33 copy = vmimic_b) / vmimic2 / vmimic3 / v10 on 10 shared maps,
+180 games per version, 0 crashes. Fingerprint lines inside the tolerance: vmimic 40 of 50, vmimic2 35, vmimic3 35.
+
+| Version | Games | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 | by turn 20 |
+|---|---|---|---|---|---|---|---|---|
+| vmimic (ATI x iHot) | 180 | 1.983 | 36.1 % | 34.4 % | 3.00 | 3.31 | 0.48 | 1.12 |
+| vmimic2 (Les Gens Bons) | 180 | 1.928 | 36.1 % | 28.9 % | 2.99 | 3.00 | 0.61 | 1.20 |
+| vmimic3 (FullStuck) | 180 | 2.089 | 27.8 % | 36.7 % | 2.92 | 3.22 | 0.59 | 1.18 |
+| v10 | 180 | 1.983 | 33.3 % | 31.7 % | 3.06 | 2.43 | 0.59 | 1.28 |
+
+Catches per game, hunter (row) on prey (column):
+
+| | vmimic | vmimic2 | vmimic3 | v10 |
+|---|---|---|---|---|
+| vmimic | | 3.08 | 3.27 | 2.65 |
+| vmimic2 | 3.53 | | 3.22 | 2.22 |
+| vmimic3 | 3.28 | 3.05 | | 2.42 |
+| v10 | 3.12 | 2.87 | 3.18 | |
+
+Reading: the four are level on rank (the spread, 0.16, is about two standard errors). What separates them is
+survival: v10 loses 2.43 units a game, the mimics 3.00 to 3.31, and every mimic catches fewer v10 units (2.22 to
+2.65) than v10 catches of theirs (2.87 to 3.18). The Les Gens Bons mimic loses the fewest units of the three.
+
 ## 10. Leader mimic against our versions (240 local games, one thread)
 
 Pool: vmimic (15:33 copy), v10, v5, v1 and the newest candidate vres; every ordered triple (all seat orders) on 4
@@ -417,3 +442,61 @@ untested against real opponents.
   predator start under 2600; smoke thrown at the predator (at most 1800 out) with the flee dash instead of on
   ourselves; no net on a dash turn and none on turn 1, aimed at position + last move and 400 beyond instead of
   2000 out; dashes spent freely (the real squad: 24 a game, v10: 13.8); a prey under 1600 beats a predator under 1200.
+
+## 13. Copies of the leader mimic, and copy C (16:10 IST)
+
+| File | md5 | What |
+|---|---|---|
+| `versions/vmimic_a.java` | 8a9d4df40526 | the 15:08 copy: replayed on 20 Gold battles, live in the arena since 15:41 (submission 41746943). Turn-1 fault: a net at the predator instead of the smoke in about 40 % of the cases |
+| `versions/vmimic.java` = `vmimic_b.java` | 3675cf452a21 | the 15:33 copy: fault fixed, v10's catch test, no net on a dash turn (sections 7 and 10) |
+| `versions/vmimic_c.java` | 0dad520a8901 | copy B with four parts taken back from v10 |
+
+**Why copy C.** The arena games of copy A (analysis session, `E:/cg-tmp/tcf/gold/mimcmp.py`): 3.18 units lost a
+game against v10's 2.55; 38 % of its nets stopped at their aim point without a hit (v10 19 %); 11 % of its nets hit
+one of our own units or decoys (v10 0 %); 5.7 of 6 units lost in six-unit games; 3 % of its decoys took a net
+(v10 16 %). Locally the extra losses fall between turns 10 and 40, not in the opening.
+
+**What changed** (each a switch at the top of the file):
+- `F_FLEE_V10`: a flight is scored with v10's terms (two-turn margin, five-turn chase, ways out, net lines, wall
+  ring) instead of plain distance. The leader's own flight rule could not be recovered; v10's is the tested one.
+- Nets 2000 out through position + last move (`F_NET_FULL_RANGE`, `P_NET_LEAD = 1`), also at predators; v10's
+  check that no unit of ours is within 500 of the line, extended to our own decoys.
+- `F_DECOY_V10`: the decoy walks straight at a predator in sight within 2900, every 9 turns at most.
+- `F_SEP`: v10's 1.5 per unit of overlap within 700 of a team mate's end point.
+Unchanged from the leader's rule book: the whole opening (dash and smoke at the predator on turn 1), dash rules,
+smoke with the flee dash, attack of prey under 1600, net timing (none on turn 1 or on a dash turn), ghosts.
+
+**Local test** (240 games, every ordered triple on 10 shared maps, 180 games per version, 0 crashes, 0 invalid
+orders):
+
+| Version | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 | by turn 20 |
+|---|---|---|---|---|---|---|---|
+| vmimic_c | 1.861 | 38.9 % | 25.0 % | 2.93 | 3.08 | 0.69 | 1.21 |
+| vmimic_b | 2.039 | 29.4 % | 33.3 % | 2.75 | 3.11 | 0.60 | 1.06 |
+| v10 | 1.994 | 36.7 % | 36.1 % | 2.76 | 2.62 | 0.68 | 1.26 |
+| v5 | 2.089 | 28.3 % | 37.2 % | 2.77 | 2.40 | 0.47 | 1.06 |
+
+Hunter on prey: C on B 3.43, C on v10 2.78, C on v5 2.58; B on C 3.33; v10 on C 3.02, v10 on B 3.03; v5 on C 2.88.
+By team size, mean rank of C / B / v10: 3 units 1.89 / 1.97 / 1.86; 4 units 1.92 / 2.11 / 2.04; 5 units 1.81 /
+2.03 / 1.89; 6 units 1.81 / 1.97 / 2.17 (36 to 72 games per cell: weak).
+
+Survival and net lines, leader / copy C / v10 in the same local games:
+
+| Line | Leader (110 real games) | Copy C (180 local) | v10 (same local games) |
+|---|---|---|---|
+| Turn-1 dash, predator start under 1500 / 1500-2000 / 2000-2500 | 92 / 97 / 91 % | 100 / 81 / 90 % | |
+| Turn-1 smoke, same bands | 80 / 89 / 86 % | 87 / 79 / 88 % | |
+| Units lost by turn 10 per game | 0.41 | 0.67 | 0.58 |
+| Units lost per game | 2.79 | 3.08 | 2.62 |
+| Net hits taken in turns 1-5 per game (4 / 6 units) | 0.40 (morning study, all sizes) | 0.32 / 0.22 | 0.35 / 0.61 |
+| Nets that hit an enemy unit | 64 % | 64 % | 61 % |
+| Nets that hit one of our own units or decoys | | 1-2 % (copy B 3-5 %) | 0-4 % |
+| Catches per game | 3.61 | 2.93 | 2.76 |
+
+Fingerprint: 38 of 50 lines inside the tolerance (copy B 40: the decoy lines are now v10's by choice).
+**What copy C does not fix**: units lost per game is unchanged against copy B (3.08 against 3.11) and stays above
+v10's 2.62; the gain in rank (0.18 over copy B, about two standard errors) comes from fewer last places, better
+nets and the six-unit games. No real-opponent test yet. Turn time on the shared machine: mean 1.2 to 2.6 ms, worst
+later turn 12 to 30 ms with one outlier game at 79 ms while three games ran at once; the replay will show the real
+figure. **Local results did not transfer to real Gold teams for one candidate today.**
+
