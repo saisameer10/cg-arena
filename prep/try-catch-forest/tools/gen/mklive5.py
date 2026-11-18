@@ -1,0 +1,33 @@
+# vlive_dash = live code + dashes spent on prey; vlive_first = vlive_net1 + the same (the "catch first" package).
+import io, os
+V = 'E:/New folder/prep/try-catch-forest/versions/'
+def build(src, name, note):
+    s = io.open(V + src, encoding='utf-8').read()
+    def rep(a, b):
+        nonlocal s
+        assert s.count(a) == 1, (a[:80], s.count(a)); s = s.replace(a, b)
+    rep("    static final boolean F_NETWIDE = true;",
+        "    // ---- " + note + "\n"
+        "    //      With a dash ready, prey 1100 to 2100 away and no predator within 2500, the live code dashes at the prey in\n"
+        "    //      5 % of turns, teams at 23 and 25 in 15 to 40 %; that dash doubles or triples the catches within three turns\n"
+        "    //      and the hunter is lost in 0 to 1 % of those turns either way. A dash unused at turn 100 is worth nothing.\n"
+        "    static final boolean F_DASHPREY = true;\n"
+        "    static final double P_DP_MIN = 1100, P_DP_MAX = 2700, P_DP_PRED = 2500;   // prey distance band, nearest predator\n"
+        "    static final int P_DP_FAT = 4, P_DP_LATE = 60;                           // dashes already made at most; no limit from this turn\n"
+        "    static final boolean F_NETWIDE = true;")
+    rep("            for (int sp = 0; sp < 2; sp++) {\n                // dashes are a budget",
+        "            if (F_DASHPREY && !approachDash && target != null && turn - target.seen <= 1 && target.immob == 0 && ntF > P_DP_PRED\n"
+        "                    && (u.fat <= P_DP_FAT || turn >= P_DP_LATE)) {\n"
+        "                double dq = hyp(target.x - u.x, target.y - u.y);\n"
+        "                if (dq >= P_DP_MIN && dq <= P_DP_MAX) approachDash = true;\n"
+        "            }\n"
+        "            boolean dashLikely = F_DASHPREY && ntF > P_DP_PRED && (u.fat <= P_DP_FAT || turn >= P_DP_LATE);   // a likely catch is worth a later dash too\n"
+        "            for (int sp = 0; sp < 2; sp++) {\n                // dashes are a budget")
+    rep("(lastReward >= 25000 && u.fat <= (aggro ? AG_FAT : 2)))) continue;",
+        "(lastReward >= 25000 && (dashLikely || u.fat <= (aggro ? AG_FAT : 2))))) continue;")
+    for o in ('E:/cg-tmp/tcf/sub/%s/Player.java' % name, V + name + '.java'):
+        os.makedirs(os.path.dirname(o), exist_ok=True)
+        io.open(o, 'w', encoding='utf-8', newline='\n').write(s)
+    print(name, 'written', len(s))
+build('vlive_41748059.java', 'vlive_dash', 'vlive_dash: the live code plus dashes spent on prey.')
+build('vlive_net1.java', 'vlive_first', 'vlive_first: vlive_net1 (nets on turn 1) plus dashes spent on prey: the "catch first" package.')

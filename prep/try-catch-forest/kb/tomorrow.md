@@ -67,6 +67,12 @@ python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
   throw 0.80 nets a game on turn 1 and catch 0.29 more by turn 10; we throw none). 60 local games without a crash.
   Read `pfstats.py` by units per team for this one: its case is the 5- and 6-unit games (`target23.md`, last section),
   where teams at 23 have a catch by turn 15 in 83 % and 95 % of games and we in 60 % and 72 %.
+- Added 2026-11-19, 00:50 IST, on the user's direction ("catch first"): `vlive_dash.java` = the live code with dashes spent on
+  prey (`F_DASHPREY`: target in sight 1,100 to 2,700 away, no predator within 2,500, at most 4 dashes made or turn 60 and
+  later; a likely catch may also use such a dash), and `vlive_first.java` = `vlive_net1` plus the same. Both crash-checked
+  locally (20 games). **Round 1 is now: live, vgo_b, net1, dash, first, late**; `vlive_3p` and `vlive_engine` wait for round 2.
+  The held unit already nets back before anything else in the live code (`F_HELD_FIRST`). Not built: the smoke-on-predator
+  rule with a wall fix (the rule is `F_SMOKE_ON_PRED` in `vuser1.java`; no wall fix exists in the repo).
 - Six bots do not fit 40 battles each. Two rounds instead: round 1 all six on the same 20 battles (120 games,
   40 minutes, until about 09:45); round 2 the live code and the two best of round 1 on 25 further battles (75 games,
   25 minutes). `pairfield.py` skips games already played, so round 2 is the same command with fewer names and a

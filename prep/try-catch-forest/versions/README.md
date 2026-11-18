@@ -59,4 +59,8 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `vlive_engine.java` | crash-checked (2.00 against 2.02 locally; turn time as the live code); candidate | live code + two-ply search as a veto on moves that are caught within two turns, and as the test of a certain catch |
 | `vlive_net1.java` | crash-checked; candidate | live code + nets on turn 1: at most 0 / 1 / 2 / 2 for 3 / 4 / 5 / 6 units (`../kb/target23.md`) |
 | `vlive_press.java` | crash-checked (120 local games); candidate for the paired test | live code + pressing dashes at prey in sight (`F_PRESS`, `tools/gen/mkpress.py`); evidence in `../kb/target25.md` section 3 |
-
+| `vlive_t1.java` | crash-checked; candidate | live code + the first turn (`F_T1`): dash at prey in sight, net it, no smoke unless a predator is within 1000 (`tools/gen/mkt1hnet.py`, `../kb/target25.md` sections 4 and 10) |
+| `vlive_hnet.java` | crash-checked; judged only inside `vlive_all3` | live code + a held unit nets back before it smokes (`F_HNET`) |
+| `vlive_all3.java` | crash-checked; candidate | `vlive_press` + `F_T1` + `F_HNET` |
+| `vlive_dash.java` | crash-checked; candidate | live code + dashes spent on prey (`F_DASHPREY`; `../tools/gen/mklive5.py`) |
+| `vlive_first.java` | crash-checked; candidate | `vlive_net1` + `F_DASHPREY`: the "catch first" package |
