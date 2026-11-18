@@ -591,3 +591,51 @@ its nearest prey in only 17 to 26 %, and the net came around turn 22.
 on turn 1 and attacks under 1,600), but as the leader's mimic it throws no net on turn 1, none on a dash turn and
 waits three turns between nets; in the opening of a small game copy E lifts those three limits.
 
+## 16. Which bot for which team size: local pools (17:15 IST) and a warning about every earlier pool
+
+**Warning that applies to sections 9, 10, 13 and 14.** Those pools played every seat order on 4 to 10 shared maps.
+The maps, not the games, are the sample there: a four-unit pool on 10 maps gave copy C 1.78 and v10 2.19, the same
+pool on 10 other maps gave 2.00 and 1.94. Differences under about 0.3 of mean rank in those sections are noise.
+The pools below use one map per game (`-Dspread=1 -Dunits=N`, 240 maps per size, five versions, 144 games each,
+seat orders balanced over the run, 0 crashes); one standard error of a mean rank is about 0.07.
+
+| Units | Version | Mean rank | Wins | Last | Games with a catch by turn 15 | Rank with / without it | Catches | Lost |
+|---|---|---|---|---|---|---|---|---|
+| 3 | vmimic_c | 1.889 | 36.8 % | 25.7 % | 41 % | 1.56 / 2.12 | 1.88 | 1.70 |
+| 3 | vmimic2 | 1.924 | 36.1 % | 28.5 % | 42 % | 1.55 / 2.19 | 1.83 | 1.56 |
+| 3 | vmimic_e | 2.035 | 32.6 % | 36.1 % | 53 % | 1.83 / 2.26 | 1.66 | 1.91 |
+| 3 | vmimic3 | 2.069 | 32.6 % | 39.6 % | 39 % | 1.61 / 2.36 | 1.69 | 2.02 |
+| 3 | v10 | 2.083 | 28.5 % | 36.8 % | 36 % | 1.73 / 2.28 | 1.56 | 1.43 |
+| 4 | v10 | 1.924 | 37.5 % | 29.9 % | 54 % | 1.64 / 2.26 | 2.59 | 2.08 |
+| 4 | vmimic_e | 1.979 | 35.4 % | 33.3 % | 69 % | 1.82 / 2.34 | 2.56 | 2.65 |
+| 4 | vmimic_c | 2.000 | 34.7 % | 34.7 % | 59 % | 1.81 / 2.27 | 2.64 | 2.65 |
+| 4 | vmimic2 | 2.021 | 32.6 % | 34.7 % | 65 % | 1.95 / 2.16 | 2.56 | 2.65 |
+| 4 | vmimic3 | 2.076 | 26.4 % | 34.0 % | 56 % | 1.91 / 2.28 | 2.50 | 2.82 |
+| 5 | vmimic_e (= copy C at this size) | 1.889 | 42.4 % | 31.2 % | 73 % | 1.77 / 2.21 | 3.54 | 3.60 |
+| 5 | v10 | 1.903 | 34.0 % | 24.3 % | 70 % | 1.84 / 2.05 | 3.62 | 2.69 |
+| 5 | vmimic3 | 1.972 | 31.9 % | 29.2 % | 76 % | 1.88 / 2.26 | 3.50 | 3.66 |
+| 5 | vmimic2 | 2.083 | 31.2 % | 39.6 % | 76 % | 1.93 / 2.57 | 3.29 | 3.58 |
+| 5 | vmimic_c | 2.153 | 27.1 % | 42.4 % | 71 % | 2.00 / 2.52 | 3.29 | 3.72 |
+
+The six-unit pool was still playing when this was written (logs in `E:/cg-tmp/tcf/mimic/logs/z6`; table with
+`python tools/mimic_sizes.py E:/cg-tmp/tcf/mimic/logs/z6`).
+
+Reading, stated plainly:
+- **No version is separated from the others at any size** (largest gap 0.19 with 3 units, 0.15 with 4, 0.26 with 5).
+  With 5 units copy E and copy C are the same program and score 1.89 and 2.15: that 0.26 is pure noise and is the
+  yardstick for every other gap in this table.
+- **The local referee does not reproduce the arena's split by size.** In the arena v10 scored 2.44 with 4 units and
+  the leader mimic 1.64 over 22 four-unit games; here v10 is level with the mimics at 4 units. So these pools
+  cannot choose a bot per team size; the arena record by size (`kb/target23.md`) is the evidence to use.
+- What does repeat locally, at every size and for every version: a game with a catch by turn 15 ends about 0.4 to
+  0.6 of mean rank better than one without, as in the arena.
+- **The small-team opening works on its own measure, not on rank.** Copy E gets a catch by turn 15 in 69 % of the
+  four-unit games against 59 % for copy C, and in 53 % against 41 % with 3 units (one standard error about 4
+  points), but its mean rank is not better (1.98 against 2.00; 2.04 against 1.89) and it loses a little more.
+  Its early catches are worth less (rank with an early catch 1.82 against 1.81 and 1.83 against 1.56).
+- v10 loses the fewest units at every size (48 to 54 % of its team against 57 to 74 % for the mimics).
+
+Where the local referee is likely to mislead: its opponents are our own bots and mimics (they flee better, keep
+their dash, and none plays like the weaker half of the Gold field); its trees come from our generator; it has no
+time limit. It misled for one candidate earlier today and it disagrees with the arena on the four-unit question.
+
