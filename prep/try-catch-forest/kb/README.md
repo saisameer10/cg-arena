@@ -13,6 +13,7 @@ Branch `try-catch-forest` holds everything for this challenge.
 | `prep/try-catch-forest/dummy/Player.java` | placeholder that only answers WAIT (to leave in the IDE or show on screen) |
 | `prep/try-catch-forest/kb/arena.md` | what happened against real players and what was changed because of it |
 | `prep/try-catch-forest/kb/learnings.md` | lessons about the game, the referee and the method; checklist for the next contest |
+| `prep/try-catch-forest/kb/prompt-gold-top5.md` | the prompt for a new session that aims at the top 5 of Gold (state, method, rules) |
 | `prep/try-catch-forest/kb/rules.md` | the rules in our own words, per league, plus everything measured about the referee |
 | `prep/try-catch-forest/kb/strategy.md` | how the bot works, which research pattern each part answers, known weak points, ideas |
 | `prep/try-catch-forest/kb/log.md` | every version: what changed, why, and the test results |
