@@ -3,6 +3,8 @@
 CodinGame "Unleash the Geek 2026" (`unleash-the-geek-2026-opp35`), game "Try Catch Forest".
 Branch `try-catch-forest` holds everything for this challenge.
 
+**Resuming? Read `handover.md` first** (state at the end of the first window, what is decided, what is open), then `target24.md` (plan).
+
 ## Where things are
 
 | Path | What |
