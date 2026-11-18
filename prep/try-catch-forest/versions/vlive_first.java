@@ -97,6 +97,8 @@ class Player {
     //      With a dash ready, prey 1100 to 2100 away and no predator within 2500, the live code dashes at the prey in
     //      5 % of turns, teams at 23 and 25 in 15 to 40 %; that dash doubles or triples the catches within three turns
     //      and the hunter is lost in 0 to 1 % of those turns either way. A dash unused at turn 100 is worth nothing.
+    static final boolean F_NETEARLY = true;   // turns 1 to P_NETEARLY: a net at any prey in reach, no reserve kept
+    static final int P_NETEARLY = 5;
     static final boolean F_DASHPREY = true;
     static final double P_DP_MIN = 1100, P_DP_MAX = 2700, P_DP_PRED = 2500;   // prey distance band, nearest predator
     static final int P_DP_FAT = 4, P_DP_LATE = 60;                           // dashes already made at most; no limit from this turn
@@ -671,7 +673,7 @@ class Player {
                 // v16: in the early game the last net may go too, if one of our hunters stands within 1500 of the target to finish it
                 boolean followUp = false;
                 if (early) for (E h : live) if (h.immob == 0 && hyp(h.ex - qx, h.ey - qy) < AG_FOLLOW) followUp = true;
-                if (!sure && (nets < 2 || !F_NETWIDE) && !(followUp && F_NETWIDE)) continue;
+                if (!sure && !(F_NETEARLY && turn <= P_NETEARLY) && (nets < 2 || !F_NETWIDE) && !(followUp && F_NETWIDE)) continue;
                 double cost = d + (sure ? 0 : 1500);
                 if (cost < bd) { bd = cost; bq = q; bx = qx; by = qy; }
             }
