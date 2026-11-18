@@ -109,3 +109,46 @@ targets, in this order:
 | Count the ways out near walls and big trees | +0.05; pocket deaths in the arena |
 | Do not penalise unseen ground | removing the penalty +0.19 |
 | Judge every change on a fair test | three of our own "improvements" were harmful and only the ablation showed it |
+
+## 7. v10 in the Gold arena: what really happened
+
+A Gold submission plays 37 ranking games. v10 finished them at 12:20 IST.
+
+| | Games | First | Second | Last | Mean rank | Catches | by turn 10 | by 20 | Lost | Final place |
+|---|---|---|---|---|---|---|---|---|---|---|
+| v5 (replaced at 30 %) | 32 | 41 % | 34 % | 25 % | 1.84 | 3.44 | 0.44 | 1.28 | 2.22 | 148th of 274, score 16.1 |
+| v10 | 37 | 49 % | 22 % | 30 % | 1.81 | 3.27 | 0.70 | 1.73 | 2.51 | **104th of 357, score 18.0** |
+
+- v10 moved us up 44 places and 1.9 points. The top of Gold is at 25.
+- It wins more and catches earlier, and it finishes last more often. The replay test (1.52 against 1.81 on v5's 21
+  battles) overstated the gain: on its own 37 battles the mean rank is 1.81. A replay comparison on 21 battles has a
+  standard error of about 0.15; the arena is the final judge.
+- Matchmaking pairs us with teams of our rating: in 69 Gold games we met a top-20 team only 6 times. Our figures look
+  like those of the top teams (section 2) because we measure them against the middle of the league.
+
+What v10 does worse than v5 in Gold:
+
+| Measure | v5 | v10 | Reading |
+|---|---|---|---|
+| Losses with the order tagged HUNT (no known predator within 2500) | 16 % of losses | 35 % | hunters are hit from out of sight: the price of dropping the unseen-ground penalty |
+| Nets that hit prey | 47 % | 31 % | nets go out earlier and at worse targets; after turn 30 only 14 nets were left to throw (v5: 37) |
+| Net hits on prey turned into a catch | 79 % | 59 % | |
+| Nets that hit a predator | 27 % | 33 % | more exposure, more defensive nets |
+
+How our units get netted in Gold (54 times in 21 replayed battles, `tools/netted.py`):
+
+| Situation | Share | Caught within 5 turns |
+|---|---|---|
+| All | 100 % | 44 % |
+| Net thrown by our predator | 63 % | 68 % |
+| Net thrown by our prey (their defence) | 37 % | 5 % |
+| Thrower within 1400 | 57 % | 61 % |
+| A decoy of ours was out that turn | 0 % | - |
+| A team mate netted the hunter afterwards | 17 % | 22 % |
+| The held unit did nothing afterwards | 48 % | 50 % |
+
+Next candidate (v12, in test): a team mate's net at the hunter of a held unit no longer needs a sure aim; decoys are
+kept for predators that are in sight; unseen-ground penalty for dashes only (switch `F_HIDDASH`).
+
+Tuning the numbers gave nothing: 20 variations over 2,400 local games, then the only apparent gain (wider approach
+dash) re-run on fresh seeds: 1.99 against 2.03, inside the noise.
