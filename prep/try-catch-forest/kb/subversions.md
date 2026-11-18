@@ -179,3 +179,31 @@ to fatigue 3 when no predator in sight is within 2,200 (`F_PRESS_DASH`). The mod
 Checks: on two recorded games with a first catch on turns 7 and 13 the output is identical to v10 for all 100
 turns; on a game without a catch it differs from turn 16 on, as intended. 60 local games, no crash (2.10 against
 v10 1.90; cannot judge). To be replayed only on the 13 battles in `E:/cg-tmp/tcf/gold/press_ids.txt`.
+
+## vchase (`versions/vchase.java`): two-ply search with the exact movement rule (17:05 IST)
+
+v10 + two switches. `F_MM_FLEE`: for a unit with a predator in sight within 1,800, each candidate move is valued by
+the predator's best reply (stay, 16 walks, 16 dashes if its dash is ready, with exact sliding) and our best next
+move after it; this replaces the five-turn straight chase for that unit. `F_MM_STRIKE`: a catch counts as certain
+only if every reply of the prey still ends on our path, and a move after which the prey is caught next turn
+whatever it does is rewarded (`P_FORCE2`).
+
+Each version alone against the mimics of ATI x iHot (copy C), Les Gens Bons and FullStuck, 240 games on the same
+maps, 180 games per version (one standard error about 0.06):
+
+| Version | Mean rank | Wins | Last | Catches | Lost | by turn 10 |
+|---|---|---|---|---|---|---|
+| v10 | 1.83 | 40.0 % | 22.8 % | 2.90 | 2.24 | 0.81 |
+| vchase, both switches | 1.96 | 31.7 % | 27.8 % | 2.75 | 2.51 | 0.84 |
+| flight search only | 1.97 | 31.7 % | 28.3 % | 2.79 | 2.48 | 0.84 |
+| strike search only | 1.80 | 43.9 % | 23.9 % | 2.96 | 2.29 | 0.81 |
+
+- The flight search is worse than what it replaces (0.13, about two standard errors; 0.25 more units lost per
+  game). Likely reasons, not yet checked: it looks only two turns ahead where the old term looks five, so it does
+  not see the wall or a pocket coming; and it assumes the worst reply every turn, which makes every direction look
+  equally bad when two predators are near.
+- The strike search is level with v10 (slightly ahead, inside noise).
+- Checks: 60 games without a crash. Turn time could not be measured: the machine was so loaded that v10 itself
+  showed 60 to 170 ms turns; typical turns were 2 to 3 ms for both.
+- Not a candidate as it stands. If continued: keep the five-turn chase and add the two-ply value only as a
+  veto on moves that are lost against the best reply; test the strike search alone on real battles.
