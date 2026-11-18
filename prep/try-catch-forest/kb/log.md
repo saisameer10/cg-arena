@@ -291,3 +291,43 @@ Not separated by a test: the three rules went in together, in a different hour f
 - Bots by team size on the local referee, 240 maps per size: no version separated at any size (largest gap 0.26,
   between two identical programs). The local referee cannot choose a bot per team size.
 - Sprites (`SECRET_FOREST_SPRITE`): no effect on the power pool, the dash cooldown or the fatigue in 51 debug games.
+
+## Night of 2026-11-18: two battles looked at move by move (`tools/recon.py`)
+
+The contest was paused (no test games, so no replays). `tools/recon.py <game.json> <seat> <from> <to>` rebuilds the
+unit positions of a plain arena log from the commands and the referee's position reports (dash from, power at,
+catch at); median error 0 to 1, 90 % within 600. Trees are not known to it.
+
+Second run of the live code (submission 41749025, `vlive_41748059.java`): 128 games, 38 / 43 / 47, mean rank 2.07
+(first run of the same file: 1.95 over 145 games).
+
+**Battle 924819818 (4 units, we scored 0), turn 18 and 19.**
+- Unit 9 dashed towards the wall on turn 18 because the hunt goal is a lead point: the prey's last movement
+  carried on for up to 4 turns (`decide`, the `for (int i = 0; i < 3; i++)` lead loop). The prey had been running
+  along the wall towards us; it reversed the same turn. A dash straight at it would have ended about 870 away, the
+  lead dash ended 1,120 away.
+- Turn 19: unit 9 threw a net at the prey's expected place 930 away ("sure" because within 1,400, although the prey
+  had its dash). The prey dashed aside, the net flew on to its full 2,000 and held our own unit 11, which stood
+  1,750 away on the same line at radius 7,180. `friendOnLine` checks team mates only up to the expected place of
+  the prey; `net()` aims at the full range.
+- Unit 10 ran from predators it could not see (tag LFLEE) between radius 5,500 and 6,440 for six turns, was held
+  by a net on turn 23 and caught on turn 30. The flee point only costs beyond radius 6,300.
+- Nets on our own units are rare: 3 of 1,233 nets in the two runs, one of the three units was caught.
+
+**Battle 924518587 (3 units, third with 1 catch), turns 87 to 96.**
+- State: we 1 catch (turn 60), prey team 2, predator team 1 (turn 7). One predator alive, two prey alive, both
+  chasing that predator, which was chasing our unit 8. Our unit 6 stood behind this line, 1,650 to 2,300 from both
+  prey, the predator 2,250 away and moving away from it.
+- Unit 6 went forward while the predator was beyond 2,500 and back when it came inside (tags HUNT, HUNT, FLEE,
+  LFLEE, LFLEE, HUNT) until the game ended. In `eval` the prey pulls with weight 1 per unit of distance (2 only
+  within 1,500), a predator within 2,500 pushes with 1 per unit plus the chase forecast (1.5 per unit): a predator
+  standing behind the prey always wins, whatever it is doing and whatever the score is.
+- A loss could not cost a place (the predator team was already above us); one catch was worth second place, two
+  were worth first. No net: beyond 1,400 with the prey moving across the line a net needs a second one in reserve.
+
+**How often one catch decides.** In 49 of 183 games not won (both runs) one more catch would have passed the team
+just above; in 34 of the 49 we ended with two or more units alive, in 32 we made no catch after turn 80.
+
+Not built yet: (1) friends checked along the whole flight of a net, (2) when the predator team is already above us
+late in the game, the soft terms against predators are scaled down and the last net may go at any prey in range,
+(3) the behind-or-level pressing rule of `vuser1.java` (`F_USER_AGGRO`), which did raise dash catches in the arena.
