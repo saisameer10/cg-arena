@@ -36,6 +36,7 @@ class Player {
     static final double P_FLEE_PREY_W = 0.35;     // a fleeing unit leans towards the nearest prey it knows: median angle off "straight away" 54 deg on turn 1 (n = 341), 32 deg later (n = 5,071). The weight is fitted
     static final double P_ATTACK = 1600;          // a prey in sight nearer than this is attacked even with a predator near: heading at the prey 53-66 % with prey under 1600 and a predator under 1200, 27-37 % with prey beyond 2200 (n = 3,500)
     static final int P_PRED_MEMORY = 3;           // turns a predator out of sight keeps counting. ASSUMPTION (cannot be read from logs); v10's value
+    static final int P_ATTACK_MEMORY = 0;         // prey out of sight is not attacked (no evidence either way)
     static final int P_PREY_MEMORY = 25;          // turns a prey position is kept as a place to walk to. ASSUMPTION; v10's value
     static final boolean F_SYM_THREAT = false;    // turn 1: react to predators known only through the symmetry. No: decoy 0-1 % with a predator start beyond 2000 (n = 750)
     static final boolean F_SYM_ATTACK = true;     // turn 1: dash at prey known only through the symmetry. Yes: predator far, dash 86 / 96 % with a prey start under 1000 / 1600 (n = 111): trees would hide a part of them
@@ -49,7 +50,7 @@ class Player {
     static final double P_ADASH_MIN = 0;          // ... and farther than this (28-60 % under 600, n = 84: no lower limit)
     static final double P_ADASH_HELD = 1700;      // ATTACK: dash at a held prey between walking reach (1040) and this: 38 % at 1300-1600 (n = 85); 75 % of the units under 1040 of a prey just netted dash (n = 56)
     static final double P_FDASH = 1200;           // FLEE: dash when the predator in sight is nearer than this and can dash: 70 / 49 / 9 % under 800 / 1200 / 1600 (n = 2,508)
-    static final double P_FDASH_T1 = 1200;        // FLEE on turn 1: 64 % with a predator start under 1500, 34 % at 1500-2000, 18 % at 2000-2500 (n = 490)
+    static final double P_FDASH_T1 = 1500;        // FLEE on turn 1: 64 % with a predator start under 1500, 34 % at 1500-2000, 18 % at 2000-2500 (n = 490)
     static final double P_T1_DASH_SHARE = 1.0;    // no share rule: the turn-1 dash follows the distances (96 % at prey under 1600)
     static final boolean F_FDASH_NEEDS_PRED_DASH = true;// FLEE dash only from a predator whose dash is ready: 70 / 49 % against 17 / 9 % from one without (n = 6,200)
     static final double P_TDASH = 1800;           // HUNT: the first dash of a unit is spent to travel to a prey in sight nearer than this: 24 % with no dash made at 1600-3000, 8-10 % afterwards (n = 7,200); turn 1: 27 % at 1600-2200, 0 % beyond
@@ -59,8 +60,9 @@ class Player {
     static final double P_NET_D_NODASH = 1300;    // net at a free prey in sight whose dash is on cooldown when OUR move ends nearer than this to it: thrown on 14 / 20 / 9 / 5 / 3 % of the unit-turns at 0-600 / 1000 / 1300 / 1600 / 2000 while nets are left (n = 2,446)
     static final double P_NET_D_READY = 1300;     // same for a prey that can dash: 14 / 17 / 10 / 7 / 2 % (n = 3,510); 22 / 38 / 15 % after a dash of ours
     static final double P_NET_MIN_D = 0;          // no lower limit after turn 1 (turn 1: 21 % under 600 against 67 % at 600-1000)
-    static final int P_NET_EVERY = 3;             // turns the team waits between two nets at prey. FITTED, not recovered: median net turn 12, 1.19 / 1.08 / 1.34 nets per game in turns 1-5 / 6-20 / 21-100
-    static final double P_NET_D_T1 = 1300;        // same on turn 1: 67 / 60 / 40 / 9 % at 600-1000 / 1300 / 1600 / 2000 (n = 129)
+    static final int P_NET_EVERY = 4;             // turns the team waits between two nets at prey. FITTED, not recovered: median net turn 12, 1.19 / 1.08 / 1.34 nets per game in turns 1-5 / 6-20 / 21-100
+    static final double P_NET_D_T1 = 1100;        // same on turn 1: 67 / 60 / 40 / 9 % at 600-1000 / 1300 / 1600 / 2000 (n = 129)
+    static final boolean F_NET_ONE_PER_PREY = true;// only one unit nets a given prey on a turn. ASSUMPTION (1.19 nets in turns 1-5)
     static final boolean F_NET_HELD_PREY = false; // net at a prey that is already held. No: 1-4 % (n = 848)
     static final double P_NET_LEAD = 0.4;         // aim at prey position + this x its last move. Median 0.39, least squares 0.35 over 604 nets
     static final boolean F_NET_FULL_RANGE = true; // the aim point is 2000 from the thrower along the line: 86-88 % of 656 nets at prey
@@ -83,7 +85,7 @@ class Player {
     static final double P_DECOY_HELD_D = 2300;    // a held unit sends one when a predator is nearer than this: 18-20 % per held turn at 1000-2300 while decoys are left (n = 324), 1 % under 1000
     // ---- smoke
     static final double P_SMOKE_D = 1300;         // a fleeing unit that DASHES drops smoke when the predator in sight is nearer than this: 85 / 76 / 49 / 22 % under 800 / 1200 / 1600 / 2000 while smoke is left (n = 866), 2-3 % when it walks
-    static final double P_SMOKE_D_T1 = 1000;      // same on turn 1: 28 % with a predator start under 1500, 3 % at 1500-2000 (n = 341)
+    static final double P_SMOKE_D_T1 = 1300;      // same on turn 1: 28 % with a predator start under 1500, 3 % at 1500-2000 (n = 341)
     static final boolean F_SMOKE_IN_ATTACK = false;// only when fleeing (ASSUMPTION: 0-1 % with the predator beyond 2000)
     static final boolean F_SMOKE_ONLY_ON_COOLDOWN = false;// not this team: 17-26 % with the dash ready under 1200, 7-9 % on cooldown
     static final boolean F_SMOKE_WITH_FLEE_DASH = true;// smoke goes with the dash: 100 / 92 / 78 % of the smokes of turn 1 / 2-5 / 6+ on a turn with a dash (n = 859)
@@ -95,7 +97,7 @@ class Player {
     static final int P_GHOST = 1;                 // 1 = walk onto the nearest living prey: 63 % of ghost orders end within 1000 of one, 6 % of a predator (n = 32,071)
     static final boolean F_GHOST_DASH = false;    // ghosts never dash: 0 in 264 games
     static final double P_GHOST_STOP = 300;       // a ghost nearer than this to its prey gives no order: 39 % of ghost turns without order while 63 % of the orders end within 1000 of a prey
-    static final boolean F_GHOST_EXPLORE = true;  // a ghost with no prey to go to stands: 39 % of ghost turns have no order (n = 52,700)
+    static final boolean F_GHOST_EXPLORE = false; // a ghost with no prey to go to stands: 39 % of ghost turns have no order (n = 52,700)
     // =====================================================================================================
 
     static int myId, prey, pred, N = -1, turn = 0, myScore = 0, nets, smokes, decoys;
@@ -359,6 +361,7 @@ class Player {
             if (t.owner != prey || t.vis || t.dead || t.lost) continue;
             int age = turn - t.seen;
             if (t.sym && age == 0 && F_SYM_ATTACK) attackable.add(t);
+            else if (!t.sym && age >= 1 && age <= P_ATTACK_MEMORY) attackable.add(t);
             if (age <= P_PREY_MEMORY && (!t.sym || F_SYM_SEEK)) known.add(t);
         }
         List<Integer> claimed = new ArrayList<>();
@@ -463,7 +466,7 @@ class Player {
             if (nets > 0 && turn - lastPreyNet >= P_NET_EVERY) {
                 E bq = null; double bd = 1e18, bxq = 0, byq = 0;
                 for (E qq : seenPrey) {
-                    if (qq.netTargeted || (qq.immob > 0 && !F_NET_HELD_PREY)) continue;
+                    if ((qq.netTargeted && F_NET_ONE_PER_PREY) || (qq.immob > 0 && !F_NET_HELD_PREY)) continue;
                     double[] v = predV(qq); double qx = qq.x + v[0] * P_NET_LEAD, qy = qq.y + v[1] * P_NET_LEAD;
                     double d = hyp(qq.x - u.ex, qq.y - u.ey);
                     if (d > (turn == 1 ? P_NET_D_T1 : qq.cd > 0 ? P_NET_D_NODASH : P_NET_D_READY) || d < P_NET_MIN_D || hyp(qx - u.ex, qy - u.ey) < 30) continue;
@@ -552,7 +555,7 @@ class Player {
     /** A fixed number in [0, 1) per unit and game (from its position on turn 1): which units fall under a "share" rule. */
     static double share(E u) { double h = Math.sin(u.x * 12.9898 + u.y * 78.233 + u.id * 37.719) * 43758.5453; return h - Math.floor(h); }
     static boolean inOwnSmoke(double x, double y) {
-        for (double[] c : clouds) if (c[3] > 0 && hyp(x - c[0], y - c[1]) < SMOKE_R - 100) return true;
+        for (double[] c : clouds) if (c[3] > 0 && c[2] < turn + SMOKE_LIFE && hyp(x - c[0], y - c[1]) < SMOKE_R - 100) return true;
         return false;
     }
     static boolean friendOnLine(E u, double qx, double qy, List<E> live) {

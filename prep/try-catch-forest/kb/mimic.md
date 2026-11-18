@@ -200,3 +200,29 @@ Results: 45.5 % wins, mean rank 1.75, 3.44 catches, 3.02 losses, 0.89 catches by
 | Steering around trees, hiding behind them | v10's steering; no hiding |
 | Why fleeing units run 31 degrees off the straight line | a pull toward the nearest known prey (`P_FLEE_PREY_W`), fitted |
 | The power pools | see section 8 |
+
+## 7. State of the proof (15:05 IST, NOT finished)
+
+Fingerprint = `tools/mimic_fingerprint.py` (50 lines; tolerance: shares within 10 points, counts per game and
+distances within 25 %). Local games: `sim/SimLog.java` (copy of the referee that writes CodinGame-shaped logs; pools
+= sum over the units of a random 0, 1 or 2, fitted on 564 Gold games; `-Dspread=1` gives one map per game).
+
+Lines inside the tolerance after the second joint run (120 games, 60 per mimic, opponents: the other two mimics,
+v10, v5, v1), before the third round of fixes that is in the files now:
+
+| Mimic | Inside | Main lines still outside |
+|---|---|---|
+| vmimic (ATI x iHot) | 28 of 50 | turn-1 smoke under 1500 (57 % against 80 %), catches (2.67 against 3.61; 0.40 against 0.89 by turn 10), nets at predators (21 % against 36 %) |
+| vmimic2 (Les Gens Bons) | 32 of 50 | turn-1 dash too frequent (87 % against 66 %), nets too late (median turn 9 against 3) |
+| vmimic3 (FullStuck) | 37 of 50 | nets after turn 5 too many, ghosts |
+
+Lines the local referee distorts for every mimic: "net at prey: target could dash" (79 % locally against 36-63 %:
+v10, v5 and v1 keep their dash), "nets that hit" (40-48 % against 52-64 %), catches by turn 10 and units lost by
+turn 10 (local opponents flee better and attack later than the Gold field).
+
+Still to do: read the third joint run (`E:/cg-tmp/tcf/mimic/fp/cmp_b3_*.txt`), the final side-by-side tables, 240
+games per mimic against v10, v5 and v1, the five candidate switches for v10 (leader against v10: dash and smoke at the
+predator on turn 1 for every unit with a predator start under 2500; smoke thrown at the predator, at most 1800 out,
+with the flee dash; nets kept for later, 36 % at close predators, aimed at the target with a lead instead of 2000
+out; dashes spent freely (24 per game against 13.8); a prey under 1600 beats a predator under 1200).
+Local results did not transfer to real Gold teams for one candidate today: judge the mimics on replays.
