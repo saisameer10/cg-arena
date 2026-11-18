@@ -17,3 +17,6 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 (paired seeds or replays of arena battles, both catches and losses) shows it is better; `kb/log.md` has the numbers.
 | `v12.java` | tested, not better than v10 | v11 + rescue nets without a sure aim, decoys only against predators in sight, optional dash-only unseen-ground penalty |
 | `v13.java` | tested: better on the local referee, worse on real Gold battles | v12 + the second hunter of a prey aims behind it (`F_PINCER`) |
+| `v14.java` | tested: locally worse than v10 (2.01 against 1.94, 720 games) | v10 + six switches from `kb/gold-top5-research.md`: smoke placement, memory in clouds, held unit nets first, predator net aim, prey net range, held-prey net lines |
+| `v15.java` | test bed | v14 + `F_AGGRO`: approach and strike dashes up to the 4th dash in turns 1-40, cheaper dashes, approach with a predator at 2200 |
+| `v16.java` | **candidate to submit (2026-11-18 16:20)** | v15 with only `F_AGGRO` on (= v10 + attack). Local: 1.93 against v10 2.04 (960 games). Real Gold opponents, 21 paired rounds: mean place 1.95 / v10 2.05 / v5 2.43; catches 3.10 / 2.57 / 2.38; wins 33 % / 23 % / 14 % |
