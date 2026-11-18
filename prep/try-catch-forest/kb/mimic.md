@@ -319,10 +319,27 @@ mean N); `Sim.java` uses 2 to 5. `-Dspread=1` gives a new map per game, `-Donly=
 version. Distorted lines: everything that depends on the opponents (early catches and losses, dash state of net
 targets), on the maps (trees are placed by our generator: sight on turn 1), and on its collision steps.
 
-## 9. vmimic2 and vmimic3: state
+## 9. vmimic2 and vmimic3: state (15:57 IST, final engine)
 
-Same engine, rule books of Les Gens Bons and FullStuck. After the second joint run (60 games each, before the last
-three rounds of engine fixes): 32 and 37 of 50 lines inside. Not re-measured since; no 240-game table yet.
+One run of 120 games on 120 maps, one thread, pool vmimic2 / vmimic3 / v10 / v5 / v1 (72 games per version);
+0 crashes, 0 invalid orders for both (`tools/mimic_check.py`).
+
+| Version | Games | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 | by turn 20 | Fingerprint lines inside (of 50) |
+|---|---|---|---|---|---|---|---|---|---|
+| vmimic2 (Les Gens Bons) | 72 | 1.972 | 33.3 % | 30.6 % | 2.51 | 2.85 | 0.71 | 1.07 | 35 |
+| vmimic3 (FullStuck) | 72 | 2.264 | 20.8 % | 47.2 % | 2.58 | 3.08 | 0.57 | 0.90 | 35 |
+| v10 | 72 | 1.889 | 38.9 % | 27.8 % | 3.04 | 2.44 | 0.78 | 1.40 | |
+| v5 | 72 | 1.861 | 36.1 % | 22.2 % | 2.93 | 2.38 | 0.51 | 1.25 | |
+| v1 | 72 | 1.986 | 37.5 % | 36.1 % | 2.67 | 2.99 | 0.49 | 1.13 | |
+
+Lines outside for vmimic2: decoys per phase (1.86 / 1.93 / 0.57 against 2.56 / 1.44 / 0.35: sent too late), net hit
+rate (31 % against 52 %: it aims at the prey's position as measured, and v10 / v5 step off the line), catches (2.51
+against 3.38) and catches on held prey (27 % against 40 %, a consequence), turn-1 directions (straighter than the
+real squad), ghosts near team mates. For vmimic3: turn-1 dash and smoke next to a predator (94 % and 57 % against
+64 % and 28 %), turn-1 nets (46 % against 31 %), smokes in turns 6-20 (0.47 against 0.89), net hit rate (38 %
+against 53 %), early catches, ghosts. Both are usable as sparring partners with a recognisable opening; neither
+meets the tolerance, and neither has a 240-game table. The 72 games are one run: differences of 0.2 of mean rank
+between versions are inside the noise.
 
 ## 10. Leader mimic against our versions (240 local games, one thread)
 
@@ -395,7 +412,7 @@ untested against real opponents.
 ## 12. Still to do
 
 - Replay of the current file on real Gold battles (testing session).
-- Final fingerprints and 240-game tables of vmimic2 and vmimic3.
+- vmimic2 and vmimic3: the lines listed in section 9, and 240-game tables.
 - Candidate switches for v10 from the leader: dash and smoke at the predator on turn 1 for every unit with a
   predator start under 2600; smoke thrown at the predator (at most 1800 out) with the flee dash instead of on
   ourselves; no net on a dash turn and none on turn 1, aimed at position + last move and 400 beyond instead of
