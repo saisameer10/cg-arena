@@ -616,9 +616,14 @@ seat orders balanced over the run, 0 crashes); one standard error of a mean rank
 | 5 | vmimic3 | 1.972 | 31.9 % | 29.2 % | 76 % | 1.88 / 2.26 | 3.50 | 3.66 |
 | 5 | vmimic2 | 2.083 | 31.2 % | 39.6 % | 76 % | 1.93 / 2.57 | 3.29 | 3.58 |
 | 5 | vmimic_c | 2.153 | 27.1 % | 42.4 % | 71 % | 2.00 / 2.52 | 3.29 | 3.72 |
+| 6 | vmimic_c | 1.917 | 36.8 % | 28.5 % | 74 % | 1.75 / 2.39 | 4.53 | 4.40 |
+| 6 | vmimic_e (= copy C at this size) | 1.965 | 34.7 % | 31.2 % | 80 % | 1.91 / 2.17 | 4.44 | 4.53 |
+| 6 | v10 | 2.000 | 34.7 % | 34.7 % | 78 % | 1.89 / 2.38 | 4.20 | 3.66 |
+| 6 | vmimic2 | 2.014 | 33.3 % | 34.7 % | 83 % | 1.95 / 2.32 | 4.36 | 4.41 |
+| 6 | vmimic3 | 2.104 | 27.1 % | 37.5 % | 80 % | 2.02 / 2.45 | 4.12 | 4.67 |
 
-The six-unit pool was still playing when this was written (logs in `E:/cg-tmp/tcf/mimic/logs/z6`; table with
-`python tools/mimic_sizes.py E:/cg-tmp/tcf/mimic/logs/z6`).
+The six-unit pool finished at 17:25 (rows above): largest gap 0.19, again no version separated; v10 loses 61 %
+of its team there against 73 to 78 % for the mimics.
 
 Reading, stated plainly:
 - **No version is separated from the others at any size** (largest gap 0.19 with 3 units, 0.15 with 4, 0.26 with 5).
