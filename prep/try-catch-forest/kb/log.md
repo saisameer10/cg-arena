@@ -174,7 +174,8 @@ Sub-version pools of the battle-autopsy session (14 switches, smoke distance in 
 |---|---|---|---|---|
 | 11:03 | 41742767 | v5 | the user's own session | replaced at 30 %: 148th of 274, score 16.1 |
 | 11:35 | 41743202 | v10 | this session, on the user's word | 37 games: 104th of 357 (18.0); later 85th of 383 (18.9), then 134th of 407 (19.0) as the league grew |
-| 15:41 | 41746943 | mimic of the leader (`vmimic.java`, 15:08 copy, md5 8a9d4df40526, the copy replayed in gold/gm) | the analysis session, on the user's instruction to it | 10 % at 15:46: score 14.3 (placement still running) |
+| 15:41 | 41746943 | mimic of the leader (`vmimic.java`, 15:08 copy, md5 8a9d4df40526, the copy replayed in gold/gm; now `vmimic_a.java`; its author calls it unfinished: turn-1 net instead of smoke in about 40 % of the cases) | the analysis session, on the user's instruction to it | replaced after 25 games at 16 %: 11 first / 6 second / 8 last, mean rank 1.88, units lost 3.3 per game, score 16.5 |
+| 16:02 | 41747326 | hybrid (`vhybrid4.java`, md5 ac9e2ec5581e): that mimic copy in games with 4 units per team, v10 in all others | the analysis session, on the user's instruction to it | running |
 
 v10 is no longer live. `versions/v10.java` is the file to resubmit if the mimic's rating ends below v10's 19.0; a
 resubmission needs about 40 minutes for its 37 games, so about 17:15 IST is the last sensible moment today.
@@ -183,3 +184,14 @@ Control proposed by the analysis session and built here: `versions/v10-placebo.j
 directions turned by 7.5 degrees (same rules, different trajectories). Every candidate today was compared with v10's
 one realised arena result on the same battles; if v10 was lucky in those battles, every candidate of equal strength
 looks worse by the same amount. The placebo's score on the same 20 battles is the bar a candidate has to beat.
+
+Two things learnt from these submissions:
+- Replays are tied to the current submission. When the mimic replaced v10, 19 of 20 replays of v10's battles were
+  refused ("no longer an opponent you can test against"); when the hybrid replaced the mimic, the mimic's battles
+  closed in turn. Every resubmission costs the replay base of the version it replaces, and a new placement run.
+- Paired replays on the mimic's battles before they closed: only 4 battles had all versions. ATI mimic (arena) 2 / 1 / 1,
+  mean rank 1.75, units lost 3.75; v10 2 / 1 / 1, 1.75, 1.75; FullStuck mimic (`vmimic3`) 1 / 0 / 3, 2.50, 3.25;
+  Les Gens Bons mimic (`vmimic2`) 0 / 2 / 2, 2.50, 4.25. v10 ranked above vmimic3 in 2 battles and below in 0, above
+  vmimic2 in 3 and below in 0. Too few to conclude; direction: v10 level with the ATI mimic with half its losses,
+  the other two mimics behind.
+- vgo_b never got a valid replay set (1 battle); vgo was clearly worse on 8.
