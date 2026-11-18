@@ -167,3 +167,15 @@ Each version under test plays alone against the mimics of ATI x iHot, Les Gens B
 - In all six pools the Les Gens Bons and FullStuck mimics rank 0.2 to 0.3 better than whichever of our versions
   sits with them, and the ATI mimic ranks level with ours. On the local referee those two mimics are the strongest
   bots we have. Not tested on real battles.
+
+## vpress (`versions/vpress.java`) = v10 + a "press" mode for games without a catch (16:05 IST)
+
+Asked for by the analysis session: in 13 of v10's 37 arena games (35 %) we had no catch by turn 15; those games
+averaged rank 2.31 with only 0.4 units lost, the other 24 averaged 1.54. From turn 16 on, while our score is 0:
+every free unit hunts the same prey unit (`F_PRESS_PACK`); soft threat terms are halved (`F_PRESS_BOLD`); nets at
+prey only from within 1,400 and without a reserve (`F_PRESS_NET`); smoke only against a predator in sight within
+1,500, and a unit in a cloud with no predator known within 1,500 is pushed out (`F_PRESS_SIGHT`); approach dash up
+to fatigue 3 when no predator in sight is within 2,200 (`F_PRESS_DASH`). The mode ends for good at our first catch.
+Checks: on two recorded games with a first catch on turns 7 and 13 the output is identical to v10 for all 100
+turns; on a game without a catch it differs from turn 16 on, as intended. 60 local games, no crash (2.10 against
+v10 1.90; cannot judge). To be replayed only on the 13 battles in `E:/cg-tmp/tcf/gold/press_ids.txt`.
