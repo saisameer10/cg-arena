@@ -167,3 +167,19 @@ First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2
 v10's place in Gold: 104th of 357 (score 18.0) when its 37 games ended, 85th of 383 (18.9) an hour later.
 
 Sub-version pools of the battle-autopsy session (14 switches, smoke distance in four pools, bundles vs1 to vs3): see `subversions.md`.
+
+## Submissions in Gold (2026-11-18)
+
+| Time (IST) | Submission | What | By whom | Result |
+|---|---|---|---|---|
+| 11:03 | 41742767 | v5 | the user's own session | replaced at 30 %: 148th of 274, score 16.1 |
+| 11:35 | 41743202 | v10 | this session, on the user's word | 37 games: 104th of 357 (18.0); later 85th of 383 (18.9), then 134th of 407 (19.0) as the league grew |
+| 15:41 | 41746943 | mimic of the leader (`vmimic.java`, 15:08 copy, md5 8a9d4df40526, the copy replayed in gold/gm) | the analysis session, on the user's instruction to it | 10 % at 15:46: score 14.3 (placement still running) |
+
+v10 is no longer live. `versions/v10.java` is the file to resubmit if the mimic's rating ends below v10's 19.0; a
+resubmission needs about 40 minutes for its 37 games, so about 17:15 IST is the last sensible moment today.
+
+Control proposed by the analysis session and built here: `versions/v10-placebo.java` = v10 with its 24 search
+directions turned by 7.5 degrees (same rules, different trajectories). Every candidate today was compared with v10's
+one realised arena result on the same battles; if v10 was lucky in those battles, every candidate of equal strength
+looks worse by the same amount. The placebo's score on the same 20 battles is the bar a candidate has to beat.
