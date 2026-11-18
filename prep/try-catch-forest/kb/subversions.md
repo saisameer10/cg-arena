@@ -137,3 +137,13 @@ vs0 (= v10) with five switches on, each of which can be turned off alone:
 `F_FINISHER` and `F_T1` are present and off. Local check only: compiles, 60 games on one thread with no crash;
 mean rank 2.13 against v10 1.88 and v5 1.95 (60 games cannot judge, but it is not a good sign). Judge on replays of
 real Gold battles: rank, and the share of net hits on prey that become a catch (v10: 74 %).
+
+## vgo_b (`versions/vgo_b.java`) = vgo + two switches from watching replays (16:00 IST)
+
+| Switch | What it does | Known before the replay |
+|---|---|---|
+| `F_SMOKEGOAL` | a unit blind in a cloud with a prey assigned: (1) heads for where the prey should be by now (last seen position moved along its last movement for up to 4 turns); (2) a move that reverses the previous one costs 2,500, so it keeps its heading unless the hard rule forces a turn; (3) the pull to that goal is doubled when no known predator is within 1,500 | differs from "leave the cloud" (no local effect): it leaves on the prey's side |
+| `F_SMOKEBACK`, `P_SMOKEBACK` 0.66 | cloud centred on the line from the thrower (after its move) to where the predator will be, at two thirds of the distance, at most 1,800: the leader's geometry | "2,000 past the hunter" was worse in the ablation; "half way" lost more units locally; across all teams smoke on the unit itself had the best survival. A test of the leader's exact geometry, not a known gain |
+
+The finisher rule is not in either file: alone it lost on 16 real Gold battles (2.06 against 1.75).
+Local check only: compiles, 60 games on one thread with no crash (1.95 against v10 2.08 and v5 1.97; cannot judge).
