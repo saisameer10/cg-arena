@@ -95,3 +95,18 @@ up, because 1,800 itself was rejected on real battles.
 
 The evidence behind each idea from the Gold logs is in `reports/Gold league improvement evidence.md`
 (notes in `research_notes/Gold league improvement evidence/`).
+
+## Tempo switches (added 15:30 IST; source `versions/vs-tempo.java` = vs0 + 4 switches, all off)
+
+Ideas from the tempo research note: do more early, instead of restricting. Pools with v1 and v5 as fixed members.
+
+| Pool | Variant | Mean rank | base |
+|---|---|---|---|
+| P1 (288 each) | `F_SPREAD`: one hunter per prey first, until turn 6 | 1.96 | 1.95 |
+| | `F_NET23`: net any visible prey on turns 2 and 3 | 1.95 | 1.95 (identical games: v10 already throws these nets) |
+| P2 (288 each) | `F_DASH25`: dash at prey 1,000 to 2,500 away in turns 2 to 5 | 1.96 | 2.02 |
+| | `F_PRESS`: prey not on the predator's side: keep less distance | 2.04 | 2.02 |
+| P3 (270 each) | all four together | 1.97 | 1.90 |
+
+No effect from any of them, alone or together. In these three pools v10 stayed ahead of v1 (2.05 to 2.10) and of
+v5 in two of three (2.08, 1.87, 2.01).
