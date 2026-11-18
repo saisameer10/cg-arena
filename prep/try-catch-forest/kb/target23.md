@@ -289,3 +289,37 @@ Same games (271 of teams at 23, 214 of ours, opponents ranked beyond 100).
    2.3; they hold 0.60 catches at turn 15, we 0.31 (zero in 73 % of our behind-games, 50 % of theirs). With a
    catch in hand and behind, we match them (1.96 against 2.05). No behind-mode is visible in their play. They throw
    half as many nets after turn 15 (1.14 against 2.34) for the same catches and dash a third more in every phase.
+
+## Teams at 25 added; the first point; place by turn (2026-11-19, 02:00 IST)
+
+297 games of teams ranked 35 to 64 against opponents ranked beyond 100 (`tools/peer/peerfetch25.py`), next to the
+271 of teams at 23 and our 214. Scripts: `tools/peer/firstpoint.py`, `standing.py`, `opening.py`.
+
+| First ten turns | At 25 | At 23 | Us |
+|---|---|---|---|
+| Mean rank | 1.65 | 1.78 | 2.00 |
+| A catch of ours by turn 3 / 5 / 10 | 27 / 40 / 62 % | 22 / 35 / 62 % | 10 / 21 / 47 % |
+| Catches by turn 10: own net / free prey | 0.50 / 0.37 | 0.53 / 0.28 | 0.28 / 0.29 |
+| Turns 1 to 5 per unit: dash / net / smoke | 1.16 / 0.53 / 0.19 | 1.08 / 0.52 / 0.18 | 0.99 / 0.23 / 0.38 |
+| Nets in turns 1 to 5; on a dash turn | 2.32; 43 % | 2.24; 41 % | 1.04; 21 % |
+| Turns 1 to 5 with two or more nets | 0.53 | 0.44 | 0.10 |
+| Net hits on prey in turns 1 to 8; caught within 2 / 4 turns | 0.85; 48 / 58 % | 0.89; 44 / 59 % | 0.38; 49 / 69 % |
+| Units dashing on turn 1 / turn 3 / both | 56 / 31 / 26 % | 51 / 29 / 24 % | 52 / 16 / 11 % |
+| Catch by 10 and a loss by 10: mean rank | 1.57 | 1.88 | 2.09 |
+| No catch by 10, no loss by 10: mean rank | 1.75 | 1.77 | 2.11 |
+
+Teams at 25 and at 23 open the same way; we are the outlier on every line. What separates 25 from 23 is not the
+opening but what follows an early catch (1.37 and 1.57 against 1.47 and 1.88).
+
+Place at a turn against the final place (share of all games):
+
+| | At 25 | At 23 | Us |
+|---|---|---|---|
+| First at turn 30 | 55 % | 45 % | 34 % |
+| First at turn 30, not first at the end | 19 % | 13 % | 14 % |
+| First or second at turn 30, last at the end | 8 % | 11 % | 16 % |
+| First or second at turn 40, last at the end | 6 % | 8 % | 14 % |
+| Second at turn 40 and last at the end (share of those games) | 16 % | 18 % | 28 % |
+
+We lose a lead no more often than they do; they lead more often. Our own leak is second place turning into last
+between turns 30 and 60.
