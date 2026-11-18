@@ -33,6 +33,7 @@ Found in the first test game, not in the statement:
 Powers: nets at prey that cannot dodge (dash on cooldown, closer than 1400, or moving along the line), thrown from the position after the move at full range; a net at the hunter that is about to reach us; smoke ahead of the unit when a predator has a clear line within 2300; a decoy walked straight at the predator as a net shield. Ghosts sit on prey so the hunters keep seeing them.
 
 First results (test games, Bronze): 7 wins in 7 against the boss, 30 catches for 7 units lost, no error or timeout.
+Later versions, the audit of the bot against these patterns and the test tools: `prep/try-catch-forest/kb/`.
 
 ## 1. What this is based on
 

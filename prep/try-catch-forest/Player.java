@@ -5,10 +5,11 @@ import java.util.*;
  * Try Catch Forest (Unleash the Geek 2026).
  *
  * Three players in a cycle: player i catches player (i+1)%3 and is caught by player (i+2)%3.
- * Design (see challenges/try-catch-forest-prep.md, sections "statement" and "battle plan"):
+ * Knowledge base: prep/try-catch-forest/kb (rules.md, strategy.md, log.md). Design:
  *  - every unit scores a set of candidate moves (24 walk directions, 24 dash directions, direct lines, stay)
  *    with one function: never end where a predator can touch us this turn, keep a two-turn escape margin,
- *    stay out of net lines, and inside those limits close in on the assigned prey;
+ *    look five turns ahead in a chase (wall, trees), stay out of net lines and off ground nobody sees,
+ *    and inside those limits close in on the assigned prey; moves are simulated with the referee's slide rule;
  *  - a catch that the prey cannot avoid (netted, or no dash left and inside dash reach) outranks everything;
  *  - nets go to prey that cannot dodge (dash on cooldown, close, or moving along the line), thrown from the
  *    position after the move and aimed at full range; a netted unit of ours nets the hunter back;
@@ -38,6 +39,7 @@ class Player {
     static List<E> mine = new ArrayList<>(), seenPrey = new ArrayList<>(), seenPred = new ArrayList<>();
     static List<double[]> clouds = new ArrayList<>();      // x, y, last turn of life
     static List<Th> threats = new ArrayList<>();
+    static List<E> oldPred = new ArrayList<>();          // predators last seen 4 to 8 turns ago
 
     // ---------------------------------------------------------------- geometry
     static double hyp(double a, double b) { return Math.sqrt(a * a + b * b); }
@@ -59,20 +61,42 @@ class Player {
         for (double[] c : clouds) if (segDist(c[0], c[1], ax, ay, bx, by) < SMOKE_R) return true;
         return false;
     }
-    /** End point of a MOVE/DASH towards (gx, gy): straight line, pushed out of trees (slide) and kept in the arena. */
+    /**
+     * End point of a MOVE/DASH towards (gx, gy), as the referee does it (fitted on 638 recorded moves, p99 error 3 units):
+     * straight line until the unit touches a tree, then the rest of the turn along the tangent with the speed that is
+     * left after dropping the component towards the tree. The arena wall keeps the unit inside (radius R - UR).
+     */
     static double[] simMove(double x, double y, double gx, double gy, double speed, boolean ghost) {
         double d = hyp(gx - x, gy - y);
         if (d < 1e-6) return new double[]{x, y};
-        double len = Math.min(d, speed), ux = (gx - x) / d, uy = (gy - y) / d;
-        int steps = 8;
-        for (int s = 0; s < steps; s++) {
-            x += ux * len / steps; y += uy * len / steps;
-            if (!ghost) for (int i = 0; i < T; i++) {
-                double dd = hyp(x - tx[i], y - ty[i]), min = tr[i] + UR + 1;
-                if (dd < min) { if (dd < 1e-6) { x += min; } else { x = tx[i] + (x - tx[i]) * min / dd; y = ty[i] + (y - ty[i]) * min / dd; } }
+        double len = Math.min(d, speed), vx = (gx - x) / d * len, vy = (gy - y) / d * len;
+        final int slices = 4;
+        for (int sl = 0; sl < slices; sl++) {
+            double rem = 1.0 / slices, sx = x, sy = y;
+            for (int it = 0; it < 4 && rem > 1e-7; it++) {
+                double rvx = vx * rem, rvy = vy * rem, A = rvx * rvx + rvy * rvy;
+                if (A < 1e-9) break;
+                double bt = 2; int bi = -1;
+                if (!ghost) for (int i = 0; i < T; i++) {
+                    double fx = x - tx[i], fy = y - ty[i], rr = tr[i] + UR;
+                    double B = 2 * (fx * rvx + fy * rvy), C = fx * fx + fy * fy - rr * rr, t;
+                    if (C <= 0) { if (B >= 0) continue; t = 0; }
+                    else { double D = B * B - 4 * A * C; if (D < 0) continue; t = (-B - Math.sqrt(D)) / (2 * A); if (t < 0 || t > 1) continue; }
+                    if (t < bt) { bt = t; bi = i; }
+                }
+                if (bi < 0) { x += rvx; y += rvy; break; }
+                x += rvx * bt; y += rvy * bt; rem *= 1 - bt;
+                double nx = x - tx[bi], ny = y - ty[bi], nl = hyp(nx, ny); nx /= nl; ny /= nl;
+                x = tx[bi] + nx * (tr[bi] + UR + 0.01); y = ty[bi] + ny * (tr[bi] + UR + 0.01);
+                double dot = vx * nx + vy * ny; vx -= dot * nx; vy -= dot * ny;
             }
             double l = hyp(x, y);
-            if (l > R - UR) { x *= (R - UR) / l; y *= (R - UR) / l; }
+            if (l > R - UR) {
+                x *= (R - UR) / l; y *= (R - UR) / l;
+                boolean stuck = false;
+                if (!ghost) for (int i = 0; i < T; i++) if (hyp(x - tx[i], y - ty[i]) < tr[i] + UR - 1) stuck = true;
+                if (stuck) { x = sx; y = sy; break; }           // wedged between the wall and a tree
+            }
         }
         return new double[]{x, y};
     }
@@ -105,6 +129,24 @@ class Player {
     static boolean canSeePoint(double x, double y) {
         for (E u : mine) { if (hyp(u.x - x, u.y - y) < 1800 && !treeBlocks(u.x, u.y, x, y, 0) && !smokeBlocks(u.x, u.y, x, y)) return true; }
         return false;
+    }
+
+    static final double[] RING_X = new double[6], RING_Y = new double[6];
+    static { for (int i = 0; i < 6; i++) { RING_X[i] = Math.cos(i * Math.PI / 3) * 650; RING_Y[i] = Math.sin(i * Math.PI / 3) * 650; } }
+    /** Share of the ground around (px, py) that none of my units can see right now: a predator may stand there. */
+    static double hiddenFrac(double px, double py) {
+        int hidden = 0;
+        for (int i = -1; i < 6; i++) {
+            double x = px + (i < 0 ? 0 : RING_X[i]), y = py + (i < 0 ? 0 : RING_Y[i]);
+            if (hyp(x, y) > R - UR) continue;
+            boolean inTree = false;
+            for (int k = 0; k < T && !inTree; k++) if (hyp(x - tx[k], y - ty[k]) < tr[k] + UR) inTree = true;
+            if (inTree) continue;
+            boolean seen = false;
+            for (E u : mine) if (hyp(u.x - x, u.y - y) < 1950 && !treeBlocks(u.x, u.y, x, y, 0) && !smokeBlocks(u.x, u.y, x, y)) { seen = true; break; }
+            if (!seen) hidden++;
+        }
+        return hidden / 7.0;
     }
 
     // ---------------------------------------------------------------- input
@@ -176,7 +218,32 @@ class Player {
     }
 
     // ---------------------------------------------------------------- scoring of one candidate move
-    static double eval(E u, double px, double py, boolean dash, double wx, double wy, double wG, E target, boolean[] certain) {
+    /**
+     * Five-turn chase: the unit keeps walking in direction (ux, uy) after this move (sliding along trees and the wall),
+     * every predator runs straight at it. Returns the smallest distance reached: a direction that ends in the wall
+     * or in a tree shows up here several turns before it kills.
+     */
+    static double rollout(double px, double py, double ux, double uy) {
+        int n = threats.size(); double[] qx = new double[n], qy = new double[n];
+        for (int i = 0; i < n; i++) { qx[i] = threats.get(i).x; qy[i] = threats.get(i).y; }
+        double x = px, y = py, min = 1e18;
+        for (int k = 1; k <= 5; k++) {
+            if (k > 1 && (ux != 0 || uy != 0)) { double[] e = simMove(x, y, x + ux * MOVE, y + uy * MOVE, MOVE, false); x = e[0]; y = e[1]; }
+            for (int i = 0; i < n; i++) {
+                Th t = threats.get(i);
+                if (t.w < 0.5) continue;                              // older than one turn: too uncertain to chase with
+                double d = hyp(x - qx[i], y - qy[i]);
+                if (t.immob < k) {
+                    double step = Math.min(d, k == 1 ? t.reach : MOVE);
+                    if (d > 1e-6) { qx[i] += (x - qx[i]) / d * step; qy[i] += (y - qy[i]) / d * step; }
+                    d -= step;
+                }
+                if (d < min) min = d;
+            }
+        }
+        return min;
+    }
+    static double eval(E u, double px, double py, double ux, double uy, boolean dash, double wx, double wy, double wG, E target, boolean[] certain) {
         double sx = u.x, sy = u.y, sc = 0;
         double mySp = hyp(px - sx, py - sy);
         // catches
@@ -219,7 +286,14 @@ class Player {
             if (!hidden && D < 2470 + (t.immob > 0 ? 0 : 600) && !treeBlocks(px, py, t.x, t.y, NET_TREE)) sc -= t.w * 400;
         }
         if (nearestTh < 4000) sc -= 1.5 * Math.max(0, hyp(px, py) - 6300);
+        if (nearestTh < 3600) {
+            double rm = rollout(px, py, ux, uy);
+            sc += 1.5 * Math.min(rm, 2600);
+            if (rm < CATCH + 60) sc -= deathScale * 30000;
+        }
         sc -= wG * hyp(px - wx, py - wy);
+        if (reward < 300000 && (dash || hyp(px - sx, py - sy) > 100)) sc -= hiddenFrac(px, py) * (dash ? 2500 : 1200);   // no blind steps
+        for (E o : oldPred) sc -= Math.max(0, 1800 - hyp(px - o.x, py - o.y));                                          // a predator was here
         if (dash) {
             sc -= 700 + 250 * u.fat;
             if (target != null && target.immob > 0 && (hyp(target.x - sx, target.y - sy) - CATCH) / MOVE > target.immob - 1) sc += 1500;
@@ -234,11 +308,11 @@ class Player {
         boolean preyGone = myScore >= N;
 
         // threats: predators in sight, and the ones seen in the last three turns (with a wider reach)
-        threats.clear();
+        threats.clear(); oldPred.clear();
         for (E e : seenPred) threats.add(threat(e, 0));
         for (E t : tracks.values()) {
             if (t.owner != pred || t.vis || t.dead || t.lost) continue;
-            int age = turn - t.seen; if (age > 3) continue;
+            int age = turn - t.seen; if (age > 3) { if (age <= 8) oldPred.add(t); continue; }
             threats.add(threat(t, age));
         }
         // prey candidates: the ones in sight, then remembered ones
@@ -271,6 +345,7 @@ class Player {
         boolean[] cert = new boolean[1];
         for (E u : live) {
             if (u.immob > 0) { u.tag = "HELD"; continue; }
+            if (preyGone) { double nt0 = 1e18; for (Th t : threats) nt0 = Math.min(nt0, hyp(u.x - t.x, u.y - t.y)); if (nt0 > 3600) { u.tag = "HIDE"; continue; } }
             E target = targetOf.get(u);
             double gx, gy, wG;
             if (target != null) {
@@ -297,11 +372,11 @@ class Player {
                     double al = hyp(ax, ay); if (al > R - 1) { ax *= (R - 1) / al; ay *= (R - 1) / al; }
                     ax = Math.round(ax); ay = Math.round(ay);
                     double[] e = simMove(u.x, u.y, ax, ay, speed, false);
-                    double s = eval(u, e[0], e[1], sp == 1, w[0], w[1], wG, target, cert);
+                    double s = eval(u, e[0], e[1], dx / l, dy / l, sp == 1, w[0], w[1], wG, target, cert);
                     if (s > best) { best = s; bestCmd = (sp == 1 ? "DASH " : "MOVE ") + u.id + " " + (long) ax + " " + (long) ay; bex = e[0]; bey = e[1]; bestCert = cert[0]; bestDash = sp == 1; }
                 }
             }
-            double s = eval(u, u.x, u.y, false, w[0], w[1], wG, target, cert);
+            double s = eval(u, u.x, u.y, 0, 0, false, w[0], w[1], wG, target, cert);
             if (s > best) { best = s; bestCmd = null; bex = u.x; bey = u.y; bestCert = cert[0]; bestDash = false; }
             u.cmd = bestCmd; u.ex = bex; u.ey = bey;
             double nt = 1e18; for (Th t : threats) nt = Math.min(nt, hyp(u.x - t.x, u.y - t.y));
@@ -314,6 +389,7 @@ class Player {
         // 1. nets at prey that cannot dodge
         for (E u : live) {
             if (nets <= 0) break;
+            if (u.immob > 0 && hunterInReach(u)) continue;      // a held unit keeps its net for the hunter
             E bq = null; double bd = 1e18; double bx = 0, by = 0;
             for (E q : seenPrey) {
                 if (q.netTargeted || q.caughtNow || q.immob >= 2) continue;
@@ -324,9 +400,12 @@ class Player {
                 if (turn == 1 && q.cd == 0) continue;
                 if (treeBlocks(u.ex, u.ey, qx, qy, NET_TREE + 20) || friendOnLine(u, qx, qy, live)) continue;
                 double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
-                boolean ok = q.immob == 1 || q.cd > 0 || d <= 1400 || (lateral <= 250 && hyp(v[0], v[1]) > 100);
-                if (!ok) continue;
-                if (d < bd) { bd = d; bq = q; bx = qx; by = qy; }
+                // a target that cannot dodge (no dash, close, or not moving across the line) is always worth a net;
+                // any other visible prey gets one while a net stays in reserve for defence (63 % of such nets hit in Gold)
+                boolean sure = q.immob == 1 || q.cd > 0 || d <= 1400 || lateral <= 250;
+                if (!sure && nets < 2) continue;
+                double cost = d + (sure ? 0 : 1500);
+                if (cost < bd) { bd = cost; bq = q; bx = qx; by = qy; }
             }
             if (bq != null) { out.add(net(u, bx, by)); bq.netTargeted = true; }
         }
@@ -341,6 +420,7 @@ class Player {
                 if (d < 300 || d > 2200) continue;
                 if (treeBlocks(u.ex, u.ey, qx, qy, NET_TREE + 20) || friendOnLine(u, qx, qy, live)) continue;
                 boolean need = (u.immob > 0 && d <= CATCH + MOVE * u.immob + MOVE) || d <= 1500;
+                for (E h : live) if (h != u && h.immob > 0 && hyp(e.x - h.x, e.y - h.y) <= CATCH + MOVE * h.immob + MOVE) need = true;   // rescue
                 double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
                 boolean hit = e.cd > 0 || d <= 1300 || lateral <= 250;
                 if (need && hit && d < bd) { bd = d; be = e; bx = qx; by = qy; }
@@ -396,6 +476,10 @@ class Player {
         return all.isEmpty() ? "WAIT" : String.join(";", all);
     }
 
+    static boolean hunterInReach(E u) {
+        for (E e : seenPred) if (e.immob == 0 && hyp(e.x - u.x, e.y - u.y) <= CATCH + MOVE * u.immob + MOVE) return true;
+        return false;
+    }
     static Th threat(E e, int age) {
         Th t = new Th(); t.e = e; t.x = e.x; t.y = e.y; t.immob = age == 0 ? e.immob : 0;
         if (t.immob > 0) { t.reach = 0; t.reach2 = t.immob >= 2 ? 0 : (e.cd <= 1 ? DASH : MOVE); }
