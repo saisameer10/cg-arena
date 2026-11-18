@@ -262,3 +262,30 @@ Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 10
 `versions/vlive_net1.java` now follows reading 3: turn-1 nets at most 0 / 1 / 2 / 2 for 3 / 4 / 5 / 6 units.
 60 local games without a crash; the local rank moved from 1.97 to 2.22 between two seed sets with the live code at
 2.10 and 1.97, which again shows only that the local referee cannot rank.
+
+## The opening, measured (2026-11-19, 01:00 IST; `tools/peer/opening.py`, `tools/peer/behind15.py`)
+
+Same games (271 of teams at 23, 214 of ours, opponents ranked beyond 100).
+
+| | Teams at 23 | Us |
+|---|---|---|
+| A catch of ours by turn 3 / 5 / 8 / 10, share of games | 22 / 35 / 54 / 62 % | 10 / 21 / 40 / 47 % |
+| Catches by turn 10 | 0.87 | 0.58 |
+| of which on prey held by our own net | 0.53 | 0.28 |
+| of which on free prey | 0.28 | 0.29 |
+| of which on prey held by the third team's net | 0.06 | 0.01 |
+| Turn 1, per unit: dash / net / smoke | 0.51 / 0.18 / 0.06 | 0.52 / 0.00 / 0.22 |
+| Turns 1 to 5, per unit: dash / net / smoke | 1.08 / 0.52 / 0.18 | 0.99 / 0.23 / 0.38 |
+
+1. **The whole early gap is catches on prey held by our own net** (0.25 of the 0.29). On free prey we are level. We
+   dash as much as they do in the first five turns; we net less than half as much and smoke twice as much.
+2. Our mean rank by the turn of our first catch: by turn 5: 1.75 (21 % of games); turns 6 to 10: 1.77 (26 %); none
+   by turn 10: 2.20 (53 %). With their shares (35 / 27 / 38 %) our mean rank would be 1.93 instead of 1.99:
+   **about +0.8 points**. That is what the opening alone supports. Two points would need "no catch by turn 10" in
+   14 % of games; teams at 23 have 38 %.
+3. The rest of their lead is in the games without an early catch (1.87 against our 2.20), and there they are
+   simply less far behind (see below), not better at coming back.
+4. Behind at turn 15 (41 % of their games, 48 % of ours): they finish first 32 %, we 19 %. After turn 15 both catch
+   2.3; they hold 0.60 catches at turn 15, we 0.31 (zero in 73 % of our behind-games, 50 % of theirs). With a
+   catch in hand and behind, we match them (1.96 against 2.05). No behind-mode is visible in their play. They throw
+   half as many nets after turn 15 (1.14 against 2.34) for the same catches and dash a third more in every phase.
