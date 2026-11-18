@@ -41,6 +41,12 @@ python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
   switch: no unit-for-point trade while the predator team has as many points as we have (`F_NOTRADE`); after turn 65
   with more points than the predator team, soft threat terms x 1.6 (`F_HOLDLEAD`); prefer the prey unit within 2,000
   of a predator in sight (`F_HUNTHUNTERS`). Compiles, 60 local games without a crash, no real-field game yet.
+- Fifth bot: `vlive_engine.java` = the live code plus the two-ply search in its corrected form. The first form
+  (vchase) replaced the five-turn chase and lost 0.13 rank locally. Here the chase stays; the search only vetoes a
+  move after which we are caught within two turns whatever we do (`F_MM_FLEE`), and a catch counts as certain only
+  if every reply of the prey still ends on our path, with a reward for a forced catch in two (`F_MM_STRIKE`).
+  Compiles, 60 local games without a crash (2.00 against 2.02 for the live code), turn time on the same recorded
+  games: median 2 to 4 ms, worst 26 ms, against 2 ms and 26 ms for the live code. No real-field game yet.
 - Then, in this order: `vpress.java`, `vs-commit.java`.
 - A full ranking run took about 50 minutes on the evening of the 18th (0 to 90 % between 16:44 and 17:32), so testing
   can go on until about 10:30 if the first round is not decisive.
