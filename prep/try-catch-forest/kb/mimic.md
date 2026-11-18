@@ -500,3 +500,26 @@ nets and the six-unit games. No real-opponent test yet. Turn time on the shared 
 later turn 12 to 30 ms with one outlier game at 79 ms while three games ran at once; the replay will show the real
 figure. **Local results did not transfer to real Gold teams for one candidate today.**
 
+**Second pool with copy C (16:16 IST, other 10 maps, with copy D in place of copy B):** C 1.972, v10 1.939, v5
+2.028. Over both pools (360 games each) copy C stands at mean rank 1.92 and v10 at 1.97: **level**. The 0.13 lead
+of the first pool did not repeat; what repeats is that C is no worse than v10 locally and better than copy B.
+
+## 14. Copy D: two survival rules, tested, not better (16:16 IST)
+
+Where copy C's units are lost in its 180 local games (554 units; `deaths.py` in the scratch folder, last order of
+each lost unit): by turn 10, 68 % were walking at prey and 58 % had thrown their own smoke within 9 turns (blind in
+their cloud); after turn 10, 72 to 98 % had made three or more dashes (v10: 24 to 77 %) and 36 to 41 % were held.
+
+`versions/vmimic_d.java` = copy C plus (1) a unit standing in a cloud keeps predators in mind for 8 turns and walks
+out away from them (`P_SMOKE_MEMORY`), (2) after three dashes a unit dashes on v10's budget only (`P_DASH_FREE`).
+
+| Version (240 games, 10 shared maps, 180 each) | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 |
+|---|---|---|---|---|---|---|
+| vmimic_d | 2.044 | 27.8 % | 32.2 % | 2.49 | 2.71 | 0.68 |
+| vmimic_c | 1.972 | 36.1 % | 33.3 % | 2.62 | 2.64 | 0.74 |
+| v10 | 1.939 | 38.3 % | 32.2 % | 2.56 | 2.43 | 0.71 |
+| v5 | 2.028 | 31.1 % | 33.9 % | 2.51 | 2.40 | 0.41 |
+
+Copy D loses as many units as copy C (2.71 against 2.64), catches fewer and wins less: **not better; copy C stays
+the leader copy to judge.** The two loss patterns are descriptions, not causes: removing them did not save units.
+
