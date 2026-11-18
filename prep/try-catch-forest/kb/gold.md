@@ -236,3 +236,23 @@ the pool by more than the effects under test.
 What that says about v10: it is a local optimum for one-rule changes. Rules that restrict (later smoke, shorter
 nets) cost catches; rules that push (cut-off, dash onto held prey) cost units. The gap to the top of Gold (about
 19 points against 25) is not one missing rule.
+
+## 12. Short replays, 15:13 to 18:00 IST (first 20 of v10's Gold battles by game id)
+
+On the user's instruction candidates now get 20 battles each, so that one can reach the arena before the window
+closes. 20 battles resolve about 0.2 of mean rank; the verdict is one of: clearly worse, clearly better, level.
+
+| Candidate | First / second / last | Mean rank | Catches | by turn 10 | Lost | Better / worse / same | Net hits on prey converted | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| v10 in the arena (those 20) | 9 / 7 / 4 | 1.75 | 3.55 | 0.75 | 2.55 | | 74 % (39 replays) | |
+| Mimic of the leader (`vmimic.java`, 15:08 copy) | 7 / 8 / 5 | 1.90 | 3.55 | 0.95 | 3.20 | 7 / 8 / 5 | 73 % of 22 | level to slightly worse; more units lost; not a candidate |
+
+The mimic is a rule book fitted on the leader's printed commands (110 games); the logs do not show what the leader
+saw, the trees or its pools, and those gaps are filled with v10's parts (`mimic.md`, section 6). At its last
+fingerprint check 28 of 50 behaviour measures were inside the tolerance. It reproduces what the leader does on
+average, not the conditions under which it decides.
+
+Where v10's units are lost (123 losses in 47 replayed Gold battles): free 63 %, held by a net 36 %; no net and no smoke
+left at that moment 48 %. A held unit with a hunter in sight: nothing left -> caught 100 % (17 cases, plus 2 with a
+net left and unused); smoked -> 70 % (10); threw a net at the hunter -> 50 % (14). Candidate built from it:
+`versions/vres.java` (v10 with the last net kept for defence until turn 85), not yet replayed.
