@@ -64,3 +64,4 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `vlive_all3.java` | crash-checked (360 local games); candidate | `vlive_press` + `F_T1` + `F_HNET` |
 | `vlive_dash.java` | crash-checked; candidate | live code + dashes spent on prey (`F_DASHPREY`; `../tools/gen/mklive5.py`) |
 | `vlive_first.java` | crash-checked; candidate | `vlive_net1` + `F_DASHPREY`: the "catch first" package |
+| `vlive_combo.java` | crash-checked (20 local games); candidate | `vlive_all3` + turn-1 dash and net also at prey known only from the rotation + up to 2 early nets without a sure aim in turns 2 to 5 (`tools/gen/mkcombo.py`) |
