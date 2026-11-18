@@ -127,3 +127,24 @@ v10 = v9 with `F_SMOKE`, `F_HIDDEN` and `F_OLDPRED` off (the three changes the a
 
 `kb/gold.md` has the reasoning and the profile of the top Gold teams. v11 is v10 with tunable numbers; tuning pools
 on the local referee: see below when filled in.
+
+## Tuning of v11's numbers on the local referee (2026-11-18, 2,400 games)
+
+Five pools of 480 games: the base and four variants each. Mean rank, lower is better; one standard error about 0.05.
+
+| Pool | Base | Variants |
+|---|---|---|
+| Pull towards prey, soft distance to predators | 2.00 | pull x1.5: 1.96; pull x0.7: 1.96; distance x0.5: 1.97; distance x1.5: 2.07 |
+| Chase lookahead, two-turn margin, net-line penalty | 1.90 | lookahead x0.5: 2.05; lookahead x2: 2.08; margin x0.5: 1.88; net line x3: 2.09 |
+| Dashes | 1.95 | **approach dash with a predator down to 2200 away and for the first three dashes: 1.85**; cheaper flee dash: 2.00; strike reward x3: 2.23; strike reward x0.3: 1.95 |
+| Nets | 1.96 | sure distance 1800: 2.02; no reserve and range 2400: 2.06; wider nets at hunters: 2.01; reserve of 3: 1.97 |
+| Smoke, decoy, ways out | 1.90 | smoke from 2800: 2.05; smoke from 1800: 2.14; decoy from 2200: 1.95; ways-out weight x2: 1.95 |
+
+Reading: the numbers of v10 sit at or near their best; 19 of 20 variations are level or worse. Smoke timing is
+sensitive in both directions (2300 is right). The one gain, a wider approach dash, is being confirmed on fresh seeds
+and then on replays of Gold battles before it goes anywhere.
+
+## v10 in the Gold arena
+
+Submitted 2026-11-18 11:40 IST (submission 41743202), replacing v5 (148th of 274, score 16.1, at 30 % of its games).
+First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2.43; 134th of 300, score 16.9, at 25 %.
