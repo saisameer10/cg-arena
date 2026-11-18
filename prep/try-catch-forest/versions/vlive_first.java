@@ -89,7 +89,7 @@ class Player {
     //      prey that can still dash). A net yields about the same whenever it is thrown (16 to 26 %), so this moves
     //      catches earlier, it does not add any: of use for the tie-break and for 'no catch by turn 15'.
     static final boolean F_NET1 = true;
-    static final double P_NET1 = 1900;        // farthest target of a turn-1 net (distance after our move)
+    static final double P_NET1 = 2000;        // farthest target of a turn-1 net (distance after our move)
     // by units per team: teams at 23 get 0.01 catches from turn-1 nets with 3 units, 0.07 with 4, 0.15 with 5, 0.28 with 6
     static final int[] P_NET1_MAX = {0, 0, 0, 0, 1, 2, 2};   // nets spent on turn 1 at most, index = units per team
     static int net1Thrown = 0;
@@ -99,6 +99,8 @@ class Player {
     //      and the hunter is lost in 0 to 1 % of those turns either way. A dash unused at turn 100 is worth nothing.
     static final boolean F_NETEARLY = true;   // turns 1 to P_NETEARLY: a net at any prey in reach, no reserve kept
     static final int P_NETEARLY = 5;
+    static final boolean F_NET1UNSEEN = true;  // turn 1: prey known from the rotation counts as a net target
+    static final double P_DP_PRED1 = 1000;     // turn 1: nearest predator allowed for the dash at prey
     static final boolean F_DASHPREY = true;
     static final double P_DP_MIN = 1100, P_DP_MAX = 2700, P_DP_PRED = 2500;   // prey distance band, nearest predator
     static final int P_DP_FAT = 4, P_DP_LATE = 60;                           // dashes already made at most; no limit from this turn
@@ -594,7 +596,7 @@ class Player {
             double ntF = 1e18; for (Th t : threats) if (t.w >= 0.5) ntF = Math.min(ntF, hyp(u.x - t.x, u.y - t.y));
             approachDash = F_APPROACH && target != null && turn - target.seen <= 1 && hyp(target.x - u.x, target.y - u.y) > (aggro ? 1300 : 1500)
                 && (aggro ? u.fat <= AG_FAT && ntF > AG_NTF : u.fat <= 2 && ntF > 3000);   // v16/v17: more approach dashes in small games
-            if (F_DASHPREY && !approachDash && target != null && turn - target.seen <= 1 && target.immob == 0 && ntF > P_DP_PRED
+            if (F_DASHPREY && !approachDash && target != null && turn - target.seen <= 1 && target.immob == 0 && ntF > (turn == 1 ? P_DP_PRED1 : P_DP_PRED)
                     && (u.fat <= P_DP_FAT || turn >= P_DP_LATE)) {
                 double dq = hyp(target.x - u.x, target.y - u.y);
                 if (dq >= P_DP_MIN && dq <= P_DP_MAX) approachDash = true;
@@ -658,7 +660,17 @@ class Player {
             if (u.usedPower) continue;
             if (u.immob > 0 && hunterInReach(u)) continue;      // a held unit keeps its net for the hunter
             E bq = null; double bd = 1e18; double bx = 0, by = 0;
-            for (E q : seenPrey) {
+            List<E> netPrey = seenPrey;
+            if (F_NET1UNSEEN && turn == 1) {
+                netPrey = new ArrayList<>(seenPrey);
+                for (E t : tracks.values()) {
+                    if (t.owner != prey || t.vis || t.dead || t.seen != turn) continue;
+                    int j = t.id - prey * N; boolean gh = false;
+                    for (E m : mine) if (m.id - myId * N == j && m.ghost) gh = true;   // its counterpart of ours is a ghost: so is it
+                    if (!gh) netPrey.add(t);
+                }
+            }
+            for (E q : netPrey) {
                 if (q.netTargeted || q.caughtNow || q.immob >= 2) continue;
                 double[] v = predV(q); double qx = q.x + v[0], qy = q.y + v[1];
                 double d = hyp(qx - u.ex, qy - u.ey);
