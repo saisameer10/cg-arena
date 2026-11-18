@@ -152,3 +152,30 @@ kept for predators that are in sight; unseen-ground penalty for dashes only (swi
 
 Tuning the numbers gave nothing: 20 variations over 2,400 local games, then the only apparent gain (wider approach
 dash) re-run on fresh seeds: 1.99 against 2.03, inside the noise.
+
+## 8. Candidates after v10 (2026-11-18 afternoon)
+
+| Candidate | Change | Local referee (480 games) | Replay of v10's Gold battles | Verdict |
+|---|---|---|---|---|
+| v12 | rescue net without a sure aim; decoys only against predators in sight; wider approach dash | 1.98 against 2.00 (noise) | 26 battles: mean rank 1.81 against v10's 1.81; better in 6, worse in 6 | no gain, dropped |
+| dash-only unseen-ground penalty (`F_HIDDASH`) | | 2.01 against 2.00 | not run | no gain |
+| v13: second hunter aims behind the prey (`F_PINCER`) | | running | | |
+| nets limited to 1600 (`P_NET_MAX`) | see the table below | not meaningful (our own bots dodge differently) | running | |
+
+v10's nets in the 21 replayed Gold battles, by intended target (`tools/netclass.py`; 109 nets with a visible target):
+
+| Target | Thrown | Hit |
+|---|---|---|
+| Prey, all | 70 | 54 % |
+| Prey that can dash, within 1000 | 18 | 55 % |
+| Prey that can dash, 1000 to 1500 | 11 | 72 % |
+| Prey with dash on cooldown, 1000 to 1500 | 13 | 53 % |
+| Prey with dash on cooldown, 1500 to 2000 | 5 | 20 % |
+| Prey with dash on cooldown, beyond 2000 | 9 | 33 % |
+| Predator, all | 39 | 58 % |
+| Predator, thrown by a held unit of ours | 8 | 75 % |
+
+- Inside 1500 a net at prey hits 55 to 72 %; beyond it 20 to 33 %, even when the prey has no dash. "Dash on cooldown"
+  does not make a long net sure in Gold: a walking unit 1800 away has a whole turn to step off the line.
+- On the same 21 battles v5 got 1.76 catches per game from nets (45 % hits on prey, 77 % converted), v10 1.38
+  (36 %, 72 %): v10 throws earlier and from farther. That is the part of v5 worth getting back.
