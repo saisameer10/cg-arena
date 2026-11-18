@@ -121,3 +121,19 @@ the pull to the prey and on the catch itself; remembered predators, soft distanc
 chase lookahead and ways-out count are dropped for it. Its moves are tagged COMMIT in the log.
 Local check only: compiles, 60 games on one thread with no crash (1.95 against v10 2.00 and v5 2.02; too few to
 judge). To be judged on replays of real Gold battles by the share of net hits that become a catch (v10: 74 %).
+
+## vgo (`versions/vgo.java`): the five-part candidate asked for on 2026-11-18, 15:30 IST
+
+vs0 (= v10) with five switches on, each of which can be turned off alone:
+
+| Switch | What it does | Evidence so far |
+|---|---|---|
+| `F_COMMIT` (slack 300) | a free unit that can reach held prey in time ignores everything but predators in sight | 7 of v10's 18 wasted net hits were a hunter turning away from a remembered predator; untested on real battles |
+| `F_CLOUDMEM` | predators seen up to 9 turns ago stay in the threat model while one of our units is in a cloud | 0.15 worse in local pool A1; included on request |
+| `F_HUNTFIRST` (0.5; 0.3 in turns 1 to 10) | a prey within 1,500 that is held or has no dash: soft threat terms (distance kept, chase lookahead, net line, remembered predators) are scaled down; the hard no-touch rule stays | untested |
+| `F_EARLYDASH` | until turn 10 the first dash may be spent to close in on prey in sight when no predator is in sight within 2,500 | untested (a similar "dash in turns 2 to 5" switch showed no local effect) |
+| `F_GHOSTPLAN` | first ghost on held prey (else the prey nearest our hunters), second on the predator nearest our living units | untested |
+
+`F_FINISHER` and `F_T1` are present and off. Local check only: compiles, 60 games on one thread with no crash;
+mean rank 2.13 against v10 1.88 and v5 1.95 (60 games cannot judge, but it is not a good sign). Judge on replays of
+real Gold battles: rank, and the share of net hits on prey that become a catch (v10: 74 %).
