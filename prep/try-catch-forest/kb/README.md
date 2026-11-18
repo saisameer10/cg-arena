@@ -88,4 +88,5 @@ java -cp simc Sim 480 4 1000 v9=bin/v9 noMAP=bin/noMAP v5=bin/v5  # games, threa
 | 2026-11-18 10:16 | Silver | v5 promoted; same statement and input as Bronze; 7th of 68 at 36 % |
 | 2026-11-18 | Silver | candidates v6 to v8 built from the arena analysis, not better than v5 (see `log.md`) |
 | 2026-11-18 11:01 | Gold | v5 promoted; same statement and input; top league (no boss) |
-| 2026-11-18 | Gold | v10 validated on the local referee and on replays of all 21 Gold battles (mean rank 1.52 against 1.81); not yet submitted |
+| 2026-11-18 | Gold | v10 validated on the local referee and on replays of all 21 Gold battles (mean rank 1.52 against 1.81) |
+| 2026-11-18 11:40 | Gold | v10 submitted (submission 41743202); v5 had reached 150th of 272 at 30 % of its Gold games |

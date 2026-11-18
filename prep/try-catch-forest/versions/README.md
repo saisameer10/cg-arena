@@ -10,7 +10,7 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `v7.java` | candidate, not submitted | v6 + early approach dash, lighter unseen-ground penalty for hunters |
 | `v8.java` | candidate, not submitted | v7 + search map instead of the ring patrol |
 | `v9.java` | test bed | v8 with an on/off switch (`F_...`) on every change, for ablation on the local referee |
-| `v10.java` | **validated for Gold; same as `../Player.java`; submit this one** | v9 with three harmful changes off (unseen-ground penalty, smoke past the hunter, old-predator avoidance) |
+| `v10.java` | **live in the Gold arena since 2026-11-18 11:40 IST (submission 41743202)**; same as `../Player.java` | v9 with three harmful changes off (unseen-ground penalty, smoke past the hunter, old-predator avoidance) |
 | `v11.java` | test bed | v10 with its numbers as constants (`P_...`) that `tools/variant.sh` can change, for tuning |
 
 `../Player.java` is the version to play: the best one that has passed a fair test. A candidate replaces it only after a fair test
