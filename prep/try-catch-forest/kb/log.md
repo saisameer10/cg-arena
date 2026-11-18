@@ -162,3 +162,5 @@ First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2
 | vs3 (other session): net at prey only when a hunter of ours ends within 1300 | 37 | | | running |
 
 v10's place in Gold: 104th of 357 (score 18.0) when its 37 games ended, 85th of 383 (18.9) an hour later.
+
+Sub-version pools of the battle-autopsy session (14 switches, smoke distance in four pools, bundles vs1 to vs3): see `subversions.md`.
