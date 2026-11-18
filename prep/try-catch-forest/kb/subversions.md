@@ -110,3 +110,14 @@ Ideas from the tempo research note: do more early, instead of restricting. Pools
 
 No effect from any of them, alone or together. In these three pools v10 stayed ahead of v1 (2.05 to 2.10) and of
 v5 in two of three (2.08, 1.87, 2.01).
+
+## Commit to netted prey (`versions/vs-commit.java` = vs0 + `F_COMMIT=true`, `P_COMMIT_SLACK=300`)
+
+Asked for by the analysis session: of 70 net hits on prey in 39 debug replays of v10, 18 were not converted, 7 of
+them because our nearest unit (1,100 to 1,800 from the held prey) turned away from a predator it only remembered.
+With the switch on, a free unit that can reach held prey in time (distance - 440 <= 600 x turns held + 300, +600 if
+its dash is ready) scores its moves only on predators in sight this turn (the hard "cannot be touched" rule), on
+the pull to the prey and on the catch itself; remembered predators, soft distance, two-turn margin, net line, wall,
+chase lookahead and ways-out count are dropped for it. Its moves are tagged COMMIT in the log.
+Local check only: compiles, 60 games on one thread with no crash (1.95 against v10 2.00 and v5 2.02; too few to
+judge). To be judged on replays of real Gold battles by the share of net hits that become a catch (v10: 74 %).
