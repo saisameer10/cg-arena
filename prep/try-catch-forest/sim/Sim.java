@@ -30,7 +30,17 @@ public class Sim {
         final Random rnd; int T; double[] tx, ty, tr; int N; U[] units; List<Decoy> decoys = new ArrayList<>(); List<Cloud> clouds = new ArrayList<>();
         int[][] pool = new int[3][3]; int[] score = new int[3]; List<List<Integer>> catchTurns = new ArrayList<>(); boolean[] out = new boolean[3]; int nextId; int turn;
         int[] lost = new int[3];
+        /** events for validation: {turn, hunter id, prey id} for catches; {turn, thrower id, hit id} for net hits */
+        List<int[]> catchEv = new ArrayList<>(), netEv = new ArrayList<>();
+        int[] netThrows = new int[3];
         Game(long seed) { rnd = new Random(seed); for (int i = 0; i < 3; i++) catchTurns.add(new ArrayList<>()); gen(); }
+        /** A game with a given map and units (replays of real games). Powers are not limited. */
+        Game(double[] txA, double[] tyA, double[] trA, U[] us, int perTeam) {
+            rnd = new Random(1); for (int i = 0; i < 3; i++) catchTurns.add(new ArrayList<>());
+            T = txA.length; tx = txA; ty = tyA; tr = trA; units = us; N = perTeam;
+            for (int p = 0; p < 3; p++) { pool[p][0] = 99; pool[p][1] = 99; pool[p][2] = 99; }
+            nextId = 3 * N + T;
+        }
 
         void gen() {
             int per = 4 + rnd.nextInt(8);                                  // trees per third: 12 to 33 in total
@@ -144,6 +154,7 @@ public class Sim {
 
         void catchUnit(U hunter, U prey) {
             prey.ghost = true; prey.moving = false; prey.immob = 0; score[hunter.owner]++; catchTurns.get(hunter.owner).add(turn); lost[prey.owner]++;
+            catchEv.add(new int[]{turn, hunter.id, prey.id});
         }
 
         void play(String[] cmd) {
@@ -198,7 +209,7 @@ public class Sim {
                 if (f[0].equals("SMOKE") && pool[u.owner][1] > 0) {
                     double k = d > SMOKE_THROW ? SMOKE_THROW / d : 1; Cloud c = new Cloud(); c.id = nextId++; c.owner = u.owner; c.life = 10; c.x = u.x + (gx - u.x) * k; c.y = u.y + (gy - u.y) * k; newClouds.add(c); pool[u.owner][1]--;
                 } else if (f[0].equals("NET") && pool[u.owner][0] > 0 && d > 1) {
-                    pool[u.owner][0]--;
+                    pool[u.owner][0]--; netThrows[u.owner]++;
                     double k = d > NET_RANGE ? NET_RANGE / d : 1, ex = u.x + (gx - u.x) * k, ey = u.y + (gy - u.y) * k, best = 2;
                     for (int i = 0; i < T; i++) if (segDist(tx[i], ty[i], u.x, u.y, ex, ey) < tr[i] + NET_R) best = Math.min(best, firstTouch(tx[i], ty[i], tr[i] + NET_R, u.x, u.y, ex, ey));
                     for (U o : units) if (o != u && !o.ghost && !out[o.owner] && segDist(o.x, o.y, u.x, u.y, ex, ey) < UR + NET_R) best = Math.min(best, firstTouch(o.x, o.y, UR + NET_R, u.x, u.y, ex, ey));
@@ -207,7 +218,7 @@ public class Sim {
                     double hx = u.x + (ex - u.x) * best, hy = u.y + (ey - u.y) * best; boolean tree = false;
                     for (int i = 0; i < T; i++) if (Math.hypot(hx - tx[i], hy - ty[i]) < tr[i] + NET_R + 1) tree = true;
                     if (tree) continue;
-                    for (U o : units) if (o != u && !o.ghost && !out[o.owner] && Math.hypot(o.x - hx, o.y - hy) < UR + NET_R + 1) newImmob[o.id] = 4;
+                    for (U o : units) if (o != u && !o.ghost && !out[o.owner] && Math.hypot(o.x - hx, o.y - hy) < UR + NET_R + 1) { newImmob[o.id] = 4; netEv.add(new int[]{turn, u.id, o.id}); }
                     for (Decoy o : decoys) if (!o.dead && Math.hypot(o.x - hx, o.y - hy) < UR + NET_R + 1) o.dead = true;
                 }
             }
@@ -243,12 +254,13 @@ public class Sim {
             p = new ProcessBuilder(System.getProperty("java.home") + File.separator + "bin" + File.separator + "java", "-Xss8m", "-XX:TieredStopAtLevel=1", "-cp", cp, "Player").redirectError(ProcessBuilder.Redirect.DISCARD).start();
             in = new BufferedReader(new InputStreamReader(p.getInputStream())); outw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(p.getOutputStream())), false);
         }
-        void send(String s) { outw.print(s); outw.flush(); }
-        String read() throws IOException { return in.readLine(); }
+        long sentAt, maxNs, slow50; int turns;
+        void send(String s) { sentAt = System.nanoTime(); outw.print(s); outw.flush(); }
+        String read() throws IOException { String l = in.readLine(); long ns = System.nanoTime() - sentAt; turns++; if (turns > 1) { if (ns > maxNs) maxNs = ns; if (ns > 50_000_000L) slow50++; } return l; }
         void kill() { p.destroyForcibly(); }
     }
 
-    static final class Res { int[] rank, catches, lost, c10, c20; int turns; boolean crash; }
+    static final class Res { int[] rank, catches, lost, c10, c20, nets; int turns; boolean crash; long maxNs; long[] slow50 = new long[3]; }
 
     static Res runGame(long seed, String[] cps) {
         Game g = new Game(seed); Bot[] bots = new Bot[3]; Res r = new Res();
@@ -267,11 +279,14 @@ public class Sim {
             }
         } catch (IOException e) { r.crash = true; } finally { for (Bot b : bots) if (b != null) b.kill(); }
         r.rank = g.ranks(); r.catches = g.score.clone(); r.lost = g.lost.clone(); r.turns = g.turn; r.c10 = new int[3]; r.c20 = new int[3];
+        r.nets = g.netThrows.clone();
+        for (int p = 0; p < 3; p++) if (bots[p] != null) { r.maxNs = Math.max(r.maxNs, bots[p].maxNs); r.slow50[p] = bots[p].slow50; }
         for (int p = 0; p < 3; p++) for (int t : g.catchTurns.get(p)) { if (t <= 10) r.c10[p]++; if (t <= 20) r.c20[p]++; }
         return r;
     }
 
     public static void main(String[] a) throws Exception {
+        if (a.length > 0 && a[0].equals("fixed")) { fixedMain(Arrays.copyOfRange(a, 1, a.length)); return; }
         int games = Integer.parseInt(a[0]), threads = Integer.parseInt(a[1]); long seed0 = Long.parseLong(a[2]);
         int V = a.length - 3; String[] names = new String[V], cps = new String[V];
         for (int i = 0; i < V; i++) { String[] f = a[3 + i].split("=", 2); names[i] = f[0]; cps[i] = f[1]; }
@@ -295,5 +310,34 @@ public class Sim {
         System.out.printf("%-8s %6s %6s %6s %6s %7s %6s %6s %6s%n", "version", "games", "rank", "win%", "last%", "catches", "lost", "by10", "by20");
         for (int i = 0; i < V; i++) { double[] q = st[i]; if (q[0] == 0) continue; System.out.printf("%-8s %6.0f %6.3f %5.1f%% %5.1f%% %7.2f %6.2f %6.2f %6.2f%n", names[i], q[0], q[1] / q[0], 100 * q[2] / q[0], 100 * q[3] / q[0], q[4] / q[0], q[5] / q[0], q[6] / q[0], q[7] / q[0]); }
         for (int i = 0; i < V; i++) for (int j = 0; j < V; j++) if (huntN[i][j] > 0) System.out.printf("   %s hunting %s: %.2f catches per game%n", names[i], names[j], hunt[i][j] / huntN[i][j]);
+    }
+
+    /**
+     * Fixed seats: every map is played once with the given bots in seats 0, 1, 2 (the seat order is not rotated).
+     * Prints per seat: mean rank, catches and units lost per game, net throws per game, and the same for each
+     * seat's victims. Used to compare a bot with the league boss, where we always sit in seat 0.
+     */
+    static void fixedMain(String[] a) throws Exception {
+        int games = Integer.parseInt(a[0]), threads = Integer.parseInt(a[1]); long seed0 = Long.parseLong(a[2]);
+        String[] names = new String[3], cps = new String[3];
+        for (int i = 0; i < 3; i++) { String[] f = a[3 + i].split("=", 2); names[i] = f[0]; cps[i] = f[1]; }
+        ExecutorService ex = Executors.newFixedThreadPool(threads);
+        List<Future<Res>> fs = new ArrayList<>();
+        for (int n = 0; n < games; n++) {
+            final long seed = seed0 + n;
+            fs.add(ex.submit(() -> runGame(seed, cps)));
+        }
+        double[] rank = new double[3], catches = new double[3], lost = new double[3], nets = new double[3], slow = new double[3];
+        int crashes = 0; long maxNs = 0;
+        for (Future<Res> f : fs) {
+            Res r = f.get(); if (r.crash) crashes++;
+            for (int s = 0; s < 3; s++) { rank[s] += r.rank[s]; catches[s] += r.catches[s]; lost[s] += r.lost[s]; nets[s] += r.nets[s]; }
+            maxNs = Math.max(maxNs, r.maxNs);
+            for (int s = 0; s < 3; s++) slow[s] += r.slow50[s];
+        }
+        ex.shutdown();
+        System.out.printf("games %d  crashes %d  slowest bot turn %.1f ms%n", games, crashes, maxNs / 1e6);
+        System.out.printf("%-10s %6s %6s %8s %6s %7s %8s%n", "seat", "games", "rank", "catches", "lost", "nets", "turns>50ms");
+        for (int s = 0; s < 3; s++) System.out.printf("%-10s %6d %6.3f %8.2f %6.2f %7.2f %8.0f%n", names[s] + "@" + s, games, rank[s] / games, catches[s] / games, lost[s] / games, nets[s] / games, slow[s]);
     }
 }

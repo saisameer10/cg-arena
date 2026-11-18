@@ -13,6 +13,9 @@ Branch `try-catch-forest` holds everything for this challenge.
 | `prep/try-catch-forest/dummy/Player.java` | placeholder that only answers WAIT (to leave in the IDE or show on screen) |
 | `prep/try-catch-forest/kb/arena.md` | what happened against real players and what was changed because of it |
 | `prep/try-catch-forest/kb/learnings.md` | lessons about the game, the referee and the method; checklist for the next contest |
+| `prep/try-catch-forest/kb/offline.md` | what works after the API closes (18:00 IST): local arena, referee check, boss stand-in, archive |
+| `prep/try-catch-forest/kb/archive-2026-11-18.md` | what the archive holds, the leaderboard and the top teams as of the last API day |
+| `prep/try-catch-forest/offline/arena.py` | the local arena: compile every bot, play against the boss stand-in, three-way tournaments, referee check |
 | `prep/try-catch-forest/kb/prompt-gold-top5.md` | the prompt for a new session that aims at the top 5 of Gold (state, method, rules) |
 | `prep/try-catch-forest/kb/rules.md` | the rules in our own words, per league, plus everything measured about the referee |
 | `prep/try-catch-forest/kb/strategy.md` | how the bot works, which research pattern each part answers, known weak points, ideas |
@@ -81,6 +84,8 @@ java -cp simc Sim 480 4 1000 v9=bin/v9 noMAP=bin/noMAP v5=bin/v5  # games, threa
    (the parser ignores unknown types; `SECRET_FOREST_SPRITE` already appears and is undocumented).
 
 ## Status
+
+After 18:00 IST (API closed): offline only. Start with `kb/offline.md`.
 
 | Date | League | State |
 |---|---|---|
