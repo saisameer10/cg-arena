@@ -324,12 +324,79 @@ targets), on the maps (trees are placed by our generator: sight on turn 1), and 
 Same engine, rule books of Les Gens Bons and FullStuck. After the second joint run (60 games each, before the last
 three rounds of engine fixes): 32 and 37 of 50 lines inside. Not re-measured since; no 240-game table yet.
 
-## 10. Still to do
+## 10. Leader mimic against our versions (240 local games, one thread)
 
-- 240 games per mimic against v10, v5, v1 and the newest candidate, both seat cycles.
-- Final fingerprints of vmimic2 and vmimic3.
-- "For the user's decision" (a submission replaces v10, restarts the ranking games; only the last one counts).
+Pool: vmimic (15:33 copy), v10, v5, v1 and the newest candidate vres; every ordered triple (all seat orders) on 4
+shared maps, 144 games per version. **Only four maps: the two halves of the run disagree (vmimic 2.21 on the first
+two maps, 1.79 on the last two), so differences under 0.2 of mean rank mean nothing here.**
+
+| Version | Games | Mean rank | Wins | Last | Catches | Lost | Catches by turn 10 | by turn 20 |
+|---|---|---|---|---|---|---|---|---|
+| vmimic | 144 | 2.000 | 34.0 % | 34.0 % | 2.88 | 3.02 | 0.40 | 0.97 |
+| v10 | 144 | 1.826 | 38.9 % | 21.5 % | 3.04 | 2.55 | 0.71 | 1.25 |
+| v5 | 144 | 2.069 | 29.2 % | 36.1 % | 2.60 | 2.70 | 0.54 | 1.15 |
+| v1 | 144 | 2.097 | 33.3 % | 43.1 % | 2.77 | 3.20 | 0.54 | 1.03 |
+| vres | 144 | 2.000 | 31.3 % | 31.3 % | 2.72 | 2.54 | 0.67 | 1.11 |
+
+Catches per game, hunter (row) on prey (column):
+
+| | vmimic | v10 | v5 | v1 | vres |
+|---|---|---|---|---|---|
+| vmimic | | 2.62 | 3.20 | 3.20 | 2.53 |
+| v10 | 3.03 | | 2.92 | 3.45 | 2.78 |
+| v5 | 2.47 | 2.45 | | 3.20 | 2.28 |
+| v1 | 3.75 | 2.61 | 2.14 | | 2.59 |
+| vres | 2.84 | 2.53 | 2.53 | 2.98 | |
+
+0 crashes, 0 invalid orders (`tools/mimic_check.py`). Reading: locally the mimic is in the middle of our versions;
+it catches as much as they do but later (0.40 by turn 10 against 0.54 to 0.71) and loses the most units after v1.
+**Local results did not transfer to real Gold teams for one candidate today.**
+
+## 11. For the user's decision
+
+**What happened.** At 15:41 IST the 15:08 copy of the mimic was submitted (submission 41746943, by the analysis
+session on the user's instruction to it). It **replaced v10 in the arena** (v10 stood at about 85th of 383, later
+134th of 407, rating 19.0) and restarted the ranking games. Only the last submission counts for the final ranking.
+
+**The live copy is not the best copy.** It has a fault found at 15:14: on turn 1 a unit next to a predator throws a
+net at the predator instead of its smoke in about 40 % of the cases (smoke 53 % with a predator start under 1500;
+the real leader 80 %, and no net at all on turn 1). The file in the repository (`versions/vmimic.java`, commit
+aa416a6, md5 3675cf452a21) throws the smoke (89 %), uses v10's catch test for attack moves, and no longer nets on
+a dash turn.
+
+| | Live copy (15:08) | Current file (15:33) | v10 |
+|---|---|---|---|
+| Fingerprint lines inside the tolerance (of 50) | 32 | 40 | |
+| Local, against v10 and v5, 120 games each on different maps: mean rank | 2.14 | 2.00 | 1.86 |
+| Replay of 20 real Gold battles: mean rank / catches / lost | 1.90 / 3.55 / 3.20 | not replayed | 1.75 / 3.55 / 2.55 |
+| Head to head, 120 local games on 20 shared maps (15:50): mean rank / wins / catches / lost | 2.05 / 32.5 % / 2.53 / 2.76 | 1.98 / 36.7 % / 2.60 / 2.81 | 1.96 / 30.8 % / 2.76 / 2.32 |
+
+The head to head puts the current file 0.07 of mean rank ahead of the live copy: inside the noise of 120 games.
+The fix is real (fingerprint), its effect on results is not shown.
+
+**What the mimic does differently from v10**: dashes and smokes on turn 1 with every unit that has a predator start
+under 2600, the smoke thrown at the predator; dashes more (22 a game locally, v10 13.8 in the arena); attacks a prey under 1600
+even with a predator near; keeps its nets for later and aims them at the target, not 2000 out; sends decoys
+sideways, late.
+
+**Risks.**
+- On the only real-opponent evidence (20 replayed battles, live copy) the mimic is level to slightly worse than
+  v10 and loses more units (3.20 against 2.55). Nothing shows it is better than v10.
+- It imitates what the leader does on average, not when it decides to do it (40 of 50 measures; its catches are
+  below the real squad's in every local run).
+- A further submission (the current file, or v10 again) restarts the ranking games once more and needs about 40
+  minutes; the testing session gives about 17:15 IST as the last sensible moment today.
+- Turn time is not a risk (worst 15 ms in the replays, limit 50).
+
+**Options**: (a) leave the live copy; (b) resubmit the current file, best after a 20-battle replay of it;
+(c) resubmit v10 if the mimic's rating ends below 19.0. The evidence so far favours (c) over (a); (b) is
+untested against real opponents.
+
+## 12. Still to do
+
+- Replay of the current file on real Gold battles (testing session).
+- Final fingerprints and 240-game tables of vmimic2 and vmimic3.
 - Candidate switches for v10 from the leader: dash and smoke at the predator on turn 1 for every unit with a
   predator start under 2600; smoke thrown at the predator (at most 1800 out) with the flee dash instead of on
   ourselves; no net on a dash turn and none on turn 1, aimed at position + last move and 400 beyond instead of
-  2000 out; dashes spent freely (24 a game against 13.8); a prey under 1600 beats a predator under 1200.
+  2000 out; dashes spent freely (the real squad: 24 a game, v10: 13.8); a prey under 1600 beats a predator under 1200.
