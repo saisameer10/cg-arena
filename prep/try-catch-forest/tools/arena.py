@@ -146,6 +146,8 @@ def report(name, rows):
 
 
 if __name__ == '__main__':
+    try: sys.stdout.reconfigure(encoding='utf-8', errors='replace')   # team names may hold characters the console cannot print
+    except Exception: pass
     d = sys.argv[1]
     for bf in sys.argv[2:]:
         rows = [study(*x) for x in load(d, bf)]

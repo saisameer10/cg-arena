@@ -214,3 +214,80 @@ In 4-unit games the leader mimic is ahead of v10: the first candidate today that
 
 Tool fault found on the way: `rerun.sh` waited 30 seconds once; slower games then came back without a log and
 the next request collided with the game still running. Fixed (it now polls until the game is done).
+
+## Late afternoon of 2026-11-18: four more submissions and what each showed
+
+All times IST. A submission plays its ranking games in parallel; figures are from the game logs
+(`tools/arena.py`, `tools/mimcmp.py`, `tools/allcmp.py`, `tools/tiebreak.py`).
+
+| Time | Submission | File | Games read | First / second / last | Mean rank | Catches | Lost | Rating seen |
+|---|---|---|---|---|---|---|---|---|
+| 16:02 | 41747326 | `vhybrid4.java` (mimic copy A with 4 units, v10 otherwise) | 66 | 23 / 20 / 23 | 2.00 | 3.03 | 2.92 | 19.5 at 52 % |
+| 16:44 | 41748059 | `vlive_41748059.java` (v10 + "better ability usage" + early aggression by team size; sent from another session) | 145 | 52 / 48 / 45 | 1.95 | 2.59 | 2.30 | 20.4 at 64 % |
+| 17:43 | 41748858 | `vuser1_m4.java` (that code + three user rules, mimic copy A with 4 units) | 60 | 21 / 17 / 22 | 2.02 | 2.75 | 2.32 | 18.0 at 54 % |
+| 17:55 | 41749025 | `vlive_41748059.java` again (put back before the window closed, on the user's choice) | - | - | - | - | - | 18.5 at 90 % |
+
+The same file scored 20.4 in its first run and 18.5 in its second: one run's rating carries about two points of
+noise (other games, a field that got harder through the day). A version cannot be judged on one rating.
+
+### By team size, afternoon field (mean rank, games)
+
+| Version | 3 | 4 | 5 | 6 | All |
+|---|---|---|---|---|---|
+| v10 code (inside the hybrid) | 2.08 (13) | 2.44 (9, morning) | 2.22 (27) | 1.87 (15) | 2.09 |
+| Mimic copy A (alone and inside the hybrid) | 1.78 (9) | 1.68 (19) | 1.50 (4) | 2.50 (4) | 1.78 |
+| `vlive_41748059` (first run, 145 games) | 1.85 (39) | 1.93 (40) | 2.00 (33) | 2.06 (33) | 1.95 |
+| `vuser1_m4` | 2.00 (19) | 2.00 (12, mimic) | 1.94 (16) | 2.15 (13) | 2.02 |
+
+Paired on the same 12 four-unit battles of the hybrid: mimic copy A (arena) 1.58, v10 (replay) 2.00; v10 above
+in 1, below in 6. On 11 of them copy C scored 1.73 against copy A's 1.55 (above in 4, below in 4).
+
+### The three user rules (`vuser1.java`, switches `F_SMOKE_ON_PRED`, `F_NET_CAREFUL`, `F_USER_AGGRO`)
+
+Arena, `vuser1_m4` (60 games) against `vlive_41748059` (145 games):
+
+| Rule | Measured | Before | After |
+|---|---|---|---|
+| Smoke centred on the predator | units lost while held by a net, share of losses | 47 % | 32 % |
+| | units lost by turn 10, share of losses | 19 % | 12 % |
+| | units lost beyond radius 6500, share of losses | 18 % | 32 % |
+| Attack nets only when sure, with a finisher within 1600, no team mate on the flight line | nets that hit prey | 31 % | 22 % |
+| | nets thrown by turn 5 | 24 % | 14 % |
+| | catches made on netted prey, share of catches | 36 % | 22 % |
+| Pressing mode until the first catch (3 and 4 units) and while not ahead of the predator | catches of free prey with a dash, share of catches | 20 % | 33 % |
+| | catches by turn 10 per game | 0.54 | 0.58 |
+| All together | mean rank | 1.95 | 2.02 |
+| | non-wins lost on the tie-break | 15 % | 26 % |
+
+Reading: the net rule is the loss (it removes the early close nets that make first catches); the smoke rule
+protects held units and the opening but drives units to the wall; the pressing mode did what it was meant to.
+Not separated by a test: the three rules went in together, in a different hour from the comparison run.
+
+### Tie-breaks (`tools/tiebreak.py`, 53 places lost in four runs)
+
+- 25 to 32 % of our places below first are lost with the same number of catches as the team just above; every
+  one was decided by the first catch.
+- Their first catch came on about turn 4 to 6, ours on about turn 15 to 18 (later by a median of 8 to 11 turns);
+  in 40 of the 53 we had no catch by turn 10.
+- By team size (`vlive_41748059`, first run): 10 of 39 three-unit games, 7 of 40 four-unit games, 4 of 33
+  five-unit games, 2 of 33 six-unit games.
+- The team above was our prey team in 33 (its first catch was a unit of the third team) and our predator team in
+  20 (its first catch was one of ours, by turn 6 in half of them).
+
+### The state that decides a game (v10's 37 arena games; v5 agrees)
+
+| State at turn 15 | Games | First / second / last | Mean rank |
+|---|---|---|---|
+| At least one catch of ours | 24 | 15 / 5 / 4 | 1.54 |
+| No catch yet (0.4 units lost by then) | 13 | 3 / 3 / 7 | 2.31 |
+
+### Other results of the afternoon
+
+- Net hits on prey that did not become a catch (`tools/netfail.py`, 39 debug replays of v10, 70 hits, 18 wasted):
+  nearest unit of ours ran from a predator it could not see 7, was held by a net itself 6, lost sight of the held
+  unit 4, was caught on the way 1.
+- Chase engine (`vchase.java`, two-ply search with the exact movement rule) against the three mimics, 240 local
+  games: v10 1.83, flight search 1.97, forced-catch test 1.80, both 1.96. The flight search is worse.
+- Bots by team size on the local referee, 240 maps per size: no version separated at any size (largest gap 0.26,
+  between two identical programs). The local referee cannot choose a bot per team size.
+- Sprites (`SECRET_FOREST_SPRITE`): no effect on the power pool, the dash cooldown or the fatigue in 51 debug games.

@@ -97,3 +97,19 @@ After 18:00 IST (API closed): offline only. Start with `kb/offline.md`.
 | 2026-11-18 11:01 | Gold | v5 promoted; same statement and input; top league (no boss) |
 | 2026-11-18 | Gold | v10 validated on the local referee and on replays of all 21 Gold battles (mean rank 1.52 against 1.81) |
 | 2026-11-18 11:40 | Gold | v10 submitted (submission 41743202); v5 had reached 150th of 272 at 30 % of its Gold games |
+
+## Added on the afternoon of 2026-11-18 (analysis session)
+
+| Tool | What it answers |
+|---|---|
+| `tools/mkhybrid.py`, `tools/mkportfolio.py` | one file that picks a complete bot by the number of units per team on turn 1 |
+| `tools/allcmp.py` | every version with arena games, by team size, and the expected score of each hybrid |
+| `tools/mimcmp.py` | two arena runs side by side: why nets miss, how units are lost, what decoys do |
+| `tools/tiebreak.py` | places lost with the same catches as the team above, and by how many turns |
+| `tools/netfail.py` | net hits on prey that did not become a catch, and why (debug replays) |
+| `tools/hybcmp.py`, `tools/hybpairs.py` | the live version's arena games against replays of the same battles, by team size |
+| `tools/monitor.py` | waits for a live submission to reach a number of games, then prints its record next to the others |
+| `tools/mkuser1.py` | the patch that turns `vlive_41748059.java` into `vuser1.java` (three user rules as switches) |
+
+Results of the afternoon: last section of `log.md`; lessons: `learnings.md` section 5c; files: `versions/README.md`, last table.
+Most of these scripts expect to be run in the scratch folder that holds `games/` and the `battles_*.json` / `rows_*.json` files.

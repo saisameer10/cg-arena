@@ -149,6 +149,53 @@ Method:
 9. **Tuning numbers is the last 1 %.** Twenty variations of fifteen numbers over 2,400 games: nothing outside the noise.
    Structure (what the bot does at all) decided every step of the day, in both directions.
 
+## 5c. Learnings from the afternoon and evening of 2026-11-18 (numbers in `log.md`)
+
+About the game:
+1. **A game is decided by turn 15.** With a catch of ours by turn 15 the mean rank is 1.54, without one 2.31,
+   although only 0.4 units are lost by then. This holds for every version and team size, locally and in the arena.
+2. **The tie-break is the first catch, and it is lost by many turns, not by one.** A quarter to a third of the
+   places below first are level on catches; all were decided by the first catch, ours later by a median of 8 to
+   11 turns. Three- and four-unit games carry most of them, because only three or four catches exist.
+3. **Two different bots can each be the better one at a different team size.** v10 scored 2.44 with four units
+   where the leader's imitation scored about 1.7; with six units it was the other way round. One file that picks
+   the bot by team size on turn 1 (`tools/mkportfolio.py`) uses both.
+4. **Early close nets make first catches.** The top teams net their nearest prey on turns 2 to 4 from 650 to 880
+   and catch it a turn later. A rule that allows attack nets only when sure cut our net hits on prey from 31 % to
+   22 % and doubled the share of tie-break losses.
+5. **A cloud on the predator protects held units and the opening** (losses while held 47 % -> 32 %, losses by
+   turn 10 19 % -> 12 %) **and costs at the wall** (18 % -> 32 %). Earlier local tests of other placements had
+   said "no gain"; the arena showed a trade, not a gain.
+6. **A net hit is wasted mostly by our own flight.** In 7 of 18 wasted hits the nearest unit ran from a predator
+   it could not see while the held prey stood 1100 to 1800 away.
+7. **Imitation has a ceiling.** The copy of the leader matched 40 of 50 measured habits and still lost more units
+   than the original: what the leader decides inside a chase is not in the logs.
+8. **A two-turn worst-case search is worse than a five-turn simple chase** for fleeing: the wall and the tree
+   pockets lie further ahead than two turns.
+
+About the method:
+1. **The local referee cannot rank close candidates.** Pools on ten maps gave gaps of 0.2 to 0.4 that vanished on
+   other maps; two identical programs differed by 0.26. The maps are the sample, not the games. It can find
+   crashes and clearly broken ideas, nothing finer.
+2. **One arena run is not a measurement of a version either.** The same file reached 20.4 in one run and 18.5 in
+   the next. The field got harder through the day (the same v10 code: 1.81 in the morning, 2.09 in the afternoon).
+   Compare versions inside the same hour, by mean rank over the games, not by the rating shown.
+3. **A paired test inside one run is the cleanest evidence we found.** A hybrid plays two bots in the same hour
+   against the same field, split by team size; replaying its battles with the other bot gives the pair.
+4. **Replays are tied to the live submission.** Every submission closes the replay base of the version it
+   replaces. Three submissions from three sessions within an hour cut off three test series. One session
+   submits, on the user's word, and says so to the others first.
+5. **A test that selects on the state at a given turn is fair; one that selects on the final result is not.**
+   "Games with no catch by turn 15" is a state; "our worst games" is a result.
+6. **A change that only acts in a bad state cannot hurt the good games** and needs replays only for the games in
+   that state. This is the cheapest kind of change to test and the least risky to ship.
+7. **Bundles cannot be read.** Five rules shipped together lost clearly and nobody knows which one lost; three
+   user rules shipped together showed one loss, one trade and one gain only because each moved its own counter.
+   Give every rule a counter of its own before shipping it.
+8. **Check what the instruction costs before following it under time pressure.** The net rule was built as asked
+   in ten minutes and was the main loss of the run; the cost was visible on recorded games before submitting
+   (nets per game fell from 3 to 5 to 0 or 1) and was reported but not acted on.
+
 ## 6. Checklist for the next contest
 
 1. Before the statement: collect game logs of the test league, measure rules, list patterns of winners and losers.
@@ -161,3 +208,5 @@ Method:
 7b. After the first submission: download every arena game, replay the lost ones with the debug build the same hour.
 8. After each promotion: new statement, diff, probe game, then code.
 9. Keep the original statement out of git; write rules in our own words.
+10. Give every rule its own counter in the logs, test rules one at a time, and let exactly one session submit.
+11. Split results by team size and by state at turn 15 before judging a version.
