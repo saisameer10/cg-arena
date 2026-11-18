@@ -212,4 +212,15 @@ bundle on real Gold battles.
 
 One disagreement, recorded so nobody takes it from the local referee: the smoke trigger distance. On one local pool
 1800 scored 2.14 against 1.90 for 2300; on another pool 1800 scored 1.88 against 2.05. The pool decides. Being settled
-on real opponents: all 37 of v10's Gold battles replayed with only that number changed (running).
+on real opponents: all 37 of v10's Gold battles replayed with only that number changed.
+
+Result (36 battles played, 13:55 IST): **smoke from 1800 is worse than from 2300.**
+
+| | First | Second | Last | Mean rank | Catches | by turn 10 | by 20 | Lost |
+|---|---|---|---|---|---|---|---|---|
+| v10 in the arena (smoke from 2300) | 17 | 8 | 11 | 1.83 | 3.22 | 0.69 | 1.67 | 2.47 |
+| same battles, smoke from 1800 | 12 | 10 | 14 | 2.06 | 2.72 | 0.56 | 1.25 | 2.53 |
+
+Better rank in 10 battles, worse in 12, same in 14. Units lost are the same; the catches drop: a unit that smokes late
+is busy fleeing longer. The other session's 960-game confirmation also lost the local gain (1.99 against 1.98).
+The number stays at 2300.

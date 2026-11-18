@@ -148,3 +148,14 @@ and then on replays of Gold battles before it goes anywhere.
 
 Submitted 2026-11-18 11:40 IST (submission 41743202), replacing v5 (148th of 274, score 16.1, at 30 % of its games).
 First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2.43; 134th of 300, score 16.9, at 25 %.
+
+## After v10: candidates judged on replays of v10's own Gold battles (2026-11-18)
+
+| Candidate | Battles | v10 in the arena (mean rank, catches, lost) | Candidate | Verdict |
+|---|---|---|---|---|
+| v12 (rescue nets, decoys for visible predators, wider approach dash) | 26 | 1.81, 3.31, 2.42 | 1.81, 3.27, 2.58 | level, dropped |
+| v13 (second hunter aims 800 behind the prey) | 24 | 1.88, 3.25, 2.50 | 2.04, 2.75, 3.08 | worse, dropped (was +0.2 to +0.4 on the local referee) |
+| v11 with nets limited to 1600 | 3 | 1.00 | 2.00 | stopped early, undecided |
+| v11 with smoke from 1800 instead of 2300 | 36 | 1.83, 3.22, 2.47 | 2.06, 2.72, 2.53 | worse, dropped |
+
+v10's place in Gold: 104th of 357 (score 18.0) when its 37 games ended, 85th of 383 (18.9) an hour later.
