@@ -161,7 +161,8 @@ First 23 games: 11 first, 7 second, 5 last, mean rank 1.74, catches 3.43, lost 2
 | vs4: always dash onto netted prey, cheap (`F_RUSH`) | 29 | 1.83, 3.31, 2.55 | 1.97, 3.07, 2.62 | not better (better in 4, worse in 8), dropped |
 | vs3 (other session): net at prey only when a hunter of ours ends within 1300 | 16 (stopped for the mimic) | 1.75, 2.75, 1.94 | 2.06, 2.31, 2.12 | worse (better in 1, worse in 5), dropped |
 | vmimic (mimic of the leader ATI x iHot, copy of 15:08) | first 20 by game id | 1.75, 3.55, 2.55 | 1.90, 3.55, 3.20 | level to slightly worse (better in 7, worse in 8, same in 5); loses more units; net hits converted 73 % of 22 (v10: 74 %); no error, no turn over 30 ms (worst 15 ms) |
-| vgo (other session: commit to held prey, cloud memory, hunt first, early dash, ghost plan) | first 20 | | | running |
+| vgo (other session: commit to held prey, cloud memory, hunt first, early dash, ghost plan) | 8 (stopped: clearly worse) | 1.62, 3.88, 2.62 | 2.25, 2.62, 3.25 | clearly worse (better in 0, worse in 4, same in 4), dropped |
+| vgo_b (vgo + blind units keep their heading, cloud thrown two thirds of the way to the predator) | first 20 | | | running since 15:43 |
 
 v10's place in Gold: 104th of 357 (score 18.0) when its 37 games ended, 85th of 383 (18.9) an hour later.
 

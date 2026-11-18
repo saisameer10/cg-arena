@@ -247,6 +247,10 @@ closes. 20 battles resolve about 0.2 of mean rank; the verdict is one of: clearl
 | v10 in the arena (those 20) | 9 / 7 / 4 | 1.75 | 3.55 | 0.75 | 2.55 | | 74 % (39 replays) | |
 | Mimic of the leader (`vmimic.java`, 15:08 copy) | 7 / 8 / 5 | 1.90 | 3.55 | 0.95 | 3.20 | 7 / 8 / 5 | 73 % of 22 | level to slightly worse; more units lost; not a candidate |
 
+vgo (five switches on v10: commit to held prey, cloud memory, hunt first, early dash, ghost plan) was stopped after 8
+battles: mean rank 2.25 against v10's 1.62, better in 0, worse in 4, same in 4, catches 2.62 against 3.88, units lost 3.25
+against 2.62. Clearly worse. Its share of unit-turns inside our own cloud in turns 1-30 was 14.6 % (v10: 20 to 22 %).
+
 The mimic is a rule book fitted on the leader's printed commands (110 games); the logs do not show what the leader
 saw, the trees or its pools, and those gaps are filled with v10's parts (`mimic.md`, section 6). At its last
 fingerprint check 28 of 50 behaviour measures were inside the tolerance. It reproduces what the leader does on
