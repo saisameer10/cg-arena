@@ -65,6 +65,8 @@ python "/e/New folder/prep/try-catch-forest/tools/pfstats.py" pf2
   games: median 2 to 4 ms, worst 26 ms, against 2 ms and 26 ms for the live code. No real-field game yet.
 - Sixth bot: `vlive_net1.java` = the live code with one net on turn 1 (`target23.md`, last section: teams at 23
   throw 0.80 nets a game on turn 1 and catch 0.29 more by turn 10; we throw none). 60 local games without a crash.
+  Read `pfstats.py` by units per team for this one: its case is the 5- and 6-unit games (`target23.md`, last section),
+  where teams at 23 have a catch by turn 15 in 83 % and 95 % of games and we in 60 % and 72 %.
 - Six bots do not fit 40 battles each. Two rounds instead: round 1 all six on the same 20 battles (120 games,
   40 minutes, until about 09:45); round 2 the live code and the two best of round 1 on 25 further battles (75 games,
   25 minutes). `pairfield.py` skips games already played, so round 2 is the same command with fewer names and a

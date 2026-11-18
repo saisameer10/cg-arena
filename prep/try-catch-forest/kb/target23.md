@@ -219,3 +219,42 @@ Sized with that rate; none of these is confirmed, and the bands are one standard
 So 23 needs 0.27 of mean rank. Only vgo_b's unconfirmed lead is of that size; everything else is a third of it or
 less. The paired test of the last window settles vgo_b first: after 30 shared battles its standard error is about
 0.13 of mean rank (1.6 points).
+
+## Where the gap to 23 sits: games without a catch by turn 15 (2026-11-18, 19:05 IST)
+
+Same games as above (271 of teams at 23, 214 of ours, opponents ranked beyond 100). `tools/peersizing.py`.
+
+| | Teams at 23 | Us |
+|---|---|---|
+| Games with a catch by turn 15: share; mean rank; first; last | 72 %; 1.74; 47 %; 21 % | 58 %; 1.81; 44 %; 25 % |
+| Games without one: share; mean rank; first; last | 28 %; 1.88; 38 %; 26 % | 42 %; 2.26; 19 %; 44 % |
+| In the games without one: catches; units lost | 2.41; 1.74 | 2.18; 2.18 |
+
+1. **With a catch by turn 15 we play like a team at 23** (1.81 against 1.74). The gap is in the other games.
+2. Sized by replacing our figures with theirs (0.1 of mean rank is about 1.2 points):
+   - as few slow games as they have (28 % instead of 42 %): 2.00 to 1.94, **about +0.75 points**;
+   - and the slow games ending as theirs do (1.88 instead of 2.26): to 1.83, **about +2 points in all**.
+   These are observed differences between teams, not effects of a change of ours.
+3. **They avoid slow games where there are many units, and they do it with nets in turns 1 to 3:**
+
+   | Units | No catch by turn 15: they / we | Catches by turn 15: they / we | of which after a net: they / we | Their turn-1 nets: number, hit, catches |
+   |---|---|---|---|---|
+   | 3 | 57 % / 57 % | 0.48 / 0.53 | 0.29 / 0.33 | 0.45, 16 %, 0.01 |
+   | 4 | 31 % / 44 % | 1.00 / 0.68 | 0.58 / 0.42 | 0.70, 26 %, 0.07 |
+   | 5 | 17 % / 40 % | 1.44 / 0.87 | 0.82 / 0.51 | 0.82, 29 %, 0.15 |
+   | 6 | 5 % / 28 % | 1.97 / 1.13 | 1.23 / 0.55 | 1.28, 32 %, 0.28 |
+
+   With 3 units there is no difference and a turn-1 net is wasted. With 6 units they have 1.23 catches after a net
+   by turn 15, we have 0.55; more than half of that difference comes from nets thrown in turns 1 to 3
+   (0.61 catches against 0.19).
+4. **In a slow game they lose 1.74 units, we lose 2.18**, and we finish last 44 % of the time (they 26 %). A press
+   mode that hunts harder in these games would lose more units still; the figures point the other way: without an
+   early catch, protect the units and take what comes (they still catch 2.41).
+5. Mean rank by final catches is the same staircase for both groups (1 catch 2.6, 2 catches 2.1 to 2.2, 3 catches
+   1.7, 5 or more 1.15): one more catch goes with 0.32 of mean rank.
+6. Net hits that are not caught within five turns: 0.42 a game for us, 0.56 for them. We convert better than they
+   do (70 % against 62 %), so "convert net hits" has at most 0.4 catches a game in it and is not where they lead.
+
+`versions/vlive_net1.java` now follows reading 3: turn-1 nets at most 0 / 1 / 2 / 2 for 3 / 4 / 5 / 6 units.
+60 local games without a crash; the local rank moved from 1.97 to 2.22 between two seed sets with the live code at
+2.10 and 1.97, which again shows only that the local referee cannot rank.

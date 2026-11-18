@@ -90,7 +90,8 @@ class Player {
     //      catches earlier, it does not add any: of use for the tie-break and for 'no catch by turn 15'.
     static final boolean F_NET1 = true;
     static final double P_NET1 = 1900;        // farthest target of a turn-1 net (distance after our move)
-    static final int P_NET1_MAX = 1;          // nets spent on turn 1 at most
+    // by units per team: teams at 23 get 0.01 catches from turn-1 nets with 3 units, 0.07 with 4, 0.15 with 5, 0.28 with 6
+    static final int[] P_NET1_MAX = {0, 0, 0, 0, 1, 2, 2};   // nets spent on turn 1 at most, index = units per team
     static int net1Thrown = 0;
     static final boolean F_NETWIDE = true;   // nets also at prey that could dodge
     static final boolean F_DECOY = true;     // decoys walked at the predator
@@ -648,7 +649,7 @@ class Player {
                 double d = hyp(qx - u.ex, qy - u.ey);
                 if (d < 450 || d > 2250) continue;
                 if (q.dup && d > 1200) continue;
-                if (turn == 1 && q.cd == 0 && !(F_NET1 && d <= P_NET1 && net1Thrown < P_NET1_MAX)) continue;
+                if (turn == 1 && q.cd == 0 && !(F_NET1 && d <= P_NET1 && net1Thrown < P_NET1_MAX[Math.min(6, N)])) continue;
                 if (treeBlocks(u.ex, u.ey, qx, qy, NET_TREE + 20) || friendOnLine(u, qx, qy, live)) continue;
                 double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
                 // a target that cannot dodge (no dash, close, or not moving across the line) is always worth a net;
