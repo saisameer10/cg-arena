@@ -34,6 +34,7 @@ More notes (added through 2026-11-18):
 |---|---|
 | `kb/findings.md` | **everything on one page**: versions and what real battles say, what worked and what did not, nets / smoke / decoys, tie-breaks, units per team, the top teams, good and bad for us |
 | `kb/target23.md` | what a rating of 23 is, how teams there play against the opponents we meet, where the gap sits, the levers sized in points |
+| `kb/target25.md` | teams rated 25 against our opponents, move by move (436 games, positions rebuilt from the logs): contacts with prey and what the hunter does, the first turn, nets by prey state, defence; the `vlive_press` candidate |
 | `kb/tomorrow.md` | the plan for the last window (2026-11-19, 09:00 to 12:00 IST): paired test, pass mark, who submits |
 | `kb/subversions.md` | every switch and bundle tested on top of v10, local pools, replays, the 13 paired real-field battles |
 | `kb/whylost.md` | one main reason per game not won (v10 in Gold), by units per team |

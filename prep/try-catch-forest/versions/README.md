@@ -58,4 +58,5 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `vlive_3p.java` | crash-checked; candidate | `vlive_late` + no unit-for-point trade while the predator team is level, hold a late lead, hunt the hunters |
 | `vlive_engine.java` | crash-checked (2.00 against 2.02 locally; turn time as the live code); candidate | live code + two-ply search as a veto on moves that are caught within two turns, and as the test of a certain catch |
 | `vlive_net1.java` | crash-checked; candidate | live code + nets on turn 1: at most 0 / 1 / 2 / 2 for 3 / 4 / 5 / 6 units (`../kb/target23.md`) |
+| `vlive_press.java` | crash-checked (120 local games); candidate for the paired test | live code + pressing dashes at prey in sight (`F_PRESS`, `tools/gen/mkpress.py`); evidence in `../kb/target25.md` section 3 |
 
