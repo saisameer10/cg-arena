@@ -568,3 +568,8 @@ hunter inside 1,800 and after 5 inside 2,900; was 5 and 8). `versions/v18_2_cr_n
 decoy + no3net; 48 local games without an error. In the paired test `pf4` from 10:54 with the live bot, netback and plus.
 3 units: the only change with evidence is no turn-1 net (kb/findings.md 7); the slow first catch there (median turn 24)
 is the same for teams at 23.
+
+**10:56 IST: `v18_2_cr_netback` submitted as 41756150** on the user's word. It replaced `v18_2_combo_ring_gangflank` (41755980,
+another session's build: gang on netted prey, nets prefer a mate able to finish, second hunter aims beyond the prey), which
+stood at 22.31, rank 172, at 38 % and was not finished. Paired `pf4` at 10:54, 10 battles: netback 1.80 (3 better / 7 equal /
+0 worse than `v18_2_combo_ring`), `v18_2_cr_plus` 2.00, `v18_2_combo_ring` 2.10.
