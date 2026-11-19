@@ -82,3 +82,6 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `v18_ring.java` | v18 + the fix for the ring at 3,600 (F_NOCLIFF, F_REACH) |
 | `v18_combo.java` | v18 + F_PRESS, F_T1, F_HNET, F_T1UNSEEN, F_NETEARLY (the opening and dash levers of `vlive_combo`) |
 | `v18_combo_ring.java` | v18 + both |
+| `v18_2.java` | the user's submission 41755049 (09:37 on the 19th), read back from the arena: v18 + net economy (`F_NETSAVE` a free unit escapes with smoke or a decoy and keeps its nets, `F_DECOY_ESCAPE` decoy every 5 turns against a hunter inside 1,800, `F_NET_LATE` from turn 40 prey on dash cooldown within 1,800 is netted first) |
+| `v18_2_ring.java`, `v18_2_combo_ring.java` | v18_2 + the 3,600 fix; + the opening and dash levers as well (`mkv18.py`) |
+| `vgo_b_ring.java` | vgo_b + the 3,600 fix (`tools/gen/mkgoring.py`) |
