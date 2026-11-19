@@ -515,3 +515,10 @@ against a predator that is attacking, + `P_SMOKE_MODE` 3, the cloud right in fro
 `v18_3` (41755216) had finished at **18.75, rank 315 of 441**.
 
 **10:18 IST: `v18_2_combo_ring` submitted as 41755573** by the Target-23 session on the user's word ("v18_2_combo_ring ( send to arena )"). It replaces `vlive_ring` (41755378). Paired table at 10:12, 25 shared battles: `vlive_ring` 1.48, `v18_2_combo_ring` 1.64, `v18_2` 1.76.
+
+**10:17 IST: `vlive_ring` finished at 19.78, rank 282 of 441** (82 games: 28 / 34 / 20, mean rank 1.90, catches 2.88, lost 2.22,
+catches by turn 10: 0.50). Arena finals of the day: `v18_2` 20.61 (mean rank 1.86), v18 20.32 (1.93), `vlive_ring` 19.78 (1.90),
+`v18_ring` 19.14 (1.95), `v18_3` 18.75 (1.96). The mean ranks are within one standard error (about 0.09) of each other.
+Paired, 56 battles pooled at 10:19 (`pfall.py v18_2 pf2 pf3 pf3_side pf3_combo pf3_six`), on the 31 battles shared with `v18_2`:
+`vlive_ring` 1.52 against 1.77 (better / equal / worse 12 / 13 / 6), `v18_2_combo_ring` 1.58 against 1.77 (11 / 15 / 5).
+Paired mean ranks run lower than arena ones (seat 0 in every game); compare them only with each other.
