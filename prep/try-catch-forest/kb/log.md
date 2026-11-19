@@ -654,3 +654,28 @@ which stood at 20.94, rank 256, at 50 % (its first run was above 23 at that stag
 `v18_2_combo_ring` with one rule changed: a free unit nets its hunter within 1,500 first only when the net is likely to land
 (the hunter's dash is on cooldown, or it moves at least 300 a turn along the line at us); otherwise smoke or a decoy as in
 v18_2. 32 local games without an error; 3 paired battles played when it was submitted, so it went in untested.
+
+## Close of the contest (2026-11-19, 12:00 IST)
+
+The last submission was `v18_2_combo_ring` (41756965, sent at 11:45 from another session; byte for byte the file of the
+23.73 run). Last reading before the API stopped answering: **12:00:04, 94 % of its games, 24.11, rank 117 of 446**
+(11:57: 80 %, 23.57, rank 141, 72 games read: 27 / 28 / 17, mean rank 1.86, catches 3.00, lost 2.69). At 12:01 the
+challenge status was `ended`; progress and leaderboard answer 422 "Leaderboard not available", so the official final
+value has to be read on the website.
+
+Submissions between 11:15 and 12:00, in order:
+
+| Time | Bot | Where it stood when it ended or was replaced |
+|---|---|---|
+| 10:56 | `v18_2_cr_netback` | finished: 23.22, rank 146 (101 games, mean rank 1.97) |
+| 11:17 | `v18_2_cr_netback56` (other session) | 19.7 at 29 % |
+| 11:20 | `v18_2_combo_ring` (rerun) | 20.94 at 50 % |
+| 11:25 | `v18_2_cr_smart` | 19.44 at 30 %; paired 2.06 over 17 battles, no edge |
+| 11:28 | `v18_2_cr_nbd3` (other session: netback + decoy timing + second dash on turn 3) | 23.09, rank 156, at about 75 %; 36 / 43 / 21 % places over 47 games |
+| 11:39 | `v18_2_cr_nbdec` (nbd3 without the turn-3 dash) | 19.6 at about 50 % |
+| 11:45 | `v18_2_combo_ring` | 24.11, rank 117, at 94 % when the window closed |
+
+Three runs of `v18_2_combo_ring`: 23.73 (finished), 20.94 at 50 % (stopped), 24.11 at 94 %. Its second run was two points
+down at half-way and its third started at 19.9 at 20 %: the rating of one run moves by several points before 60 %.
+Seven submissions in the last 45 minutes cost every one of them part of its games; the two results above 23.5 came from
+runs that were left alone.
