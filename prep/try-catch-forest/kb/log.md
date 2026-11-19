@@ -510,3 +510,6 @@ Arena since 09:37: `v18_2` finished at **20.61, rank 238** (79 games, mean rank 
 submitted a further version at 09:51 (41755216, saved as `versions/v18_3.java`: v18_2 + `F_ATTACKED`, smoke and decoys only
 against a predator that is attacking, + `P_SMOKE_MODE` 3, the cloud right in front of the predator): 19.06 at 87 %,
 58 games at 76 %: mean rank 1.97, units lost 2.67.
+
+**10:03 IST: `vlive_ring` submitted as 41755378** on the user's word (first arena run of the old live code with the ring fix).
+`v18_3` (41755216) had finished at **18.75, rank 315 of 441**.
