@@ -468,3 +468,21 @@ v18 2.27; on the 8 newest battles alone `v18_ring` was last of the four (2.38). 
 battles was mostly luck: do not submit on fewer than 15 paired battles again.
 New file: `versions/vgo_b_ring.java` (`tools/gen/mkgoring.py`): vgo_b has the same forecast bonus (its own weights);
 60 local games without an error, no real game yet.
+
+**09:46 IST: every arena run side by side** (scratch `arenatab.py` over `rows_<submission>.json`; rating = final unless marked).
+`vgo_b` was replaced at 56 % by the user's own submission `v18_2` (41755049, 09:37; its source is not in the repo).
+
+| Bot | Rating | Games | Mean rank | 1st / 2nd / 3rd % | Catches | Lost | Catches by turn 10 | No catch | Mean rank with 3 / 4 / 5 / 6 units |
+|---|---|---|---|---|---|---|---|---|---|
+| old live, 18th run 1 | 20.47 | 145 | 1.95 | 35 / 33 / 31 | 2.59 | 2.30 | 0.54 | 3 % | 1.85 / 1.93 / 2.00 / 2.06 |
+| old live, 18th run 2 | 18.99 | 128 | 2.07 | 29 / 33 / 36 | 2.66 | 2.51 | 0.66 | 5 % | 2.09 / 2.06 / 2.06 / 2.08 |
+| v18 | 20.32 | 81 | 1.93 | 34 / 38 / 27 | 2.72 | 2.37 | 0.52 | 8 % | 1.86 / 2.17 / 1.79 / 1.82 |
+| `v18_ring` | 19.14 | 56 | 1.95 | 37 / 30 / 32 | 2.68 | 2.02 | 0.48 | 5 % | 1.93 / 1.79 / 2.25 / 1.90 |
+| `vgo_b` | 16.96 at 56 % | 46 | 2.04 | 34 / 26 / 39 | 3.00 | 2.72 | 0.74 | 6 % | 2.43 / 2.18 / 2.00 / 1.82 |
+| `v18_2` | 19.17 at 81 % | 60 | 1.95 | 31 / 41 / 26 | 2.68 | 2.12 | 0.62 | 5 % | 2.18 / 1.80 / 1.94 / 1.83 |
+
+Every run is at a mean rank of 1.93 to 2.07; the ratings spread over 17 to 20.5 at equal game results.
+Paired round (Target24, `pf3`, 20 battles of v18's run): `v18_combo_ring` 1.65, v18 1.80, `v18_ring` 2.10, `vgo_b` 2.10;
+the four vlive bots are being filled in on the same battles from 09:45.
+`pairfield.py` hazard: on 409 `test-game-running` the reply carries the other run's `test_game_id`; the loop then polls
+that game and saves it under the wrong bot name. Two runs must never overlap.
