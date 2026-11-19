@@ -593,3 +593,7 @@ Paired `pf4`, 20 battles of 41755573: `v18_2_cr_plus` 1.90, `v18_2_combo_ring` 1
 the waiting time between decoys is not what limits them. Decoys in the two arena runs: 4.2 to 4.3 a game, a predator
 runs into 83 to 86 %, the unit that dropped one is caught within 6 turns in 12 to 16 %.
 Both arena runs of this family ended near 23.6 against opponents ranked about 150 on average; the earlier family ended at 19 to 20.6.
+
+**11:13 IST: `v18_2_cr_netback` (41756150) finished at 23.12, rank 151 of 443** (77 games read at 85 %: 32 / 20 / 25, mean rank 1.91,
+catches 3.04, lost 2.88). `v18_2_combo_ring` had finished at 23.73, rank 106, with the same mean rank (1.91 over 77 games).
+Two runs of this family: 23.73 and 23.12.
