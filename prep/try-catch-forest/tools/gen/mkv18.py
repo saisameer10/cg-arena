@@ -1,4 +1,4 @@
-# usage: python mkv18.py <base.java> <out.java> [ring] [press] [t1] [hnet] [combo]
+# usage: python mkv18.py <base.java> <out.java> [ring] [press] [t1] [hnet] [combo] [no3net] [late]
 # Carries the levers of the live family over to v18 (versions/v18_dl.java = v18_final, the user's defensive line).
 # Each lever is the same text as in its own generator, with the anchors of v18 where they differ:
 #   ring   F_NOCLIFF + F_REACH   mkreach.py   (kb/log.md, "The ring at 3,600"; v18 has the same forecast bonus)
@@ -6,9 +6,13 @@
 #   t1     F_T1                  mkt1hnet.py  (turn 1: dash at prey and net it, no smoke unless a predator is close)
 #   hnet   F_HNET                mkt1hnet.py  (a held unit nets back before it smokes)
 #   combo  F_T1UNSEEN, F_NETEARLY  mkcombo.py (needs t1: turn-1 prey known from the rotation, capped early nets)
+#   no3net (needs t1) no turn-1 net in 3-unit games (kb/findings.md 7: with 3 units a turn-1 net is worth 0.01 catches)
+#   late   F_SCORELATE  from turn 60 the score against the predator team (its points = our units lost) scales the soft
+#          threat terms: x0.5 for a hunter while that team is ahead of us (a unit lost changes no place), x1.5 for a unit
+#          without prey in sight within 2600 while we lead it by one (kb/log.md, 19 Nov 10:30: 24 and 18 of 282 games)
 import io, sys
 src, out = sys.argv[1], sys.argv[2]; flags = sys.argv[3:]
-assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo'}, flags
+assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo', 'no3net', 'late'}, flags
 assert 'combo' not in flags or 't1' in flags
 s = io.open(src, encoding='utf-8').read()
 
@@ -117,5 +121,23 @@ if 'ring' in flags:
     rep('            double[] w = steer(u.x, u.y, gx, gy);',
         '            reach = F_REACH && fleeTo == null && target != null && target.vis && hyp(target.x - u.x, target.y - u.y) < 2600;\n            double[] w = steer(u.x, u.y, gx, gy);')
     rep(RESET, "reach = false; " + RESET)
+if 'no3net' in flags:
+    rep("P_T1_NETS = {0, 1, 1, 1, 1, 2, 2};", "P_T1_NETS = {0, 1, 1, 0, 1, 2, 2};")
+if 'late' in flags:
+    rep('    static boolean aggro;',
+        '    // ---- F_SCORELATE (tools/gen/mkv18.py): late in the game the score against the predator team scales the soft threat terms\n'
+        '    static final boolean F_SCORELATE = true;\n    static final int P_LATE_T = 60;\n    static final double P_LATE_BEHIND = 0.5, P_LATE_AHEAD = 1.5;\n'
+        '    static double lateSoft = 1.0;\n    static boolean aggro;')
+    rep('double soft = commitNow && t.e.seen != turn ? 0.3 : 1.0;', 'double soft = (commitNow && t.e.seen != turn ? 0.3 : 1.0) * lateSoft;')
+    rep('            double[] w = steer(u.x, u.y, gx, gy);',
+        '            lateSoft = 1.0;\n'
+        '            if (F_SCORELATE && turn >= P_LATE_T) {\n'
+        '                int ps = 0; for (E m : mine) if (m.ghost) ps++;\n'
+        '                boolean preyClose = target != null && target.vis && hyp(target.x - u.x, target.y - u.y) < 2600;\n'
+        '                if (ps > myScore && fleeTo == null && target != null) lateSoft = P_LATE_BEHIND;\n'
+        '                else if (myScore - ps == 1 && !preyClose) lateSoft = P_LATE_AHEAD;\n'
+        '            }\n'
+        '            double[] w = steer(u.x, u.y, gx, gy);')
+    rep(RESET, "lateSoft = 1.0; " + RESET)
 io.open(out, 'w', encoding='utf-8', newline='\n').write(s)
 print(out, flags, len(s), 'chars')

@@ -522,3 +522,18 @@ catches by turn 10: 0.50). Arena finals of the day: `v18_2` 20.61 (mean rank 1.8
 Paired, 56 battles pooled at 10:19 (`pfall.py v18_2 pf2 pf3 pf3_side pf3_combo pf3_six`), on the 31 battles shared with `v18_2`:
 `vlive_ring` 1.52 against 1.77 (better / equal / worse 12 / 13 / 6), `v18_2_combo_ring` 1.58 against 1.77 (11 / 15 / 5).
 Paired mean ranks run lower than arena ones (seat 0 in every game); compare them only with each other.
+
+**10:36 IST: `v18_2_combo_ring` (41755573, submitted by the user at 10:18) finished at 23.73, rank 106 of 442**, the best run
+of the contest so far by more than three points. 64 games read at 87 %: 28 / 16 / 20, mean rank 1.88, catches 3.05,
+lost 2.61; its opponents were stronger than in the earlier runs (mean league rank 163 against 285 for v18_2's run),
+which is why the same mean rank gives a much higher rating.
+Loss reasons over its first 40 games (`reasons.py` on `tools/whylost.py`): slow start 33 % of places lost (7 games, almost all
+with 3 units), predator team caught more 30 %, tie-break 15 %, two hunters lost by turn 20 9 %.
+Over the four runs of the day (282 games, scratch `early.py`, `late.py`): we catch first -> mean rank about 1.5, we lose a
+unit first -> about 2.3; ahead of the predator team at turn 60 (59 % of games) -> 1.47 and still ahead at the end in
+148 of 166; behind (39 %) -> 2.50, one more catch would lift us above it in 24. Units lost by turn 10: held by a net
+in 46 to 69 %. Deaths after turn 30: 1.0 to 1.1 a game in every bot, 29 to 50 % beyond radius 6,500.
+New switches in `tools/gen/mkv18.py`, built for paired tests only (not submitted): `no3net` (no turn-1 net with 3 units:
+`versions/v18_2_cr_n3.java`) and `late` = `F_SCORELATE` (from turn 60, soft threat terms x0.5 for a hunter while the
+predator team is ahead of us, x1.5 for a unit without prey in sight while we lead it by one: `versions/v18_2_cr_plus.java`
+has both). 90 local games each without an error.
