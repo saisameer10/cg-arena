@@ -459,3 +459,12 @@ of 440 (81 games fetched: 28 / 31 / 22, mean rank 1.93). Paired test at 09:18, t
 `v18_combo_ring` 2.00, `vlive_combo` 2.00, v18 2.33. Ring fix on against off over the four pairs: 1.67 against 2.04
 (24 games each). `v18_ring` lost 3.2 units a game against 2.4 for v18 and caught 3.0 against 2.0 (5 battles).
 A full ranking run took about 15 minutes this morning (v18: 20 % at 09:05, 100 % at 09:18).
+
+**09:30 IST: `vgo_b` submitted as 41754969** on the user's word, as an arena test of the vgo style (never in the arena before).
+`v18_ring` (41754850) finished at **19.14, rank 291 of 440**; 56 of its games read at 80 %: 21 / 17 / 18, mean rank 1.95,
+catches 2.68, units lost 2.02 (v18: 81 games, 1.93, 2.72, 2.37). Same game results as v18, lower rating: the fix shows
+no gain in the arena. Paired test at 09:28, 15 shared battles: `v18_ring` 1.80, `v18_combo_ring` 1.93, `v18_combo` 2.07,
+v18 2.27; on the 8 newest battles alone `v18_ring` was last of the four (2.38). The lead of 1.17 over the first 6
+battles was mostly luck: do not submit on fewer than 15 paired battles again.
+New file: `versions/vgo_b_ring.java` (`tools/gen/mkgoring.py`): vgo_b has the same forecast bonus (its own weights);
+60 local games without an error, no real game yet.
