@@ -73,3 +73,12 @@ Each file is a complete bot (class `Player`); to play one, send the file as it i
 | `vlive_nocliff.java` | crash-checked (360 local games) | live code + the chase forecast as a penalty, not a bonus that exists only within 3,600 of a predator |
 | `vlive_ring.java` | crash-checked (360 local games); candidate for the paired test | `vlive_nocliff` + while hunting prey in sight within 2,600, forecast, net-line and wall terms count only predators within 2,500 |
 | `vlive_combo_ring.java` | compiles; not run | `vlive_combo` + the same two switches |
+
+## v18 family (morning of 2026-11-19, `tools/gen/mkv18.py`, kb/log.md last section)
+
+| File | What it is |
+|---|---|
+| `v18_dl.java` | the user's v18_final as downloaded; submission 41754675 |
+| `v18_ring.java` | v18 + the fix for the ring at 3,600 (F_NOCLIFF, F_REACH) |
+| `v18_combo.java` | v18 + F_PRESS, F_T1, F_HNET, F_T1UNSEEN, F_NETEARLY (the opening and dash levers of `vlive_combo`) |
+| `v18_combo_ring.java` | v18 + both |

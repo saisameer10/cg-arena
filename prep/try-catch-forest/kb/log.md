@@ -414,3 +414,41 @@ Local pools, 360 games each, the same maps, against the imitations of the leader
 
 Reading: no crash, no more units lost, slightly more catches; the back-and-forth did not fall (the units still
 turn at a boundary, now at 3,600 from outside or at 2,500). Not tested on real opponents.
+
+## Morning of 2026-11-19: the ring fix on real opponents (7 battles), v18 variants (`tools/gen/mkv18.py`)
+
+**Paired check 09:00 to 09:10** (`tools/pairfield.py`, folder `pf2`, battle list of 41749025; every bot in seat 0 against the
+same two real opponents on the same map). No timeout and no error in any game.
+
+| Bot | Mean rank | First / second / last | Catches | Units lost |
+|---|---|---|---|---|
+| `vlive_ring` | 1.57 | 5 / 0 / 2 | 2.57 | 2.29 |
+| `vlive_combo_ring` | 1.86 | 3 / 2 / 2 | 2.57 | 2.00 |
+| live code | 2.00 | 2 / 3 / 2 | 2.86 | 1.43 |
+| `vlive_combo` | 2.14 | 2 / 2 / 3 | 2.57 | 2.57 |
+
+- Ring fix on against off, both pairs together (14 games each): 1.71 against 2.07. Combo on against off: 2.00 against 1.79.
+- Units lost: more with the fix on the live code (2.29 against 1.43), fewer on combo (2.00 against 2.57).
+- Seven battles decide nothing; this is a direction only.
+- 43 of the newest battles of 41749025 could not be used: `INVALID_OPPONENT` (those agents are no longer test opponents,
+  they resubmitted). `pairfield.py` writes a result file without a game for them; delete those before reading or
+  re-running (`pfstats.py` skips them, `pairfield.py` would skip the battle for good).
+
+**A second session reproduced the ring with a controlled test** (one hunter, standing prey, one predator at distance D,
+3 units per team all listed, no trees; scratch `ring/probe.py`). Live code and v18 alike: predator 2,600 to 3,000 away,
+the hunter gains 81 to 96 of 600 towards prey at right angles to the predator and walks 349 away from prey on the
+predator's side; predator 3,200 to 3,800 away, the step ends 3,450 to 3,540 from it (at 3,800 it walks in instead of
+dashing straight). With the fix the step goes straight at the prey from 2,600 on, and dashes start at 3,200 instead of 4,000.
+
+**v18** (`versions/v18_dl.java` = the user's v18_final, submitted on the morning of the 19th as 41754675) has the same
+forecast bonus (same lines in `eval`). Every lever of the live family applies to it with the same text; only the
+net-line term has another anchor (`soft *`). `tools/gen/mkv18.py <base> <out> [ring] [press] [t1] [hnet] [combo]`:
+
+| File | Switches | Local crash check (120 games against mimic_a and mimic2, seed 9100) |
+|---|---|---|
+| `v18_dl.java` | none | 0 errors, catches 3.03, lost 2.61 |
+| `v18_ring.java` | ring (F_NOCLIFF + F_REACH) | 0 errors, catches 3.17, lost 2.33 |
+| `v18_combo.java` | press, t1, hnet, combo | 0 errors, catches 3.24, lost 2.30 |
+| `v18_combo_ring.java` | all | 0 errors, catches 3.14, lost 2.46 |
+
+The local referee cannot rank them. v18's own rules are untouched (early aggression off, stance, commit, held unit).
