@@ -643,3 +643,8 @@ A higher rating with an unchanged mean rank means the same places were taken aga
    time did not raise their use, the trigger (predator within 2,900 with a clear line) is the limit.
 7. Not built, with evidence: decoy trigger, defence before the net (distance and line to predators that still hold a net),
    a second dash on turn 3 and two nets on one prey (seen in teams at 23 to 25).
+
+**11:20 IST: `v18_2_combo_ring` resubmitted as 41756511** on the user's word, byte for byte the file of the 23.73 run.
+It replaced `v18_2_cr_netback56` (41756463, another session's build, submitted at 11:17), which stood at 19.7, rank 305,
+at 29 %. `v18_2_cr_netback` had settled at 23.22, rank 146 (101 games, mean rank 1.97) before it was replaced.
+The window closes at 12:00; this run should end at about 11:36.
