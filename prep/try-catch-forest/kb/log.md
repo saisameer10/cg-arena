@@ -513,3 +513,5 @@ against a predator that is attacking, + `P_SMOKE_MODE` 3, the cloud right in fro
 
 **10:03 IST: `vlive_ring` submitted as 41755378** on the user's word (first arena run of the old live code with the ring fix).
 `v18_3` (41755216) had finished at **18.75, rank 315 of 441**.
+
+**10:18 IST: `v18_2_combo_ring` submitted as 41755573** by the Target-23 session on the user's word ("v18_2_combo_ring ( send to arena )"). It replaces `vlive_ring` (41755378). Paired table at 10:12, 25 shared battles: `vlive_ring` 1.48, `v18_2_combo_ring` 1.64, `v18_2` 1.76.
