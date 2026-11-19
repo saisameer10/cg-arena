@@ -12,7 +12,7 @@
 #          without prey in sight within 2600 while we lead it by one (kb/log.md, 19 Nov 10:30: 24 and 18 of 282 games)
 import io, sys
 src, out = sys.argv[1], sys.argv[2]; flags = sys.argv[3:]
-assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo', 'no3net', 'late'}, flags
+assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo', 'no3net', 'late', 'netback', 'decoy'}, flags
 assert 'combo' not in flags or 't1' in flags
 s = io.open(src, encoding='utf-8').read()
 
@@ -121,6 +121,13 @@ if 'ring' in flags:
     rep('            double[] w = steer(u.x, u.y, gx, gy);',
         '            reach = F_REACH && fleeTo == null && target != null && target.vis && hyp(target.x - u.x, target.y - u.y) < 2600;\n            double[] w = steer(u.x, u.y, gx, gy);')
     rep(RESET, "reach = false; " + RESET)
+if 'netback' in flags:   # a free unit nets its hunter within 1500 first, as v18 did (kb/log.md 19 Nov 10:45: net 38 % caught, smoke 52 %)
+    rep('static final boolean F_NETSAVE = true;', 'static final boolean F_NETSAVE = false;')
+if 'decoy' in flags:     # more decoys: half of the pool (2 per unit) is unused at the end and a predator runs into 75 to 83 % of them
+    rep('    static boolean aggro;',
+        '    static final boolean F_DECOY_MORE = true;   // a new decoy after 3 turns against a hunter inside 1800, after 5 turns inside 2900 (was 5 and 8)\n    static boolean aggro;')
+    rep('turn - u.lastDecoy > (F_DECOY_ESCAPE && Dpre < 1800 ? 5 : 8) && Dpre < 2900',
+        'turn - u.lastDecoy > (F_DECOY_MORE ? (Dpre < 1800 ? 3 : 5) : F_DECOY_ESCAPE && Dpre < 1800 ? 5 : 8) && Dpre < 2900')
 if 'no3net' in flags:
     rep("P_T1_NETS = {0, 1, 1, 1, 1, 2, 2};", "P_T1_NETS = {0, 1, 1, 0, 1, 2, 2};")
 if 'late' in flags:

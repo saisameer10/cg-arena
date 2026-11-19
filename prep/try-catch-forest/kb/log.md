@@ -558,3 +558,13 @@ six turns, 201 of them by the thrower, 113 on the very next turn.
 - Built for the paired test: `versions/v18_2_cr_netback.java` = `v18_2_combo_ring` with `F_NETSAVE` off (a free unit nets
   its hunter within 1,500, as v18). 40 local games without an error. Paired test `pf4` from 10:46 (battles of 41755573):
   `v18_2_combo_ring`, `v18_2_cr_netback`, `v18_2_cr_plus`.
+
+**10:54 IST: decoys and the 3-unit game.** Decoys (scratch `decoys.py`, three runs, 235 games): 4.2 to 4.5 a game; a predator
+runs into 75 to 83 % of them, a predator net lands on 3 to 10 %; the unit that deployed one is caught within 6 turns in
+14 to 16 % (after smoke: 15 to 18 %). The pool looks like two per unit (most used in a game: 5-6 / 6 / 8-9 / 8-10 with
+3 / 4 / 5 / 6 units) and about half is unused at the end (3.0 of 6, 3.3-3.9 of 8, 4.6-5.4 of 10, 5.4-6.0 of 12).
+New switches in `mkv18.py`: `netback` (`F_NETSAVE` off) and `decoy` (`F_DECOY_MORE`: a new decoy after 3 turns against a
+hunter inside 1,800 and after 5 inside 2,900; was 5 and 8). `versions/v18_2_cr_nd3.java` = `v18_2_combo_ring` + netback +
+decoy + no3net; 48 local games without an error. In the paired test `pf4` from 10:54 with the live bot, netback and plus.
+3 units: the only change with evidence is no turn-1 net (kb/findings.md 7); the slow first catch there (median turn 24)
+is the same for teams at 23.
