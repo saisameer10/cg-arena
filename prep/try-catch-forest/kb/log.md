@@ -452,3 +452,10 @@ net-line term has another anchor (`soft *`). `tools/gen/mkv18.py <base> <out> [r
 | `v18_combo_ring.java` | all | 0 errors, catches 3.14, lost 2.46 |
 
 The local referee cannot rank them. v18's own rules are untouched (early aggression off, stance, commit, held unit).
+
+**09:19 IST, 2026-11-19: `v18_ring` submitted as 41754850** on the user's word. v18 (41754675) had finished at 20.32, rank 250
+of 440 (81 games fetched: 28 / 31 / 22, mean rank 1.93). Paired test at 09:18, the same 6 real battles for every bot
+(`pf2`): `v18_ring` 1.17, `vlive_ring` 1.67, old live code 1.83, `vlive_combo_ring` 1.83, `v18_combo` 2.00,
+`v18_combo_ring` 2.00, `vlive_combo` 2.00, v18 2.33. Ring fix on against off over the four pairs: 1.67 against 2.04
+(24 games each). `v18_ring` lost 3.2 units a game against 2.4 for v18 and caught 3.0 against 2.0 (5 battles).
+A full ranking run took about 15 minutes this morning (v18: 20 % at 09:05, 100 % at 09:18).
