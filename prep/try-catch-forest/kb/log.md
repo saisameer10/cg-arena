@@ -648,3 +648,9 @@ A higher rating with an unchanged mean rank means the same places were taken aga
 It replaced `v18_2_cr_netback56` (41756463, another session's build, submitted at 11:17), which stood at 19.7, rank 305,
 at 29 %. `v18_2_cr_netback` had settled at 23.22, rank 146 (101 games, mean rank 1.97) before it was replaced.
 The window closes at 12:00; this run should end at about 11:36.
+
+**11:25 IST: `v18_2_cr_smart` submitted as 41756583** on the user's word. It replaced the rerun of `v18_2_combo_ring` (41756511),
+which stood at 20.94, rank 256, at 50 % (its first run was above 23 at that stage). `v18_2_cr_smart` (`mkv18.py netsmart`) =
+`v18_2_combo_ring` with one rule changed: a free unit nets its hunter within 1,500 first only when the net is likely to land
+(the hunter's dash is on cooldown, or it moves at least 300 a turn along the line at us); otherwise smoke or a decoy as in
+v18_2. 32 local games without an error; 3 paired battles played when it was submitted, so it went in untested.
