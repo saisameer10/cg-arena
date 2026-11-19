@@ -597,3 +597,49 @@ Both arena runs of this family ended near 23.6 against opponents ranked about 15
 **11:13 IST: `v18_2_cr_netback` (41756150) finished at 23.12, rank 151 of 443** (77 games read at 85 %: 32 / 20 / 25, mean rank 1.91,
 catches 3.04, lost 2.88). `v18_2_combo_ring` had finished at 23.73, rank 106, with the same mean rank (1.91 over 77 games).
 Two runs of this family: 23.73 and 23.12.
+
+## Final of 2026-11-19 (11:15 IST): 23.13, rank 150 of 443, with `v18_2_cr_netback` (41756150)
+
+**Every arena run of the day** (rating final unless marked; games = those read from the battle list):
+
+| Time | Bot | Rating | League rank | Games | Mean rank | 1st / 2nd / 3rd % | Catches | Lost |
+|---|---|---|---|---|---|---|---|---|
+| 09:04 | v18 | 20.32 | 250 | 81 | 1.93 | 34 / 38 / 27 | 2.72 | 2.37 |
+| 09:19 | `v18_ring` | 19.14 | 291 | 56 | 1.95 | 37 / 30 / 32 | 2.68 | 2.02 |
+| 09:30 | `vgo_b` | 16.96 at 56 % | - | 46 | 2.04 | 34 / 26 / 39 | 3.00 | 2.72 |
+| 09:37 | `v18_2` | 20.61 | 238 | 79 | 1.86 | 39 / 35 / 25 | 2.89 | 2.24 |
+| 09:51 | `v18_3` | 18.75 | 315 | 76 | 1.96 | 35 / 32 / 31 | 2.70 | 2.61 |
+| 10:03 | `vlive_ring` | 19.78 | 282 | 82 | 1.90 | 34 / 41 / 24 | 2.88 | 2.22 |
+| 10:18 | `v18_2_combo_ring` | **23.73** | **106** | 76 | 1.92 | 40 / 26 / 32 | 2.95 | 2.63 |
+| 10:46 | `v18_2_combo_ring_gangflank` | 22.31 at 38 % | - | 47 | 1.91 | 29 / 48 / 21 | 3.06 | 2.57 |
+| 10:56 | `v18_2_cr_netback` (final) | **23.13** | **150** | 93 | 1.98 | 36 / 29 / 34 | 3.05 | 2.88 |
+
+**What moved the rating.** Up to 10:18 every bot ended between 18.75 and 20.61 with a mean rank of 1.86 to 1.96. From
+`v18_2_combo_ring` on, three submissions in a row stood at 22.3 to 23.7 with the same mean rank (1.91 to 1.98), against
+opponents ranked about 150 on average (before: about 285). The step is the combination v18_2 (net economy) + opening and
+dash levers + the ring fix; none of the three alone showed it (v18_2 20.61, `vlive_ring` 19.78, `v18_ring` 19.14).
+A higher rating with an unchanged mean rank means the same places were taken against stronger opponents.
+
+**Paired tests (same map, same two real opponents, seat 0), final state.**
+- `pf4`, 21 battles of the 23.73 run: `v18_2_combo_ring` 1.95, `v18_2_cr_plus` 1.95, `v18_2_cr_netback` 2.00,
+  `v18_2_cr_nd3` 2.10. No variant beat the reference.
+- Pooled over 66 battles (`pfall.py v18 pf2 pf3 pf3_side pf3_combo pf3_six`), mean rank over all games of the bot:
+  `vlive_ring` 1.55 (49), `v18_2_combo_ring` 1.66 (41), `v18_2` 1.76 (41), `vlive_combo_ring` 1.78 (18),
+  `v18_combo_ring` 1.81 (32), old live 1.88 (16), `v18_ring` 1.88 (34), v18 1.97 (34), `vlive_combo` 2.00 (14),
+  `v18_combo` 2.05 (19), `vgo_b` 2.10 (20).
+
+**Lessons of the day.**
+1. The paired test misled twice on small samples (`v18_ring` 1.17 over 6 battles, then last of four on the next 8; `vlive_ring`
+   1.39 over 18, then 19.78 in the arena). Do not act on fewer than 20 to 30 shared battles; even then it ranks bots against
+   the opponents of one run only.
+2. An arena run took 15 minutes this morning (about 80 games), so the arena itself was the fastest honest test.
+3. One run of a bot is worth about plus or minus 0.8; two runs of the same family gave 23.73 and 23.13.
+4. The loss split did not change with any version: predator team caught more of ours 34 to 43 %, no catch by turn 15
+   24 to 41 %, tie-break 12 to 20 %. Whoever makes the first catch ranks about 1.5, whoever loses a unit first about 2.3.
+5. About a third of our lost units fall after a net; 90 % of those nets are thrown from within 1,500 and half of the
+   catches come on the very next turn. Netting back is the best answer (caught 38 %, smoke 52 %, decoy 69 %, nothing 94 %),
+   but the defence has to come before the net lands.
+6. Decoys are bait that works (a predator runs into 75 to 86 %) and half of the pool is unused; shortening the waiting
+   time did not raise their use, the trigger (predator within 2,900 with a clear line) is the limit.
+7. Not built, with evidence: decoy trigger, defence before the net (distance and line to predators that still hold a net),
+   a second dash on turn 3 and two nets on one prey (seen in teams at 23 to 25).
