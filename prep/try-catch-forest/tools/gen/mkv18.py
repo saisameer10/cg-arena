@@ -12,7 +12,7 @@
 #          without prey in sight within 2600 while we lead it by one (kb/log.md, 19 Nov 10:30: 24 and 18 of 282 games)
 import io, sys
 src, out = sys.argv[1], sys.argv[2]; flags = sys.argv[3:]
-assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo', 'no3net', 'late', 'netback', 'decoy'}, flags
+assert set(flags) <= {'ring', 'press', 't1', 'hnet', 'combo', 'no3net', 'late', 'netback', 'decoy', 'netsmart'}, flags
 assert 'combo' not in flags or 't1' in flags
 s = io.open(src, encoding='utf-8').read()
 
@@ -123,6 +123,12 @@ if 'ring' in flags:
     rep(RESET, "reach = false; " + RESET)
 if 'netback' in flags:   # a free unit nets its hunter within 1500 first, as v18 did (kb/log.md 19 Nov 10:45: net 38 % caught, smoke 52 %)
     rep('static final boolean F_NETSAVE = true;', 'static final boolean F_NETSAVE = false;')
+if 'netsmart' in flags:  # between F_NETSAVE and netback: a free unit nets its hunter within 1500 first only when the net is
+    # likely to land (hunter's dash on cooldown, or it is moving along the line at us); otherwise smoke or a decoy as in v18_2
+    rep('    static boolean aggro;', '    static final boolean F_NETSMART = true;   // tools/gen/mkv18.py netsmart\n    static boolean aggro;')
+    rep('boolean freeNeed = d <= 1500 && !(F_NETSAVE && u.immob == 0 && (canSmoke || canDecoy));',
+        'double latS = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;\n'
+        '                boolean freeNeed = d <= 1500 && (!(F_NETSAVE && u.immob == 0 && (canSmoke || canDecoy)) || (F_NETSMART && (e.cd > 0 || (latS <= 250 && hyp(v[0], v[1]) >= 300))));')
 if 'decoy' in flags:     # more decoys: half of the pool (2 per unit) is unused at the end and a predator runs into 75 to 83 % of them
     rep('    static boolean aggro;',
         '    static final boolean F_DECOY_MORE = true;   // a new decoy after 3 turns against a hunter inside 1800, after 5 turns inside 2900 (was 5 and 8)\n    static boolean aggro;')
