@@ -679,3 +679,5 @@ Three runs of `v18_2_combo_ring`: 23.73 (finished), 20.94 at 50 % (stopped), 24.
 down at half-way and its third started at 19.9 at 20 %: the rating of one run moves by several points before 60 %.
 Seven submissions in the last 45 minutes cost every one of them part of its games; the two results above 23.5 came from
 runs that were left alone.
+
+**12:03 IST, 2026-11-19: window closed.** Last reading of the live submission (41756965) at 11:57: 80 %, rating 23.57, rank 137 of 435 (72 games: 27 / 28 / 17, mean rank 1.86, catches 3.00, lost 2.69, catches by turn 10 0.86). After 12:00 the progress and leaderboard endpoints answer 422 ("Leaderboard not available"), so the final figure could not be read through the API. Finished runs of the day: `v18_2_combo_ring` 23.77, `v18_2_cr_netback` 23.22, `v18_2` 20.61, v18 20.46, `vlive_ring` 19.77, `v18_ring` 19.14.
