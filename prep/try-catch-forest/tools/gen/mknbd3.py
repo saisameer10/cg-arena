@@ -1,9 +1,9 @@
-# usage: python mknbd3.py   - versions/v18_2_cr_nbd3.java = v18_2_cr_netback56 + more decoys (F_DECOY_MORE, as in nd3)
+# usage: python mknbd3.py   - versions/v18_2_cr_nbd3.java = v18_2_cr_netback (netback with every team size) + more decoys (F_DECOY_MORE, as in nd3)
 #                              + F_DASH3: on turn 3 a unit that has dashed at most once may dash again at its target
 #                                (in sight or known), when no predator is within 3000.
 import os, sys
 V = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'versions')
-s = open(os.path.join(V, 'v18_2_cr_netback56.java'), encoding='utf-8').read()
+s = open(os.path.join(V, 'v18_2_cr_netback.java'), encoding='utf-8').read()
 def rep(s, a, b):
     if s.count(a) != 1: sys.exit('anchor found %d times: %s' % (s.count(a), a[:60]))
     return s.replace(a, b)

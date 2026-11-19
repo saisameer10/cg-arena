@@ -131,7 +131,7 @@ class Player {
     // ---- net economy (user decision of 19 Nov morning): escape with smoke and decoys, keep nets for attack
     static final boolean F_DECOY_MORE = true;   // a new decoy after 3 turns against a hunter inside 1800, after 5 turns inside 2900 (was 5 and 8)
     static final boolean F_DASH3 = true;        // second dash on turn 3 at the target when no predator is within 3000
-    static final boolean F_NETSAVE = false;  // v18_2_cr_netback56: nets saved for attack with 3-4 units (N <= 4 at the use), netback with 5-6; v18_2_cr_netback: a free unit nets its hunter within 1500 again (as v18)       // a free unit nets its hunter only when it has no smoke and no decoy to use
+    static final boolean F_NETSAVE = false;  // v18_2_cr_netback: a free unit nets its hunter within 1500 again (as v18)       // a free unit nets its hunter only when it has no smoke and no decoy to use
     static final boolean F_DECOY_ESCAPE = true;  // decoy every 5 turns instead of 8 against a hunter inside 1800
     static final boolean F_NET_LATE = true;      // from turn 40: prey on dash cooldown within 1800 is netted first
     static final int P_SMOKE_MODE = 0;         // free unit's cloud: 0 = v10 (900 ahead of our move), 1 = v17 (on us / half way), 2 = on the predator
@@ -810,7 +810,7 @@ class Player {
                 // it nets the hunter only when it has neither left. Held units (counter) and rescues are unchanged.
                 boolean canSmoke = !F_NOSMOKE && smokes > 0 && !inSmoke(u.ex, u.ey, 400);
                 boolean canDecoy = F_DECOY && decoys > 0 && turn - u.lastDecoy > (F_DECOY_ESCAPE ? 5 : 8);
-                boolean freeNeed = d <= 1500 && !((F_NETSAVE || N <= 4) && u.immob == 0 && (canSmoke || canDecoy));
+                boolean freeNeed = d <= 1500 && !(F_NETSAVE && u.immob == 0 && (canSmoke || canDecoy));
                 boolean need = !multi && ((u.immob > 0 && d <= CATCH + MOVE * u.immob + MOVE) || (u.immob == 0 && freeNeed) || (u.immob > 0 && d <= 1500));
                 for (E h : live) if (h != u && h.immob > 0 && hyp(e.x - h.x, e.y - h.y) <= CATCH + MOVE * h.immob + MOVE) need = true;   // rescue
                 double lateral = Math.abs(v[0] * (qy - u.ey) - v[1] * (qx - u.ex)) / d;
