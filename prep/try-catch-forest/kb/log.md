@@ -573,3 +573,23 @@ is the same for teams at 23.
 another session's build: gang on netted prey, nets prefer a mate able to finish, second hunter aims beyond the prey), which
 stood at 22.31, rank 172, at 38 % and was not finished. Paired `pf4` at 10:54, 10 battles: netback 1.80 (3 better / 7 equal /
 0 worse than `v18_2_combo_ring`), `v18_2_cr_plus` 2.00, `v18_2_combo_ring` 2.10.
+
+**11:10 IST: `v18_2_cr_netback` against `v18_2_combo_ring`, arena games and paired games.**
+
+| | `v18_2_cr_netback` (41756150, 64 games at 76 %) | `v18_2_combo_ring` (41755573, 77 games, final) |
+|---|---|---|
+| Rating | 23.5 at 76 % (24.64 at 56 %) | 23.73, rank 106 |
+| Mean rank; first / last | 1.88; 44 % / 31 % | 1.91; 42 % / 32 % |
+| Catches / units lost | 3.02 / 2.83 | 2.95 / 2.64 |
+| Units lost while held by a net | 0.88 | 1.06 |
+| Netted units caught within 6 turns | 37 % | 44 % |
+| A unit lost by turn 10 | 56 % of games | 43 % |
+| Mean league rank of the opponents | 167 | 143 |
+| Places lost: predator team caught more / slow start / tie-break | 34 % / 32 % / 12 % | 36 % / 29 % / 13 % |
+| Mean rank with 3 / 4 / 5 / 6 units | 1.86 / 2.21 / 1.75 / 1.75 | 1.88 / 1.75 / 2.18 / 1.83 |
+
+Paired `pf4`, 20 battles of 41755573: `v18_2_cr_plus` 1.90, `v18_2_combo_ring` 1.95, `v18_2_cr_netback` 2.00,
+`v18_2_cr_nd3` 2.05 (19). The four are level. `nd3` used no more decoys than the others (4.58 against 4.42 a game):
+the waiting time between decoys is not what limits them. Decoys in the two arena runs: 4.2 to 4.3 a game, a predator
+runs into 83 to 86 %, the unit that dropped one is caught within 6 turns in 12 to 16 %.
+Both arena runs of this family ended near 23.6 against opponents ranked about 150 on average; the earlier family ended at 19 to 20.6.
