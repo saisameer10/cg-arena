@@ -486,3 +486,27 @@ Paired round (Target24, `pf3`, 20 battles of v18's run): `v18_combo_ring` 1.65, 
 the four vlive bots are being filled in on the same battles from 09:45.
 `pairfield.py` hazard: on 409 `test-game-running` the reply carries the other run's `test_game_id`; the loop then polls
 that game and saves it under the wrong bot name. Two runs must never overlap.
+
+**10:01 IST: every paired game of today pooled** (`tools/pfall.py v18 pf2 pf3 pf3_side`, 36 battles; "shared" = battles the
+bot and v18 both played, same map and same two real opponents).
+
+| Bot | Games | Mean rank | 1st / 2nd / 3rd | Catches | Lost | Shared with v18 | Bot / v18 there | Better / equal / worse |
+|---|---|---|---|---|---|---|---|---|
+| `vlive_ring` | 18 | 1.39 | 13 / 3 / 2 | 3.11 | 1.89 | 18 | 1.39 / 2.17 | 11 / 5 / 2 |
+| `v18_2_combo_ring` | 11 | 1.45 | 7 / 3 / 1 | 3.18 | 2.18 | 11 | 1.45 / 1.91 | 4 / 6 / 1 |
+| `v18_2` | 12 | 1.75 | 5 / 5 / 2 | 2.92 | 1.33 | 12 | 1.75 / 1.92 | 2 / 10 / 0 |
+| `vlive_combo_ring` | 18 | 1.78 | 8 / 6 / 4 | 3.00 | 2.06 | 18 | 1.78 / 2.17 | 9 / 5 / 4 |
+| `v18_combo_ring` | 32 | 1.81 | 14 / 10 / 8 | 3.00 | 2.41 | 32 | 1.81 / 2.03 | 13 / 12 / 7 |
+| old live code | 16 | 1.88 | 5 / 8 / 3 | 2.81 | 1.69 | 14 | 1.86 / 2.29 | 7 / 5 / 2 |
+| `v18_ring` | 34 | 1.88 | 16 / 6 / 12 | 2.76 | 2.24 | 34 | 1.88 / 1.97 | 10 / 13 / 11 |
+| v18 | 34 | 1.97 | 12 / 11 / 11 | 2.74 | 1.88 | 34 | - | - |
+| `vlive_combo` | 14 | 2.00 | 4 / 6 / 4 | 2.71 | 2.36 | 14 | 2.00 / 2.29 | 6 / 6 / 2 |
+| `v18_combo` | 7 | 2.00 | 3 / 1 / 3 | 2.14 | 2.57 | 7 | 2.00 / 2.57 | 3 / 4 / 0 |
+| `vgo_b` | 20 | 2.10 | 3 / 12 / 5 | 3.10 | 2.75 | 20 | 2.10 / 1.80 | 5 / 7 / 8 |
+
+`vlive_ring` against the old live code on their 14 shared battles: 1.43 against 1.86 (7 / 5 / 2). It led in both sets of
+battles (7 of yesterday's list: 1.57; 11 of today's: about 1.3), unlike `v18_ring`, which led the first set and trailed the second.
+Arena since 09:37: `v18_2` finished at **20.61, rank 238** (79 games, mean rank 1.86, the best run of the day); the user then
+submitted a further version at 09:51 (41755216, saved as `versions/v18_3.java`: v18_2 + `F_ATTACKED`, smoke and decoys only
+against a predator that is attacking, + `P_SMOKE_MODE` 3, the cloud right in front of the predator): 19.06 at 87 %,
+58 games at 76 %: mean rank 1.97, units lost 2.67.
