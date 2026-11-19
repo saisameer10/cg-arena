@@ -1,4 +1,4 @@
-# usage: python mkgang.py   - builds versions/v18_2_gang.java and versions/v18_2_gangflank.java from versions/v18_2.java
+# usage: python mkgang.py [base ...]   - builds versions/<base>_gang.java and <base>_gangflank.java (default base: v18_2)
 # F_GANG:    every free unit that can reach netted prey before the hold ends goes for it (no cap of two, no load penalty),
 #            and units sharing that netted prey are not pushed apart.
 # F_NETMATE: a net at prey is preferred when a free team mate can reach the prey within the hold; a unit that is itself
@@ -6,14 +6,14 @@
 # F_FLANK:   the second hunter on a free prey in sight aims 800 beyond it, on the side away from the nearer hunter.
 import os, sys
 V = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'versions')
-src = open(os.path.join(V, 'v18_2.java'), encoding='utf-8').read()
+BASES = sys.argv[1:] or ['v18_2']
 
 def rep(s, a, b):
     if s.count(a) != 1: sys.exit('anchor found %d times: %s' % (s.count(a), a[:70]))
     return s.replace(a, b)
 
-def build(flank):
-    s = src
+def build(base, flank):
+    s = open(os.path.join(V, base + '.java'), encoding='utf-8').read()
     s = rep(s, '    static final boolean F_COMMIT = true;',
             '    static final boolean F_GANG = true;        // gang: all units that can reach netted prey in time go for it\n'
             '    static final boolean F_NETMATE = true;     // gang: nets at prey prefer a team mate able to finish\n'
@@ -56,6 +56,7 @@ def build(flank):
             '                }\n')
     return s
 
-for name, fl in (('v18_2_gang', False), ('v18_2_gangflank', True)):
-    open(os.path.join(V, name + '.java'), 'w', encoding='utf-8', newline='\n').write(build(fl))
-    print('wrote', name)
+for base in BASES:
+    for suf, fl in (('_gang', False), ('_gangflank', True)):
+        open(os.path.join(V, base + suf + '.java'), 'w', encoding='utf-8', newline=chr(10)).write(build(base, fl))
+        print('wrote', base + suf)
