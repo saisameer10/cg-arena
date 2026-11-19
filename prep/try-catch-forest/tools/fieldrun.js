@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..', '..', '..');
 const { loadGames } = require(path.join(ROOT, 'games'));
 const { runMatch, workRoot } = require(path.join(ROOT, 'server', 'engine', 'match'));
 const V = path.join(__dirname, '..', 'versions');
-const VERSIONS = ['vlive_41748059', 'vlive_press', 'vlive_t1', 'vlive_all3', 'vlive_combo', 'vlive_first', 'vlive_dash', 'vlive_net1', 'vlive_late', 'vlive_3p', 'vlive_engine', 'vlive_hnet', 'vgo_b', 'v10', 'v16'];
+const VERSIONS = process.env.FIELD_VERSIONS ? process.env.FIELD_VERSIONS.split(',') : ['vlive_41748059', 'vlive_press', 'vlive_t1', 'vlive_all3', 'vlive_combo', 'vlive_first', 'vlive_dash', 'vlive_net1', 'vlive_late', 'vlive_3p', 'vlive_engine', 'vlive_hnet', 'vgo_b', 'v10', 'v16'];
 const FIELDS = [['vlive_41748059', 'v10'], ['vgo_b', 'v16']];
 const [out, worker, workers, seeds, seed0] = [process.argv[2], +process.argv[3], +process.argv[4], +process.argv[5], +process.argv[6]];
 const src = {}; const spec = n => ({ type: 'user', lang: 'java', source: src[n] || (src[n] = fs.readFileSync(path.join(V, n + '.java'), 'utf8')), name: n });
