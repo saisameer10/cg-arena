@@ -537,3 +537,24 @@ New switches in `tools/gen/mkv18.py`, built for paired tests only (not submitted
 `versions/v18_2_cr_n3.java`) and `late` = `F_SCORELATE` (from turn 60, soft threat terms x0.5 for a hunter while the
 predator team is ahead of us, x1.5 for a unit without prey in sight while we lead it by one: `versions/v18_2_cr_plus.java`
 has both). 90 local games each without an error.
+
+**10:45 IST: what happens after one of our units is netted** (`tools/heldback.py`; scratch `heldd.py`; runs 41755573, 41755049,
+41755378, 233 games). Our units are netted 2.4 to 2.6 times a game, two thirds of it by the predator team.
+Nets of the predator team (359): the thrower stood within 1,500 in 324 (90 %); 225 of our units were then caught within
+six turns, 201 of them by the thrower, 113 on the very next turn.
+
+| What the netted unit does (thrower within 1,500) | Cases | Caught within 6 turns |
+|---|---|---|
+| nothing | 99 | 94 % |
+| smoke | 113 | 52 % |
+| net | 64 | 38 % |
+| decoy | 48 | 69 % |
+
+- We net back in about one case in five. It is the best answer when it happens.
+- "Nothing" is mostly the unit that is caught on the turn after the net, before any answer can work: a predator that
+  nets from within about 1,640 (dash 1,200 + contact 440) arrives at once. The defence has to come before the net.
+- Units lost while held, per game: v18 0.69, v18_2 0.86, `v18_2_combo_ring` 0.90, old live code 0.98. v18_2's `F_NETSAVE`
+  (a free unit keeps its net and escapes with smoke or a decoy) did not lower it; the difference to v18 is within noise.
+- Built for the paired test: `versions/v18_2_cr_netback.java` = `v18_2_combo_ring` with `F_NETSAVE` off (a free unit nets
+  its hunter within 1,500, as v18). 40 local games without an error. Paired test `pf4` from 10:46 (battles of 41755573):
+  `v18_2_combo_ring`, `v18_2_cr_netback`, `v18_2_cr_plus`.
